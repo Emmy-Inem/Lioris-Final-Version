@@ -47,7 +47,9 @@ export function useCampusScope() {
   // own profile has no institutionCode (e.g. a root admin signed up with a
   // personal email), which made every "am I exploring a different campus"
   // check below always false for exactly the account most likely to explore.
-  const homeInstitutionCode = (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
+  const homeInstitutionCode = isSuperAdmin
+    ? undefined
+    : (profile?.institutionCode && profile.institutionCode !== 'GLOBAL')
     ? profile.institutionCode
     : (deducedFromEmail && deducedFromEmail !== 'GLOBAL')
     ? deducedFromEmail
@@ -57,17 +59,21 @@ export function useCampusScope() {
   // If activeCampusCode is explicitly chosen (e.g. 'UNILAG' or 'UI' when exploring), scope to that campus.
   // When no specific campus is selected (or when set to 'ALL' / 'GLOBAL'),
   // Super Admin defaults to 'ALL' - seeing every university at once across all resources, events, discussions.
+  // Campus Admin:
+  // Strictly isolated to their assigned campusCode (e.g. 'UNILAG', 'FUNAAB').
   // Regular students / campus staff / campus ambassadors:
   // Strictly isolated to their own home university (or GLOBAL if national).
   const campusCode = isSuperAdmin
     ? (activeCampusCode && activeCampusCode !== 'GLOBAL' && activeCampusCode !== 'ALL'
         ? activeCampusCode
         : 'ALL')
-    : (scope === 'global'
-        ? 'GLOBAL'
-        : (activeCampusCode && activeCampusCode !== 'GLOBAL'
-            ? activeCampusCode
-            : homeInstitutionCode || 'GLOBAL'));
+    : (user?.isCampusAdmin && user?.campusCode)
+      ? user.campusCode
+      : (scope === 'global'
+          ? 'GLOBAL'
+          : (activeCampusCode && activeCampusCode !== 'GLOBAL'
+              ? activeCampusCode
+              : homeInstitutionCode || 'GLOBAL'));
 
   return { scope, setScope, activeCampusCode, setActiveCampusCode, campusCode, homeInstitutionCode, isSuperAdmin };
 }

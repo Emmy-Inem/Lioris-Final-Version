@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useAuth } from '@/auth/AuthContext';
+import { isSuperAdminIdentity } from '@/utils/campusAccess';
 import { queryClient as globalQueryClient } from '@/api/queryClient';
 
 export type ViewScope = 'campus' | 'global';
@@ -88,9 +89,13 @@ export async function getStoredCampus(): Promise<string | null> {
   }
 }
 
-export function resetToDefaultCampusScope(qc = globalQueryClient) {
+export function resetToDefaultCampusScope(qc = globalQueryClient, isSuperAdmin = false) {
   qc.setQueryData(VIEW_SCOPE_KEY, 'campus' as ViewScope);
   persistScope('campus');
+  if (isSuperAdmin) {
+    qc.setQueryData(ACTIVE_CAMPUS_KEY, null as ActiveCampus);
+    persistCampus(undefined);
+  }
 }
 
 // "No campus picked" is stored as null, never undefined: TanStack Query's setQueryData(key, undefined)
@@ -102,22 +107,20 @@ let hydrated = false;
 
 export function useViewScope() {
   const queryClient = useQueryClient();
-  let userRole: string | undefined;
+  let currentUser: any = null;
+  let authLoading = true;
   try {
     const auth = useAuth();
-    userRole = auth?.user?.role;
+    currentUser = auth?.user;
+    authLoading = auth?.isLoading ?? false;
   } catch {
-    // outside AuthProvider (e.g. isolated tests)
+    authLoading = false;
   }
 
-  const isStudent = userRole === 'student';
-  let canExploreWorkspaces = false;
-  try {
-    const currentUser = useAuth()?.user;
-    canExploreWorkspaces = currentUser?.actualRole === 'admin' && currentUser?.isSuperAdmin === true;
-  } catch {
-    // outside AuthProvider (e.g. isolated tests)
-  }
+  const isSuperAdmin = isSuperAdminIdentity(currentUser);
+  const canExploreWorkspaces = isSuperAdmin;
+  const userRole = currentUser?.role;
+  const isStudent = userRole === 'student' && !isSuperAdmin;
 
   const { data: scope } = useQuery({
     queryKey: VIEW_SCOPE_KEY,
@@ -138,16 +141,27 @@ export function useViewScope() {
   // Restore the persisted choice once per app session (any component using
   // this hook can be the one that triggers it - the `hydrated` guard makes
   // sure it only actually runs once).
+  const hydratedRef = useRef(false);
   useEffect(() => {
-    if (hydrated) return;
-    hydrated = true;
+    if (authLoading) return;
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
     (async () => {
       try {
         const [storedScope, storedCampus] = await Promise.all([
           isWeb ? webGet(STORAGE_SCOPE_KEY) : SecureStore.getItemAsync(STORAGE_SCOPE_KEY),
           isWeb ? webGet(STORAGE_CAMPUS_KEY) : SecureStore.getItemAsync(STORAGE_CAMPUS_KEY),
         ]);
-        if (isStudent) {
+        if (canExploreWorkspaces) {
+          if (storedScope === 'campus' || storedScope === 'global') {
+            queryClient.setQueryData(VIEW_SCOPE_KEY, storedScope);
+          }
+          if (storedCampus && storedCampus !== 'GLOBAL' && storedCampus !== 'ALL') {
+            queryClient.setQueryData(ACTIVE_CAMPUS_KEY, storedCampus);
+          } else {
+            queryClient.setQueryData(ACTIVE_CAMPUS_KEY, null);
+          }
+        } else if (isStudent) {
           queryClient.setQueryData(VIEW_SCOPE_KEY, 'campus' as ViewScope);
           persistScope('campus');
           if (storedCampus && storedCampus !== 'GLOBAL') {
@@ -165,7 +179,7 @@ export function useViewScope() {
         // keep the in-memory defaults
       }
     })();
-  }, [queryClient, isStudent]);
+  }, [authLoading, queryClient, isStudent, canExploreWorkspaces]);
 
   // When switching to the student role during a session, ensure workspace defaults to campus for regular users
   const prevRoleRef = useRef(userRole);

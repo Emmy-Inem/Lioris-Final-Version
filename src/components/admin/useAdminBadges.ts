@@ -3,6 +3,7 @@ import { listReports } from '@/api/moderation';
 import { listVerificationRequests } from '@/api/verification';
 import { getAllSupportTickets } from '@/api/supportTickets';
 import { listTakedownRequests } from '@/api/takedown';
+import { useAuth } from '@/auth/AuthContext';
 
 /**
  * How many things are waiting in each admin area. One place, shared by the Overview cards and the
@@ -15,14 +16,17 @@ import { listTakedownRequests } from '@/api/takedown';
 const BADGE_REFETCH_INTERVAL_MS = 30_000;
 
 export function useAdminBadges() {
+  const { user } = useAuth();
+  const campusFilter = user?.isCampusAdmin && user?.campusCode ? user.campusCode : undefined;
+
   const reports = useQuery({
-    queryKey: ['reports', 'open'],
-    queryFn: () => listReports({ status: 'open' }),
+    queryKey: ['reports', 'open', campusFilter || 'all'],
+    queryFn: () => listReports({ status: 'open', institutionCode: campusFilter }),
     refetchInterval: BADGE_REFETCH_INTERVAL_MS,
   });
   const verification = useQuery({
-    queryKey: ['verifications', 'pending'],
-    queryFn: listVerificationRequests,
+    queryKey: ['verifications', 'pending', campusFilter || 'all'],
+    queryFn: () => listVerificationRequests(campusFilter),
     refetchInterval: BADGE_REFETCH_INTERVAL_MS,
   });
   const support = useQuery({

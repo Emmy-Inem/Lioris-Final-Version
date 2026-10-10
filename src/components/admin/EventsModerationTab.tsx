@@ -21,6 +21,7 @@ import { getEventPaymentDetails, saveEventPaymentDetails } from '@/api/paidEvent
 import { EMPTY_TICKET_FORM, TicketFormValues, paidLabel, parsePrice, validateTicketForm } from '@/utils/paidEvents';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/auth/AuthContext';
 
 function toLocalInputValue(iso?: string | null) {
   if (!iso) return '';
@@ -50,8 +51,10 @@ const VENUE_TYPE_LABELS: Record<NonNullable<CampusEvent['venueType']>, string> =
 export function EventsModerationTab() {
  const { colors, spacing, radius, isDark } = useTheme();
  const { isDesktop } = useResponsive();
+ const { user } = useAuth();
  const insets = useSafeAreaInsets();
  const queryClient = useQueryClient();
+ const campusFilter = user?.isCampusAdmin && user?.campusCode ? user.campusCode : undefined;
  const [section, setSection] = useState<'approved' | 'pending' | 'paid'>('approved');
  const [focusPaid, setFocusPaid] = useState<string | null>(null);
  const [searchQuery, setSearchQuery] = useState('');
@@ -89,8 +92,8 @@ export function EventsModerationTab() {
  });
 
  const { data: allEvents = [], isLoading, refetch } = useQuery({
- queryKey: ['events', 'admin-all-with-pending'],
- queryFn: () => listEvents({ approvalStatus: 'all' }),
+ queryKey: ['events', 'admin-all-with-pending', campusFilter],
+ queryFn: () => listEvents({ approvalStatus: 'all', campusCode: campusFilter }),
  });
 
  const pendingEvents = allEvents.filter((e) => e.approvalStatus === 'pending');
@@ -234,7 +237,8 @@ export function EventsModerationTab() {
  description: formDesc.trim(),
  category: formCategory,
  location: formLocation.trim(),
- visibilityScope: 'global',
+ visibilityScope: user?.isCampusAdmin ? 'campus' : 'global',
+ campusCode: campusFilter,
  startAt: startIso,
  endAt: endIso,
  imageUrl: formCover,

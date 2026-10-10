@@ -8,6 +8,7 @@ import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
 import { listCommunities, approveCommunity, rejectCommunity, deleteCommunity, ForumCommunityRecord } from '@/api/communities';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { CommunityManageModal } from '@/components/CommunityManageModal';
@@ -33,13 +34,22 @@ export function ForumsModerationTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
+  const { user } = useAuth();
+  const campusFilter = user?.isCampusAdmin && user?.campusCode ? user.campusCode : undefined;
+
   const { data: communities = [], isLoading: loadingCommunities, refetch: refetchCommunities } = useQuery({
-    queryKey: ['communities', 'admin-all'],
-    queryFn: () => listCommunities(),
+    queryKey: ['communities', 'admin', campusFilter || 'all'],
+    queryFn: () => listCommunities(campusFilter),
   });
 
   const filteredCommunities = communities
-    .filter((c) => communityStatusFilter === 'All' || c.approvalStatus === communityStatusFilter.toLowerCase())
+    .filter((c) => {
+      if (communityStatusFilter !== 'All' && c.approvalStatus !== communityStatusFilter.toLowerCase()) return false;
+      if (campusFilter) {
+        return c.campusCode?.toUpperCase() === campusFilter.toUpperCase() || c.campusCode === 'GLOBAL' || !c.campusCode;
+      }
+      return true;
+    })
     .slice()
     .sort((a, b) => COMMUNITY_STATUS_ORDER[a.approvalStatus] - COMMUNITY_STATUS_ORDER[b.approvalStatus]);
 

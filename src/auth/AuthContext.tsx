@@ -939,7 +939,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         userRef.current = nextUser;
         setUser(nextUser);
         if (newRole === 'student') {
-          resetToDefaultCampusScope();
+          resetToDefaultCampusScope(queryClient, true);
         }
         try {
           // Role previews share the real admin identity and profile. Keep the

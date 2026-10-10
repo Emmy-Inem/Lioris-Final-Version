@@ -318,13 +318,16 @@ function mapVerificationRow(row: any): VerificationRequest {
  * `created_at` ascending makes the queue drain fairly and makes the wait time on the top card the
  * worst wait in the system.
  */
-export async function listVerificationRequests(): Promise<VerificationRequest[]> {
+export async function listVerificationRequests(campusCode?: string): Promise<VerificationRequest[]> {
  try {
-  const { data, error } = await supabase
+  let q = supabase
    .from('verifications')
    .select('*, profiles!verifications_user_id_fkey(full_name, role, campus_code)')
-   .eq('status', 'pending')
-   .order('created_at', { ascending: true });
+   .eq('status', 'pending');
+  if (campusCode && campusCode !== 'ALL' && campusCode !== 'GLOBAL') {
+   q = q.eq('campus_code', campusCode);
+  }
+  const { data, error } = await q.order('created_at', { ascending: true });
 
   if (!error && data) {
    return data.map(mapVerificationRow);

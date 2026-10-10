@@ -8,11 +8,15 @@ import { AppText } from '@/components/AppText';
 import { ModerationQueue } from '@/components/ModerationQueue';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/auth/AuthContext';
 
 export default function AdminModerationQueueScreen() {
   const adminBadges = useAdminBadges();
+  const { user } = useAuth();
   const { spacing } = useTheme();
   const { isDesktop } = useResponsive();
+  const campusFilter = user?.isCampusAdmin && user?.campusCode ? user.campusCode : undefined;
+
   return (
     <ScreenContainer glow={false}>
       {!isDesktop && <AppHeader />}
@@ -27,7 +31,10 @@ export default function AdminModerationQueueScreen() {
           Content and members flagged by the community, waiting for a decision
         </AppText>
       </View>
-      <ModerationQueue />
+      <ModerationQueue
+        institutionCode={campusFilter}
+        emptyTitle={campusFilter ? 'Your campus queue is clear' : 'Queue is clear'}
+      />
     </ScreenContainer>
   );
 }

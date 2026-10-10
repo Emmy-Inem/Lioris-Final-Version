@@ -14,6 +14,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { listResources, createResource, updateResource, approveResource, rejectResource, deleteResource } from '@/api/resources';
 import { Resource } from '@/api/types';
 import { recordAuditLogEntry } from '@/api/auditLog';
+import { useAuth } from '@/auth/AuthContext';
 import { haptics } from '@/utils/haptics';
 
 const CATEGORIES: Resource['category'][] = ['Past Questions', 'Notes', 'Projects'];
@@ -23,8 +24,10 @@ const FILE_TYPES: Resource['fileType'][] = ['PDF', 'DOCX', 'ZIP', 'EPUB'];
 export function ResourcesModerationTab() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const campusFilter = user?.isCampusAdmin && user?.campusCode ? user.campusCode : undefined;
   const [section, setSection] = useState<'approved' | 'pending'>('approved');
   const [searchQuery, setSearchQuery] = useState('');
  const [selectedCategory, setSelectedCategory] = useState<Resource['category'] | 'all'>('all');
@@ -49,8 +52,8 @@ export function ResourcesModerationTab() {
  const [previewModalResource, setPreviewModalResource] = useState<Resource | null>(null);
 
  const { data: allResources = [], isLoading, refetch } = useQuery({
- queryKey: ['resources', 'admin-all-with-pending'],
- queryFn: () => listResources({ approvalStatus: 'all' }),
+ queryKey: ['resources', 'admin-all-with-pending', campusFilter],
+ queryFn: () => listResources({ approvalStatus: 'all', campusCode: campusFilter }),
  });
 
  const pendingSubmissions = allResources.filter((r) => r.approvalStatus === 'pending');
@@ -195,6 +198,7 @@ export function ResourcesModerationTab() {
  fileType: formFileType,
  fileSize: formFileSize.trim(),
  description: formDesc.trim(),
+ campusCode: campusFilter,
  });
  Alert.alert('Resource Published', `"${formTitle.trim()}"is now available in the university library.`);
  }

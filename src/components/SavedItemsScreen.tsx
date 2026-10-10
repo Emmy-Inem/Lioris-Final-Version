@@ -88,13 +88,25 @@ export function SavedItemsScreen() {
         router.push(`/${roleGroup}/events/${item.itemId}` as any);
         break;
       case 'resource':
-        router.push({ pathname: '/(student)/resources', params: { resourceId: item.itemId } });
+        if (roleGroup === '(admin)') {
+          router.push({ pathname: '/(admin)/content-desk', params: { tab: 'resources' } } as any);
+        } else {
+          router.push({ pathname: '/(student)/resources', params: { resourceId: item.itemId } });
+        }
         break;
       case 'job':
-        router.push(`/${roleGroup}/jobs` as any);
+        if (roleGroup === '(admin)') {
+          router.push({ pathname: '/(admin)/content-desk', params: { tab: 'jobs' } } as any);
+        } else {
+          router.push(`/${roleGroup}/jobs` as any);
+        }
         break;
       case 'marketplace':
-        router.push(`/${roleGroup}/marketplace` as any);
+        if (roleGroup === '(admin)') {
+          router.push({ pathname: '/(admin)/content-desk', params: { tab: 'marketplace' } } as any);
+        } else {
+          router.push(`/${roleGroup}/marketplace` as any);
+        }
         break;
     }
   }

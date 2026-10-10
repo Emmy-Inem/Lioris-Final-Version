@@ -15,6 +15,7 @@ import { listNotifications } from '@/api/notifications';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { ChangeWorkspaceScopeModal } from '@/components/ChangeWorkspaceScopeModal';
 import { getInstitutionByCode } from '@/api/institutions';
+import { isSuperAdminIdentity } from '@/utils/campusAccess';
 
 interface NavItem {
  id: string;
@@ -113,7 +114,7 @@ export function DesktopSidebar() {
 
   const staffNavItems = rawStaffNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
 
-  const isSuperAdmin = user?.isSuperAdmin ?? true;
+  const isSuperAdmin = isSuperAdminIdentity(user);
   const rawAdminNavItems: (NavItem & { flagKey?: FeatureKey; superAdminOnly?: boolean })[] = [
     { id: 'home', label: 'Overview', href: '/(admin)/dashboard', icon: 'grid', match: ['/dashboard'] },
     { id: 'people', label: 'People', href: '/(admin)/user-directory', icon: 'people', match: ['/user-directory', '/verification-requests', '/support-desk'] },

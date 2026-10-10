@@ -40,7 +40,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
 
  const { data: verificationsRaw = [], isLoading: loadingVerifications } = useQuery({
  queryKey: ['verification-requests', isStaffScope ? 'staff-desk' : 'admin-desk', isStaffScope ? campusCode ?? 'none' : 'all'],
- queryFn: listVerificationRequests,
+ queryFn: () => listVerificationRequests(isStaffScope && campusCode ? campusCode : undefined),
  });
 
  // listVerificationRequests has no server-side campus filter, so staff scoping is applied

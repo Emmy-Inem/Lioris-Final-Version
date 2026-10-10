@@ -16,6 +16,7 @@ import { EmptyState } from'@/components/EmptyState';
 import { QueueItemSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/auth/AuthContext';
 import {
   getVerificationDocumentUrl,
   listVerificationRequests,
@@ -202,7 +203,12 @@ export default function VerificationRequestsScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const queryClient = useQueryClient();
-  const { data: requests, isLoading } = useQuery({ queryKey: ['verification-requests'], queryFn: listVerificationRequests });
+  const { user } = useAuth();
+  const campusFilter = user?.isCampusAdmin && user?.campusCode ? user.campusCode : undefined;
+  const { data: requests, isLoading } = useQuery({
+    queryKey: ['verification-requests', campusFilter],
+    queryFn: () => listVerificationRequests(campusFilter),
+  });
 
   const [inspectDocRequest, setInspectDocRequest] = useState<VerificationRequest | null>(null);
   const [fullScreenDocument, setFullScreenDocument] = useState<VerificationDocument | null>(null);

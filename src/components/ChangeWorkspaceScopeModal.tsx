@@ -142,7 +142,7 @@ export function ChangeWorkspaceScopeModal({
  icon="school"
  title={isAdmin ? 'All Campus Networks' : 'My Campus Network'}
  subtitle={isAdmin ? 'Resources, events and discussions from every campus' : `${cleanHomeName} (${cleanHomeCode})`}
- selected={scope === 'campus' && (!activeCampusCode || activeCampusCode === cleanHomeCode)}
+ selected={scope === 'campus' && (isAdmin ? (!activeCampusCode || activeCampusCode === 'ALL') : (!activeCampusCode || activeCampusCode === cleanHomeCode))}
  onPress={() => {
  setActiveCampusCode(undefined);
  setCustomAccent(null);

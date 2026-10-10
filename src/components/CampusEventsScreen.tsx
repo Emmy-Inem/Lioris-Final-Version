@@ -220,102 +220,120 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
         <SpotlightEventsCarousel events={carouselData} roleGroup={roleGroup} />
       ) : null}
 
-      {/* Search Input */}
+      {/* Sticky Mobile Search & Filter Toolbar */}
       <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: colors.surface,
-          borderRadius: radius.pill,
-          paddingHorizontal: spacing.md,
-          marginBottom: spacing.sm,
-          borderWidth: 1,
-          borderColor: colors.border,
-          height: 40,
-        }}
+        style={[
+          {
+            paddingVertical: 4,
+            marginBottom: spacing.xs,
+            zIndex: 15,
+          },
+          Platform.OS === 'web' && ({
+            position: 'sticky',
+            top: 0,
+            backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          } as any),
+        ]}
       >
-        <Ionicons name="search-outline" size={16} color={colors.textSecondary} style={{ marginRight: spacing.xs }} />
-        <TextInput accessibilityLabel="Search events"
-          placeholder={isAlumniScope ? 'Search alumni reunions, dinners, homecomings...' : 'Search campus events, hackathons, seminars...'}
-          placeholderTextColor={colors.textSecondary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
+        {/* Search Input */}
+        <View
           style={{
-            flex: 1,
-            color: colors.textPrimary,
-            fontSize: 13,
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.surface,
+            borderRadius: radius.pill,
+            paddingHorizontal: spacing.md,
+            marginBottom: spacing.sm,
+            borderWidth: 1,
+            borderColor: colors.border,
+            height: 40,
           }}
-        />
-        {searchQuery.trim() ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setSearchQuery('')} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
-          </Pressable>
-        ) : null}
-      </View>
-
-      {/* Filter Chips Bar */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 6, paddingRight: 16, paddingBottom: 4 }}
-        style={{ width: '100%', flexGrow: 0 }}
-      >
-        {activeFilters.map((f) => {
-          const active = filter === f.key;
-          return (
-            <Pressable
-              key={f.key}
-              onPress={() => {
-                haptics.light();
-                setFilter(f.key);
-              }}
-              style={[
-                {
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 5,
-                  backgroundColor: active
-                    ? colors.brandPrimary
-                    : isDark
-                    ? 'rgba(30, 41, 59, 0.60)'
-                    : 'rgba(255, 255, 255, 0.70)',
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: radius.pill,
-                  borderWidth: 1,
-                  borderColor: active
-                    ? colors.brandPrimary
-                    : isDark
-                    ? 'rgba(255, 255, 255, 0.08)'
-                    : 'rgba(0, 0, 0, 0.08)',
-                },
-                Platform.OS === 'web' && !active &&
-                  ({
-                    backdropFilter: 'blur(20px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                    boxShadow: isDark
-                      ? 'inset 0 1px 0 rgba(255, 255, 255, 0.04)'
-                      : 'inset 0 1px 1px rgba(255, 255, 255, 0.80)',
-                  } as any),
-              ]}
-            >
-              <Ionicons
-                name={f.icon}
-                size={13}
-                color={active ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
-              />
-              <AppText
-                variant="caption"
-                weight={active ? 'bold' : 'medium'}
-                tone={active ? 'inverse' : 'secondary'}
-                style={{ fontSize: 11.5 }}
-              >
-                {f.label}
-              </AppText>
+        >
+          <Ionicons name="search-outline" size={16} color={colors.textSecondary} style={{ marginRight: spacing.xs }} />
+          <TextInput accessibilityLabel="Search events"
+            placeholder={isAlumniScope ? 'Search alumni reunions, dinners, homecomings...' : 'Search campus events, hackathons, seminars...'}
+            placeholderTextColor={colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={{
+              flex: 1,
+              color: colors.textPrimary,
+              fontSize: 13,
+            }}
+          />
+          {searchQuery.trim() ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Clear" onPress={() => setSearchQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
             </Pressable>
-          );
-        })}
-      </ScrollView>
+          ) : null}
+        </View>
+
+        {/* Filter Chips Bar */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 6, paddingRight: 16, paddingBottom: 4 }}
+          style={{ width: '100%', flexGrow: 0 }}
+        >
+          {activeFilters.map((f) => {
+            const active = filter === f.key;
+            return (
+              <Pressable
+                key={f.key}
+                onPress={() => {
+                  haptics.light();
+                  setFilter(f.key);
+                }}
+                style={[
+                  {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 5,
+                    backgroundColor: active
+                      ? colors.brandPrimary
+                      : isDark
+                      ? 'rgba(30, 41, 59, 0.60)'
+                      : 'rgba(255, 255, 255, 0.70)',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: radius.pill,
+                    borderWidth: 1,
+                    borderColor: active
+                      ? colors.brandPrimary
+                      : isDark
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : 'rgba(0, 0, 0, 0.08)',
+                  },
+                  Platform.OS === 'web' && !active &&
+                    ({
+                      backdropFilter: 'blur(20px) saturate(180%)',
+                      WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                      boxShadow: isDark
+                        ? 'inset 0 1px 0 rgba(255, 255, 255, 0.04)'
+                        : 'inset 0 1px 1px rgba(255, 255, 255, 0.80)',
+                    } as any),
+                ]}
+              >
+                <Ionicons
+                  name={f.icon}
+                  size={13}
+                  color={active ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
+                />
+                <AppText
+                  variant="caption"
+                  weight={active ? 'bold' : 'medium'}
+                  tone={active ? 'inverse' : 'secondary'}
+                  style={{ fontSize: 11.5 }}
+                >
+                  {f.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
     </View>
   );
 
@@ -373,7 +391,21 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           ) : null}
 
           {/* Filter & Search Toolbar */}
-          <GlassCard radius={18} padded={false} contentStyle={{ padding: spacing.md }} style={{ marginBottom: spacing.lg }}>
+          <GlassCard
+            radius={18}
+            padded={false}
+            contentStyle={{ padding: spacing.md }}
+            style={[
+              { marginBottom: spacing.lg, zIndex: 20 },
+              Platform.OS === 'web' && ({
+                position: 'sticky',
+                top: 0,
+                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.45)' : '0 8px 24px rgba(0,0,0,0.06)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+              } as any),
+            ]}
+          >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap' }}>
               {/* Search Field */}
               <View

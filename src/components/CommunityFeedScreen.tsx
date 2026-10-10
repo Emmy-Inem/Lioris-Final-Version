@@ -735,6 +735,19 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         </View>
       )}
 
+      {/* Sticky Sub-Forums Navigation Bar */}
+      <View
+        style={[
+          { paddingVertical: 4, marginBottom: spacing.xs, zIndex: 15 },
+          Platform.OS === 'web' && ({
+            position: 'sticky',
+            top: 0,
+            backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          } as any),
+        ]}
+      >
       {/* Sub-Forums Navigation Bar */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, paddingHorizontal: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -840,6 +853,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </AppText>
         </Pressable>
       </ScrollView>
+      </View>
 
       {/* Reddit-Style Sub-Forum Space Banner when a specific community is active */}
       {selectedChannel !== null && (

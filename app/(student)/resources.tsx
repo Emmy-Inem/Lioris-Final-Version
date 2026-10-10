@@ -31,6 +31,7 @@ import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { isSuperAdminIdentity } from '@/utils/campusAccess';
 import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModal';
 import { submitVerificationRequest } from '@/api/verification';
 import { ManageResourcesModal } from '@/components/admin/ManageResourcesModal';
@@ -143,7 +144,7 @@ export default function ResourcesScreen() {
     enabled: !!user,
   });
 
-  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
+  const isSuperAdmin = isSuperAdminIdentity(user);
   const { data: campuses = [] } = useQuery({ queryKey: ['campuses'], queryFn: listCampuses });
   // Determine user's effective campus (e.g. UNILAG, UI, FUNAAB)
   const effectiveCampus = isSuperAdmin
@@ -624,7 +625,19 @@ export default function ResourcesScreen() {
       </View>
 
       {/* Section 2: Academic Repository Header & Filters */}
-      <View style={{ marginBottom: spacing.xs }}>
+      <View
+        style={[
+          { marginBottom: spacing.xs, zIndex: 20 },
+          Platform.OS === 'web' && ({
+            position: 'sticky',
+            top: 0,
+            backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            paddingVertical: 4,
+          } as any),
+        ]}
+      >
         <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8, marginBottom: 6, fontSize: 10.5 }}>
           ACADEMIC REPOSITORY & STUDY FILES
         </AppText>
@@ -1104,7 +1117,19 @@ export default function ResourcesScreen() {
           </View>
 
           {/* Filter & Search Toolbar */}
-          <SolidCard radius={18} style={{ padding: spacing.md, marginBottom: spacing.lg }}>
+          <SolidCard
+            radius={18}
+            style={[
+              { padding: spacing.md, marginBottom: spacing.lg, zIndex: 25 },
+              Platform.OS === 'web' && ({
+                position: 'sticky',
+                top: 0,
+                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.45)' : '0 8px 24px rgba(0,0,0,0.06)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+              } as any),
+            ]}
+          >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap' }}>
               {/* Search Input */}
               <View
