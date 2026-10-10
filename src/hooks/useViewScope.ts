@@ -92,10 +92,8 @@ export async function getStoredCampus(): Promise<string | null> {
 export function resetToDefaultCampusScope(qc = globalQueryClient, isSuperAdmin = false) {
   qc.setQueryData(VIEW_SCOPE_KEY, 'campus' as ViewScope);
   persistScope('campus');
-  if (isSuperAdmin) {
-    qc.setQueryData(ACTIVE_CAMPUS_KEY, null as ActiveCampus);
-    persistCampus(undefined);
-  }
+  qc.setQueryData(ACTIVE_CAMPUS_KEY, null as ActiveCampus);
+  persistCampus(undefined);
 }
 
 // "No campus picked" is stored as null, never undefined: TanStack Query's setQueryData(key, undefined)
@@ -196,9 +194,10 @@ export function useViewScope() {
   }
 
   function setActiveCampusCode(campusCode?: string) {
-    queryClient.setQueryData(ACTIVE_CAMPUS_KEY, (campusCode ?? null) as ActiveCampus);
+    const clean = (campusCode && campusCode !== 'GLOBAL' && campusCode !== 'ALL') ? campusCode : null;
+    queryClient.setQueryData(ACTIVE_CAMPUS_KEY, clean as ActiveCampus);
     queryClient.setQueryData(VIEW_SCOPE_KEY, 'campus' as ViewScope);
-    persistCampus(campusCode);
+    persistCampus(clean || undefined);
     persistScope('campus');
   }
 

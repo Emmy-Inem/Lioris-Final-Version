@@ -31,6 +31,7 @@ import { AppLockOverlay } from '@/components/AppLockOverlay';
 import { IncomingCallListener } from '@/components/IncomingCallListener';
 
 import { FeatureFlagsProvider, useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { RolePermissionsProvider } from '@/context/RolePermissionsContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { LiquidGlassProvider } from '@/context/LiquidGlassContext';
 import { installWebAlertPolyfill, AlertHost } from '@/polyfills/webAlert';
@@ -240,7 +241,9 @@ export default function RootLayout() {
                 <LiquidGlassProvider>
                   <ToastProvider>
                     <FeatureFlagsProvider>
-                      <AppShell />
+                      <RolePermissionsProvider>
+                        <AppShell />
+                      </RolePermissionsProvider>
                     </FeatureFlagsProvider>
                   </ToastProvider>
                 </LiquidGlassProvider>

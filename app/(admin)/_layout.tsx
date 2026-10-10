@@ -93,6 +93,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="takedown-requests" options={{ href: null, tabGroup: 'moderation-queue' } as any} />
       <Tabs.Screen name="audit-logs" options={{ href: null, tabGroup: 'moderation-queue' } as any} />
       <Tabs.Screen name="feature-controls" options={{ href: null, tabGroup: 'platform-config' } as any} />
+      <Tabs.Screen name="role-permissions" options={{ href: null, tabGroup: 'platform-config' } as any} />
       <Tabs.Screen name="super-admin-config" options={{ href: null, tabGroup: 'platform-config' } as any} />
       <Tabs.Screen name="system-health" options={{ href: null, tabGroup: 'platform-config' } as any} />
       <Tabs.Screen name="analytics" options={{ href: null, tabGroup: 'platform-config' } as any} />

@@ -624,20 +624,26 @@ export default function ResourcesScreen() {
         </ScrollView>
       </View>
 
-      {/* Section 2: Academic Repository Header & Filters */}
-      <View
-        style={[
-          { marginBottom: spacing.xs, zIndex: 20 },
-          Platform.OS === 'web' && ({
-            position: 'sticky',
-            top: 0,
-            backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            paddingVertical: 4,
-          } as any),
-        ]}
-      >
+    </View>
+  );
+
+  const renderMobileResourcesFilterBar = () => (
+    <View
+      style={[
+        {
+          paddingVertical: 6,
+          marginBottom: spacing.xs,
+          zIndex: 25,
+          backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        },
+        Platform.OS === 'web' && ({
+          position: 'sticky',
+          top: 0,
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+        } as any),
+      ]}
+    >
         <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8, marginBottom: 6, fontSize: 10.5 }}>
           ACADEMIC REPOSITORY & STUDY FILES
         </AppText>
@@ -800,14 +806,13 @@ export default function ResourcesScreen() {
           })}
         </ScrollView>
       </View>
-    </View>
   );
   return (
     <ScreenContainer glow={true}>
       {isDesktop ? (
         <ScrollView style={{ flex: 1, width: '100%' }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: spacing.md, paddingBottom: 60 }}
+          contentContainerStyle={{ paddingTop: spacing.md, paddingBottom: 60, minHeight: '100%' }}
         >
           {/* Top Header Bar */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
@@ -1300,38 +1305,45 @@ export default function ResourcesScreen() {
           )}
         </ScrollView>
       ) : (
-        /* Mobile Single Column FlatList */
+        /* Mobile Single Column FlatList with Sticky Filter Bar */
         <FlatList
-          data={displayedResources}
+          data={[{ id: '__sticky_resources_filter__' }, ...displayedResources]}
           keyExtractor={(item) => item.id}
+          stickyHeaderIndices={[0]}
           ListHeaderComponent={renderHeader}
           initialNumToRender={8}
           maxToRenderPerBatch={8}
-          contentContainerStyle={{ paddingBottom: 130 }}
-          renderItem={({ item }) => (
-            <View>
-              {isMineView ? <MyUploadStatusBanner resource={item} /> : null}
-              <ResourceCard
-                resource={item}
-                showCampusTag={isSuperAdmin && effectiveCampus === 'ALL'}
-                onPreview={setReadingResource}
-                isBookmarked={bookmarkedIds.includes(item.id)}
-                onToggleBookmark={async () => {
-                  const cleanTitle = item.courseTitle || item.title || item.courseCode;
-                  const added = await toggleBookmark(item.id, {
-                    title: cleanTitle,
-                    subtitle: item.courseCode || 'Course Material',
-                  });
-                  if (added) {
-                    toast.success(`Bookmarked "${item.title}"`);
-                  } else {
-                    toast.info(`Removed "${item.title}" from bookmarks`);
-                  }
-                }}
-                onReport={setReportingResource}
-              />
-            </View>
-          )}
+          contentContainerStyle={{ paddingBottom: 130, minHeight: '100%' }}
+          renderItem={({ item }) => {
+            if (item.id === '__sticky_resources_filter__') {
+              return renderMobileResourcesFilterBar();
+            }
+            const res = item as Resource;
+            return (
+              <View>
+                {isMineView ? <MyUploadStatusBanner resource={res} /> : null}
+                <ResourceCard
+                  resource={res}
+                  showCampusTag={isSuperAdmin && effectiveCampus === 'ALL'}
+                  onPreview={setReadingResource}
+                  isBookmarked={bookmarkedIds.includes(res.id)}
+                  onToggleBookmark={async () => {
+                    const cleanTitle = res.courseTitle || res.title || res.courseCode;
+                    const added = await toggleBookmark(res.id, {
+                      title: cleanTitle,
+                      subtitle: res.courseCode || 'Course Material',
+                    });
+                    if (added) {
+                      toast.success(`Bookmarked "${res.title}"`);
+                    } else {
+                      toast.info(`Removed "${res.title}" from bookmarks`);
+                    }
+                  }}
+                  onReport={setReportingResource}
+                />
+              </View>
+            );
+          }}
           showsVerticalScrollIndicator={false}
           onRefresh={() => { if (isMineView) { void retryResources(); } else { handleRefreshResources(); } }}
           refreshing={isMineView ? isMyResourcesLoading : isRefetching && resourcesPage === 0}

@@ -91,7 +91,7 @@ export function SavedItemsScreen() {
         if (roleGroup === '(admin)') {
           router.push({ pathname: '/(admin)/content-desk', params: { tab: 'resources' } } as any);
         } else {
-          router.push({ pathname: '/(student)/resources', params: { resourceId: item.itemId } });
+          router.push({ pathname: `/${roleGroup}/resources` as any, params: { resourceId: item.itemId } });
         }
         break;
       case 'job':

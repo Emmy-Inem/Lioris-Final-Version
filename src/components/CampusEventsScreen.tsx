@@ -115,19 +115,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   );
   const carouselData = featuredEvents;
 
-  // Auto-scroll carousel timer (pauses when user is dragging)
-  useEffect(() => {
-    if (carouselData.length <= 1) return;
-    const interval = setInterval(() => {
-      if (isInteracting.current) return;
-      setActiveSlide((prev) => {
-        const nextIndex = (prev + 1) % carouselData.length;
-        carouselRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-        return nextIndex;
-      });
-    }, 3800);
-    return () => clearInterval(interval);
-  }, [carouselData.length]);
+  // Carousel auto-scroll is self-managed inside SpotlightEventsCarousel component
 
   const filtered = (events ?? []).filter((e) => {
     if (searchQuery.trim()) {
@@ -220,23 +208,26 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
         <SpotlightEventsCarousel events={carouselData} roleGroup={roleGroup} />
       ) : null}
 
-      {/* Sticky Mobile Search & Filter Toolbar */}
-      <View
-        style={[
-          {
-            paddingVertical: 4,
-            marginBottom: spacing.xs,
-            zIndex: 15,
-          },
-          Platform.OS === 'web' && ({
-            position: 'sticky',
-            top: 0,
-            backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-          } as any),
-        ]}
-      >
+    </View>
+  );
+
+  const renderMobileFilterBar = () => (
+    <View
+      style={[
+        {
+          paddingVertical: 6,
+          marginBottom: spacing.xs,
+          zIndex: 25,
+          backgroundColor: isDark ? 'rgba(10, 19, 38, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        },
+        Platform.OS === 'web' && ({
+          position: 'sticky',
+          top: 0,
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+        } as any),
+      ]}
+    >
         {/* Search Input */}
         <View
           style={{
@@ -334,7 +325,6 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           })}
         </ScrollView>
       </View>
-    </View>
   );
 
   return (
@@ -342,7 +332,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
       {isDesktop ? (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 150 }}
+          contentContainerStyle={{ paddingBottom: 150, minHeight: '100%' }}
           showsVerticalScrollIndicator={false}
         >
           {/* Header */}
@@ -538,21 +528,27 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
       ) : (
         /* Mobile Feed with Sticky Header and Horizontal Carousel */
         <FlatList
-          data={filtered}
+          data={[{ id: '__sticky_filter__' }, ...filtered]}
           keyExtractor={(item) => item.id}
-          initialNumToRender={6}
-          maxToRenderPerBatch={6}
+          stickyHeaderIndices={[0]}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
           windowSize={7}
-          renderItem={({ item }) => (
-            <View style={{ marginBottom: 12 }}>
-              <EventCard event={item} />
-            </View>
-          )}
+          renderItem={({ item }) => {
+            if (item.id === '__sticky_filter__') {
+              return renderMobileFilterBar();
+            }
+            return (
+              <View style={{ marginBottom: 12 }}>
+                <EventCard event={item as CampusEvent} />
+              </View>
+            );
+          }}
           ListHeaderComponent={renderHeader}
           showsVerticalScrollIndicator={false}
           onRefresh={refetch}
           refreshing={isRefetching}
-          contentContainerStyle={{ paddingBottom: 150 }}
+          contentContainerStyle={{ paddingBottom: 150, minHeight: '100%' }}
           ListEmptyComponent={
             isLoading ? (
               <EventCardSkeletonGrid count={4} />

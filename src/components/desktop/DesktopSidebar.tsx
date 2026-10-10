@@ -120,7 +120,7 @@ export function DesktopSidebar() {
     { id: 'people', label: 'People', href: '/(admin)/user-directory', icon: 'people', match: ['/user-directory', '/verification-requests', '/support-desk'] },
     { id: 'content', label: 'Content', href: '/(admin)/content-desk', icon: 'layers', match: ['/content-desk', '/forum', '/events-list', '/events'] },
     { id: 'safety', label: 'Safety', href: '/(admin)/moderation-queue', icon: 'shield-checkmark', match: ['/moderation-queue', '/takedown-requests', '/audit-logs'] },
-    { id: 'platform', label: 'Platform', href: '/(admin)/platform-config', icon: 'settings', match: ['/platform-config', '/feature-controls', '/super-admin-config', '/system-health'], superAdminOnly: true },
+    { id: 'platform', label: 'Platform', href: '/(admin)/platform-config', icon: 'settings', match: ['/platform-config', '/feature-controls', '/role-permissions', '/super-admin-config', '/system-health', '/analytics'], superAdminOnly: true },
     { id: 'messages', label: 'Messages', href: '/(admin)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
     { id: 'notifications', label: 'Alerts', href: '/(admin)/notifications', icon: 'notifications', badgeCount: unreadNotificationsCount },
     { id: 'saved', label: 'Saved Items', href: '/(admin)/saved', icon: 'bookmark' },

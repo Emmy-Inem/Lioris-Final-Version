@@ -74,6 +74,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
       { key: 'analytics', label: 'Analytics & Activity', route: '/(admin)/analytics', path: '/analytics' },
       { key: 'console', label: 'Console', route: '/(admin)/platform-config', path: '/platform-config' },
       { key: 'features', label: 'Features', route: '/(admin)/feature-controls', path: '/feature-controls' },
+      { key: 'permissions', label: 'Role Permissions', route: '/(admin)/role-permissions', path: '/role-permissions' },
       { key: 'campuses', label: 'Campuses & Security', route: '/(admin)/super-admin-config', path: '/super-admin-config' },
       { key: 'health', label: 'Health', route: '/(admin)/system-health', path: '/system-health' },
     ],
