@@ -28,6 +28,7 @@ import { listMarketplaceListings } from '@/api/marketplace';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useForumScope } from '@/hooks/useForumScope';
+import { useCampusRegistry } from '@/hooks/useCampusRegistry';
 
 type SearchTab = 'posts' | 'events' | 'resources' | 'jobs' | 'alumni' | 'marketplace';
 
@@ -62,6 +63,10 @@ export function SearchScreen() {
   const params = useLocalSearchParams<{ q?: string }>();
   const [query, setQuery] = useState(params.q ?? '');
   const [tab, setTab] = useState<SearchTab>('posts');
+  // Super admins can search across every university; null = all schools.
+  const [school, setSchool] = useState<string | null>(null);
+  const { campuses: schoolChoices } = useCampusRegistry();
+  const searchCampus = isSuperAdmin ? (school ?? 'ALL') : campusCode;
   const [readingResource, setReadingResource] = useState<Resource | null>(null);
   const [reportingResource, setReportingResource] = useState<Resource | null>(null);
   const trimmed = query.trim();
@@ -91,14 +96,14 @@ export function SearchScreen() {
   });
 
   const { data: events, isLoading: eventsLoading } = useQuery({
-    queryKey: ['search', 'events', debouncedTrimmed, campusCode],
-    queryFn: () => listEvents({ q: debouncedTrimmed, campusCode }),
+    queryKey: ['search', 'events', debouncedTrimmed, searchCampus],
+    queryFn: () => listEvents({ q: debouncedTrimmed, campusCode: searchCampus }),
     enabled: tab === 'events' && active,
   });
 
   const { data: resources, isLoading: resourcesLoading } = useQuery({
-    queryKey: ['search', 'resources', debouncedTrimmed, campusCode],
-    queryFn: () => listResources({ q: debouncedTrimmed, campusCode }),
+    queryKey: ['search', 'resources', debouncedTrimmed, searchCampus],
+    queryFn: () => listResources({ q: debouncedTrimmed, campusCode: searchCampus }),
     enabled: tab === 'resources' && active,
   });
 
@@ -179,6 +184,35 @@ export function SearchScreen() {
           );
         })}
       </ScrollView>
+
+      {isSuperAdmin && (tab === 'events' || tab === 'resources') ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingRight: spacing.md }} style={{ flexGrow: 0, marginBottom: spacing.md }}>
+          {[{ code: null as string | null, label: 'All schools' }, ...schoolChoices.map((c) => ({ code: c.code as string | null, label: c.shortName || c.code }))].map((opt) => {
+            const selected = school === opt.code;
+            return (
+              <Pressable
+                key={opt.code ?? 'all'}
+                onPress={() => setSchool(opt.code)}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={`Filter by ${opt.label}`}
+                style={{
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.xs,
+                  borderRadius: radius.pill,
+                  backgroundColor: selected ? colors.pastelPrimaryBg : colors.surface,
+                  borderWidth: 1,
+                  borderColor: selected ? colors.brandPrimary : colors.border,
+                }}
+              >
+                <AppText variant="caption" weight={selected ? 'bold' : 'medium'} tone={selected ? 'brand' : 'secondary'}>
+                  {opt.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
 
       {trimmed.length === 0 ? (
         <EmptyState title="Search Campus Knowledge" description="Find forum threads, events, jobs, alumni, marketplace listings, and academic past questions." />

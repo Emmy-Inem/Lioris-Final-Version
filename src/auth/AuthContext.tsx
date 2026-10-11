@@ -466,6 +466,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (event === 'SIGNED_OUT') {
+        // Guard against spurious SIGNED_OUT events fired by some mobile browsers
+        // (Chrome/Safari on Android/iOS) when the user returns from an external
+        // tab (e.g. a PDF opened via window.open). Re-confirm the session is
+        // actually gone before clearing state and redirecting to login.
+        if (!isExplicitLogout.current) {
+          const { data: recheck } = await supabase.auth.getSession();
+          if (recheck?.session) {
+            // Session is still alive — this was a phantom SIGNED_OUT event.
+            // Quietly refresh tokens and carry on without logging the user out.
+            await setTokens(
+              recheck.session.access_token,
+              recheck.session.refresh_token ?? recheck.session.access_token,
+            );
+            return;
+          }
+        }
         // Clear local state for the explicit-logout case too (logout() also does this
         // itself, so this is a no-op there) and for any other SIGNED_OUT we weren't
         // expecting - an invalidated/expired/revoked session (e.g. "Sign Out All Other

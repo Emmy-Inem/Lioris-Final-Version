@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -52,6 +52,8 @@ export default function BuildProfileScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Once the user taps a university, a late-resolving profile load must not overwrite it.
+  const userPickedCampus = useRef(false);
 
   // Fetch existing profile campus/department if previously saved
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function BuildProfileScreen() {
               ? storedCampus
               : detectedCampus;
 
-          if (effectiveInitialCampus) {
+          if (effectiveInitialCampus && !userPickedCampus.current) {
             setCampusCode(effectiveInitialCampus);
             persistCampus(effectiveInitialCampus);
           }
@@ -271,7 +273,9 @@ export default function BuildProfileScreen() {
                 key={inst.code}
                 onPress={() => {
                   haptics.light();
+                  userPickedCampus.current = true;
                   setCampusCode(inst.code);
+                  setErrorMessage(null);
                   persistCampus(inst.code);
                   setDepartment(null);
                   setFaculty(null);
