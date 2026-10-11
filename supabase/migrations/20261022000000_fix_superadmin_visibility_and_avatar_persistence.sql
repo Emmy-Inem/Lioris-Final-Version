@@ -317,50 +317,5 @@ BEGIN
 END;
 $$;
 
--- ---------------------------------------------------------------------------
--- 12. SEED ACADEMIC RESOURCES FOR UI, UNILAG & GLOBAL (Past Questions & Notes)
--- ---------------------------------------------------------------------------
-DO $$
-DECLARE
-    v_admin_id UUID;
-BEGIN
-    SELECT id INTO v_admin_id FROM public.profiles WHERE role = 'admin' LIMIT 1;
-    IF v_admin_id IS NULL THEN
-        SELECT id INTO v_admin_id FROM public.profiles LIMIT 1;
-    END IF;
-
-    IF v_admin_id IS NOT NULL THEN
-        -- UI Resources
-        INSERT INTO public.resources (
-            uploader_id, campus_code, course_code, course_title, title, description,
-            resource_type, file_url, file_mime_type, semester, academic_year, is_approved
-        ) VALUES
-        (v_admin_id, 'UI', 'CSC 311', 'Computer Science', 'Operating Systems (CSC 311) — Comprehensive Lecture Handout', 'Full courseware on processes, threads, concurrency, scheduling algorithms, and memory management from University of Ibadan Computer Science.', 'lecture_note', 'https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/academic_docs/CSC311_Operating_Systems.pdf', 'application/pdf', 'First', '2025/2026', true),
-        (v_admin_id, 'UI', 'MAT 211', 'Mathematics', 'Abstract Algebra I (MAT 211) — Past Questions & Solved Solutions (2020-2025)', 'Past examination papers with step-by-step solutions covering groups, subgroups, cyclic groups, Lagrange theorem, and homomorphisms.', 'past_question', 'https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/academic_docs/MAT211_Past_Questions_Solved.pdf', 'application/pdf', 'First', '2025/2026', true),
-        (v_admin_id, 'UI', 'PHY 101', 'Physics', 'General Physics: Mechanics & Properties of Matter (PHY 101) — Exam Revision Summary', 'Key formula derivations, practice problems with answers, and dimensional analysis guide for PHY 101 undergraduate exam prep.', 'lecture_note', 'https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/academic_docs/PHY101_Mechanics_Summary.pdf', 'application/pdf', 'First', '2025/2026', true),
-        (v_admin_id, 'UI', 'CHM 101', 'Chemistry', 'General Chemistry (CHM 101) — 100 Solved Practice MCQs', 'Collection of authentic multiple-choice examination questions with detailed rationales covering stoichiometry, atomic structure, and chemical equilibrium.', 'past_question', 'https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/academic_docs/CHM101_Solved_MCQs.pdf', 'application/pdf', 'First', '2025/2026', true)
-        ON CONFLICT DO NOTHING;
-
-        -- UNILAG Resources
-        INSERT INTO public.resources (
-            uploader_id, campus_code, course_code, course_title, title, description,
-            resource_type, file_url, file_mime_type, semester, academic_year, is_approved
-        ) VALUES
-        (v_admin_id, 'UNILAG', 'CSC 221', 'Computer Science', 'Data Structures & Algorithms (CSC 221) — Complete Course Notes & Code Examples', 'Official University of Lagos lecture notes on arrays, linked lists, stacks, queues, trees, sorting algorithms, and asymptotic complexity in Python/Java.', 'lecture_note', 'https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/academic_docs/UNILAG_CSC221_Data_Structures.pdf', 'application/pdf', 'Second', '2025/2026', true),
-        (v_admin_id, 'UNILAG', 'FSC 111', 'General Studies', 'Philosophy, Logic & Human Existence (FSC 111) — Past Questions Bank (2019-2025)', 'Curated compilation of past examination questions covering deductive and inductive logic, syllogisms, and fallacies for UNILAG freshmen.', 'past_question', 'https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/academic_docs/UNILAG_FSC111_Past_Questions.pdf', 'application/pdf', 'First', '2025/2026', true),
-        (v_admin_id, 'UNILAG', 'ACC 201', 'Accounting', 'Financial Accounting I (ACC 201) — Standard Principles & Ledger Exercises', 'Detailed notes on double-entry bookkeeping, trial balance preparation, adjustments, and final accounts with standard balance sheet formats.', 'lecture_note', 'https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/academic_docs/UNILAG_ACC201_Financial_Accounting.pdf', 'application/pdf', 'First', '2025/2026', true),
-        (v_admin_id, 'UNILAG', 'ECN 101', 'Economics', 'Principles of Microeconomics (ECN 101) — Past Questions & Solution Guide', 'Past exam problems covering elasticity, consumer behavior, indifference curves, production functions, and cost curves with step-by-step calculations.', 'past_question', 'https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/academic_docs/UNILAG_ECN101_Microeconomics_PQ.pdf', 'application/pdf', 'First', '2025/2026', true)
-        ON CONFLICT DO NOTHING;
-
-        -- GLOBAL Resources
-        INSERT INTO public.resources (
-            uploader_id, campus_code, course_code, course_title, title, description,
-            resource_type, file_url, file_mime_type, semester, academic_year, is_approved
-        ) VALUES
-        (v_admin_id, 'GLOBAL', 'GST 101', 'General Studies', 'Use of English & Communication Skills (GST 101) — National Syllabus Master Guide', 'Standardized syllabus guide across Nigerian universities covering phonetics, reading comprehension, report writing, essay composition, and grammar rules.', 'lecture_note', 'https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/academic_docs/GST101_National_Guide.pdf', 'application/pdf', 'First', '2025/2026', true),
-        (v_admin_id, 'GLOBAL', 'GST 102', 'General Studies', 'Philosophy & Nigerian People (GST 102) — Comprehensive Revision Notes', 'Concise summary of Nigerian cultural history, ethnic groups, pre-colonial institutions, and modern constitutional development.', 'lecture_note', 'https://fdtnbluslkabwsmspbem.supabase.co/storage/v1/object/public/resources/academic_docs/GST102_Revision_Notes.pdf', 'application/pdf', 'Second', '2025/2026', true)
-        ON CONFLICT DO NOTHING;
-
-    END IF;
-END;
-$$;
+-- (Section 12, which seeded placeholder resources with non-existent files, was removed;
+-- see 20261026000000_remove_fake_seeded_resources.sql.)
