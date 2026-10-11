@@ -17,6 +17,10 @@ export const ACTIVE_CAMPUS_KEY = ['active-campus-code'] as const;
 // testing across roles/campuses.
 const STORAGE_SCOPE_KEY = 'lioris.viewScope';
 const STORAGE_CAMPUS_KEY = 'lioris.activeCampusCode';
+// The super admin's "explore this campus" pick lives under its OWN key. STORAGE_CAMPUS_KEY is also
+// written by sign-up, onboarding and profile saves as a user's *home* campus, so sharing it made a
+// stale home campus (e.g. UI) come back as the admin's workspace and keep flipping the app to Ibadan.
+const STORAGE_ADMIN_CAMPUS_KEY = 'lioris.adminWorkspaceCampus';
 const isWeb = Platform.OS === 'web';
 
 function webGet(key: string): string | null {
@@ -81,6 +85,19 @@ export function persistCampus(campusCode?: string) {
   }
 }
 
+export function persistAdminWorkspaceCampus(campusCode?: string) {
+  if (isWeb) {
+    if (campusCode) webSet(STORAGE_ADMIN_CAMPUS_KEY, campusCode);
+    else webDelete(STORAGE_ADMIN_CAMPUS_KEY);
+    return;
+  }
+  if (campusCode) {
+    SecureStore.setItemAsync(STORAGE_ADMIN_CAMPUS_KEY, campusCode).catch(() => {});
+  } else {
+    SecureStore.deleteItemAsync(STORAGE_ADMIN_CAMPUS_KEY).catch(() => {});
+  }
+}
+
 export async function getStoredCampus(): Promise<string | null> {
   try {
     return isWeb ? webGet(STORAGE_CAMPUS_KEY) : await SecureStore.getItemAsync(STORAGE_CAMPUS_KEY);
@@ -94,6 +111,7 @@ export function resetToDefaultCampusScope(qc = globalQueryClient, isSuperAdmin =
   persistScope('campus');
   qc.setQueryData(ACTIVE_CAMPUS_KEY, null as ActiveCampus);
   persistCampus(undefined);
+  persistAdminWorkspaceCampus(undefined);
 }
 
 // "No campus picked" is stored as null, never undefined: TanStack Query's setQueryData(key, undefined)
@@ -101,7 +119,10 @@ export function resetToDefaultCampusScope(qc = globalQueryClient, isSuperAdmin =
 // "Return to my campus" buttons did nothing.
 type ActiveCampus = string | null;
 
-let hydrated = false;
+// Which (user, can-explore) combination the persisted scope was last restored for. Module-level so
+// every component using this hook shares one restore, and it re-runs when the identity changes
+// (e.g. a super admin whose role resolves after the first render).
+let hydratedFor: string | null = null;
 
 export function useViewScope() {
   const queryClient = useQueryClient();
@@ -139,16 +160,16 @@ export function useViewScope() {
   // Restore the persisted choice once per app session (any component using
   // this hook can be the one that triggers it - the `hydrated` guard makes
   // sure it only actually runs once).
-  const hydratedRef = useRef(false);
   useEffect(() => {
     if (authLoading) return;
-    if (hydratedRef.current) return;
-    hydratedRef.current = true;
+    const hydrationKey = `${currentUser?.id ?? 'anon'}:${canExploreWorkspaces ? 'admin' : 'user'}`;
+    if (hydratedFor === hydrationKey) return;
+    hydratedFor = hydrationKey;
     (async () => {
       try {
         const [storedScope, storedCampus] = await Promise.all([
           isWeb ? webGet(STORAGE_SCOPE_KEY) : SecureStore.getItemAsync(STORAGE_SCOPE_KEY),
-          isWeb ? webGet(STORAGE_CAMPUS_KEY) : SecureStore.getItemAsync(STORAGE_CAMPUS_KEY),
+          isWeb ? webGet(canExploreWorkspaces ? STORAGE_ADMIN_CAMPUS_KEY : STORAGE_CAMPUS_KEY) : SecureStore.getItemAsync(canExploreWorkspaces ? STORAGE_ADMIN_CAMPUS_KEY : STORAGE_CAMPUS_KEY),
         ]);
         if (canExploreWorkspaces) {
           if (storedScope === 'campus' || storedScope === 'global') {
@@ -177,7 +198,7 @@ export function useViewScope() {
         // keep the in-memory defaults
       }
     })();
-  }, [authLoading, queryClient, isStudent, canExploreWorkspaces]);
+  }, [authLoading, queryClient, isStudent, canExploreWorkspaces, currentUser?.id]);
 
   // When switching to the student role during a session, ensure workspace defaults to campus for regular users
   const prevRoleRef = useRef(userRole);
@@ -197,7 +218,8 @@ export function useViewScope() {
     const clean = (campusCode && campusCode !== 'GLOBAL' && campusCode !== 'ALL') ? campusCode : null;
     queryClient.setQueryData(ACTIVE_CAMPUS_KEY, clean as ActiveCampus);
     queryClient.setQueryData(VIEW_SCOPE_KEY, 'campus' as ViewScope);
-    persistCampus(clean || undefined);
+    if (canExploreWorkspaces) persistAdminWorkspaceCampus(clean || undefined);
+    else persistCampus(clean || undefined);
     persistScope('campus');
   }
 
