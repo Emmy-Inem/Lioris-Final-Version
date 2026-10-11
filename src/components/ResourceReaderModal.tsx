@@ -31,6 +31,7 @@ import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { resolveMediaUrl } from '@/api/signedUrls';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { useResourceFileSize } from '@/utils/fileSize';
 import { ReportResourceForm } from './ReportResourceModal';
 
 interface ResourceReaderModalProps {
@@ -51,6 +52,7 @@ export function ResourceReaderModal({
   const { user } = useAuth();
   const { isBookmarked, toggleBookmark } = useResourceBookmarks();
 
+  const fileSizeLabel = useResourceFileSize(resource);
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'notes'>('preview');
@@ -277,7 +279,7 @@ export function ResourceReaderModal({
 
             <View style={{ flexShrink: 0 }}>
               <AppButton
-                label={downloaded ? 'Saved' : 'Download'}
+                label={downloaded ? 'Saved' : fileSizeLabel ? `Download · ${fileSizeLabel}` : 'Download'}
                 variant={downloaded ? 'secondary' : 'primary'}
                 size="sm"
                 loading={downloading}
@@ -393,7 +395,7 @@ export function ResourceReaderModal({
                     variant="primary"
                   />
                   <AppButton
-                    label="Download To Device"
+                    label={fileSizeLabel ? `Download To Device · ${fileSizeLabel}` : 'Download To Device'}
                     onPress={handleDownload}
                     variant="secondary"
                   />
@@ -557,7 +559,7 @@ export function ResourceReaderModal({
               </View>
               <View style={{ flex: 1 }}>
                 <AppButton
-                  label={downloaded ? 'Downloaded ✓' : 'Download File'}
+                  label={downloaded ? 'Downloaded ✓' : fileSizeLabel ? `Download File · ${fileSizeLabel}` : 'Download File'}
                   variant="primary"
                   loading={downloading}
                   onPress={handleDownload}

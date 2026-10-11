@@ -29,6 +29,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useForumScope } from '@/hooks/useForumScope';
 import { useCampusRegistry } from '@/hooks/useCampusRegistry';
+import { isSuperAdminIdentity } from '@/utils/campusAccess';
 
 type SearchTab = 'posts' | 'events' | 'resources' | 'jobs' | 'alumni' | 'marketplace';
 
@@ -54,7 +55,7 @@ export function SearchScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
-  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
+  const isSuperAdmin = isSuperAdminIdentity(user);
   const { campusCode } = useCampusScope();
   const { scope: forumScope } = useForumScope();
   // Carries a prefilled query in from callers like DesktopTopBar's search submit
@@ -72,6 +73,7 @@ export function SearchScreen() {
   const trimmed = query.trim();
   const debouncedTrimmed = useDebouncedValue(trimmed);
   const active = debouncedTrimmed.length > 0;
+  const canBrowseBySchool = isSuperAdmin && (tab === 'events' || tab === 'resources');
 
   // Jobs/Career is alumni-only and Marketplace is student-only (staff/admin can
   // still search either, matching their broader cross-role visibility
@@ -97,14 +99,14 @@ export function SearchScreen() {
 
   const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: ['search', 'events', debouncedTrimmed, searchCampus],
-    queryFn: () => listEvents({ q: debouncedTrimmed, campusCode: searchCampus }),
-    enabled: tab === 'events' && active,
+    queryFn: () => listEvents({ q: debouncedTrimmed || undefined, campusCode: searchCampus, scope: isSuperAdmin ? 'all' : undefined }),
+    enabled: tab === 'events' && (active || canBrowseBySchool),
   });
 
   const { data: resources, isLoading: resourcesLoading } = useQuery({
     queryKey: ['search', 'resources', debouncedTrimmed, searchCampus],
-    queryFn: () => listResources({ q: debouncedTrimmed, campusCode: searchCampus }),
-    enabled: tab === 'resources' && active,
+    queryFn: () => listResources({ q: debouncedTrimmed || undefined, campusCode: searchCampus }),
+    enabled: tab === 'resources' && (active || canBrowseBySchool),
   });
 
   const { data: jobs, isLoading: jobsLoading } = useQuery({
@@ -214,7 +216,7 @@ export function SearchScreen() {
         </ScrollView>
       ) : null}
 
-      {trimmed.length === 0 ? (
+      {trimmed.length === 0 && !canBrowseBySchool ? (
         <EmptyState title="Search Campus Knowledge" description="Find forum threads, events, jobs, alumni, marketplace listings, and academic past questions." />
       ) : tab === 'posts' ? (
         <FlatList
@@ -235,7 +237,7 @@ export function SearchScreen() {
             ))}
           </View>
           {(events ?? []).length === 0 && !isLoading.events ? (
-            <EmptyState title={TAB_EMPTY_TITLE.events} description={`No results for "${debouncedTrimmed}".`} />
+            <EmptyState title={TAB_EMPTY_TITLE.events} description={debouncedTrimmed ? `No results for "${debouncedTrimmed}".` : 'No events found for the selected school.'} />
           ) : null}
         </ScrollView>
       ) : tab === 'resources' ? (
@@ -248,7 +250,7 @@ export function SearchScreen() {
             ))}
           </View>
           {(resources ?? []).length === 0 && !isLoading.resources ? (
-            <EmptyState title={TAB_EMPTY_TITLE.resources} description={`No results for "${debouncedTrimmed}".`} />
+            <EmptyState title={TAB_EMPTY_TITLE.resources} description={debouncedTrimmed ? `No results for "${debouncedTrimmed}".` : 'No resources found for the selected school.'} />
           ) : null}
         </ScrollView>
       ) : tab === 'jobs' ? (

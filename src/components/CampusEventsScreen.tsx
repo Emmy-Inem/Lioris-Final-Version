@@ -23,6 +23,7 @@ import { listEvents, EventsQuery } from '@/api/events';
 import { CampusEvent } from '@/api/types';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useAuth } from '@/auth/AuthContext';
+import { isSuperAdminIdentity } from '@/utils/campusAccess';
 import { getInstitutionByCode } from '@/api/institutions';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
@@ -58,8 +59,8 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   const segments = useSegments();
   const roleGroup = segments[0] ?? '(student)';
   const { user } = useAuth();
-  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
-  const isStaffOrAdmin = user?.role === 'admin' || user?.role === 'staff' || user?.actualRole === 'admin';
+  const isSuperAdmin = isSuperAdminIdentity(user);
+  const isStaffOrAdmin = isSuperAdmin || user?.role === 'admin' || user?.role === 'staff' || user?.actualRole === 'admin';
 
   const isAlumniScope = scope === 'alumni' || roleGroup === '(alumni)';
   const activeFilters = isAlumniScope ? ALUMNI_EVENT_FILTERS : STUDENT_EVENT_FILTERS;
@@ -102,7 +103,8 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
 
 
 
-  const queryScope: EventsQuery['scope'] = isAlumniScope ? 'alumni' : (scope ?? 'student');
+  // The super admin sees every event from every university, not just one portal's cohort.
+  const queryScope: EventsQuery['scope'] = isSuperAdmin ? 'all' : isAlumniScope ? 'alumni' : (scope ?? 'student');
 
   const { data: events, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['events', queryScope, 'full', currentCampus],

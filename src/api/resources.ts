@@ -1,4 +1,5 @@
 import { Resource } from './types';
+import { formatFileSize } from '@/utils/fileSize';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { isUserBlocked, isUserMuted } from './connections';
@@ -175,7 +176,7 @@ function mapResourceRow(row: any): Resource {
     description: row.description || '',
     // Undefined when the upload recorded no size - ResourceCard omits the
     // chip rather than showing an invented "2.5 MB".
-    fileSize: row.file_size_bytes ? `${(row.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : undefined,
+    fileSize: formatFileSize(row.file_size_bytes),
     fileUrl: sanitizeHttpUrl(row.file_url) ?? (row.file_url ? String(row.file_url).trim() : null),
     authorName: row.profiles?.full_name || 'Campus Student',
     authorId: row.uploader_id,
@@ -575,9 +576,16 @@ export async function createResource(
  const fileUrl = assertSafeHttpUrl(publicUrlData.publicUrl, 'The file link');
  created.fileUrl = fileUrl;
 
- const realSizeBytes = (fileBlob && typeof (fileBlob as any).size === 'number' ? (fileBlob as any).size : undefined)
- || payload.fileSizeBytes
- || 2500000;
+ const blobBytes =
+   fileBlob instanceof ArrayBuffer
+     ? fileBlob.byteLength
+     : fileBlob && typeof (fileBlob as any).size === 'number'
+     ? (fileBlob as any).size
+     : undefined;
+ const realSizeBytes = blobBytes || payload.fileSizeBytes || null;
+ if (!created.fileSize && realSizeBytes) {
+   created.fileSize = formatFileSize(realSizeBytes);
+ }
 
  const { error } = await supabase.from('resources').insert({
  id: resourceId,

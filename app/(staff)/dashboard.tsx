@@ -34,13 +34,14 @@ import { useReadHomeAlerts } from '@/utils/readDiscussionsTracker';
 import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { isSuperAdminIdentity } from '@/utils/campusAccess';
 
 export default function StaffDashboard() {
   const { colors, spacing, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
-  const { campusCode, homeInstitutionCode } = useCampusScope();
+  const { campusCode, homeInstitutionCode, activeCampusCode } = useCampusScope();
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
 
   const { data: profile } = useQuery({
@@ -49,18 +50,23 @@ export default function StaffDashboard() {
     enabled: !!user,
   });
 
-  const effectiveCampus =
-    homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
-      ? homeInstitutionCode
-      : campusCode && campusCode !== 'GLOBAL'
-      ? campusCode
-      : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
-      ? profile.institutionCode
-      : '';
+  const isSuperAdmin = isSuperAdminIdentity(user);
+
+  const effectiveCampus = isSuperAdmin
+    ? (activeCampusCode && activeCampusCode !== 'GLOBAL' && activeCampusCode !== 'ALL'
+        ? activeCampusCode
+        : 'ALL')
+    : (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
+        ? homeInstitutionCode
+        : campusCode && campusCode !== 'GLOBAL'
+        ? campusCode
+        : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
+        ? profile.institutionCode
+        : '');
 
   const { data: openReports } = useQuery({
     queryKey: ['reports', 'open', effectiveCampus],
-    queryFn: () => listReports({ status: 'open', institutionCode: effectiveCampus || undefined }),
+    queryFn: () => listReports({ status: 'open', institutionCode: effectiveCampus === 'ALL' ? undefined : (effectiveCampus || undefined) }),
   });
 
   const { data: pendingResources } = useQuery({
@@ -70,7 +76,7 @@ export default function StaffDashboard() {
 
   const { data: events } = useQuery({
     queryKey: ['events', 'staff-dash', effectiveCampus],
-    queryFn: () => listEvents({ scope: 'global', campusCode: effectiveCampus }),
+    queryFn: () => listEvents({ scope: 'all', campusCode: effectiveCampus }),
   });
 
   const { showBots, isBotPost } = useBotVisibility();

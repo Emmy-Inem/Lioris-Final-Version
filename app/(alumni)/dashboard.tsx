@@ -40,6 +40,7 @@ import { useReadHomeAlerts } from '@/utils/readDiscussionsTracker';
 import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { isSuperAdminIdentity } from '@/utils/campusAccess';
 
 export default function AlumniDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -47,7 +48,7 @@ export default function AlumniDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { isFeatureEnabled } = useFeatureFlags();
-  const { campusCode, homeInstitutionCode } = useCampusScope();
+  const { campusCode, homeInstitutionCode, activeCampusCode } = useCampusScope();
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
   const { isRead, markAsRead } = useReadHomeAlerts();
 
@@ -57,20 +58,25 @@ export default function AlumniDashboard() {
     enabled: !!user,
   });
 
-  const effectiveCampus =
-    homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
-      ? homeInstitutionCode
-      : campusCode && campusCode !== 'GLOBAL'
-      ? campusCode
-      : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
-      ? profile.institutionCode
-      : '';
+  const isSuperAdmin = isSuperAdminIdentity(user);
+
+  const effectiveCampus = isSuperAdmin
+    ? (activeCampusCode && activeCampusCode !== 'GLOBAL' && activeCampusCode !== 'ALL'
+        ? activeCampusCode
+        : 'ALL')
+    : (homeInstitutionCode && homeInstitutionCode !== 'GLOBAL'
+        ? homeInstitutionCode
+        : campusCode && campusCode !== 'GLOBAL'
+        ? campusCode
+        : profile?.institutionCode && profile.institutionCode !== 'GLOBAL'
+        ? profile.institutionCode
+        : '');
 
   const { showBots, isBotPost } = useBotVisibility();
 
   const { data: posts } = useQuery({
     queryKey: ['feed', 'alumni-dash', effectiveCampus, showBots],
-    queryFn: () => listFeedPosts({ scope: 'global', viewerInstitutionCode: effectiveCampus || undefined, viewScope: effectiveCampus ? 'campus' : 'global', showBots }),
+    queryFn: () => listFeedPosts({ scope: 'global', viewerInstitutionCode: effectiveCampus === 'ALL' ? undefined : (effectiveCampus || undefined), viewScope: effectiveCampus && effectiveCampus !== 'ALL' ? 'campus' : 'global', showBots }),
   });
 
   const { data: jobs, isLoading: jobsLoading } = useQuery({
@@ -87,7 +93,7 @@ export default function AlumniDashboard() {
 
   const { data: events } = useQuery({
     queryKey: ['events', 'alumni-dash', effectiveCampus],
-    queryFn: () => listEvents({ scope: 'alumni', campusCode: effectiveCampus }),
+    queryFn: () => listEvents({ scope: isSuperAdmin ? 'all' : 'alumni', campusCode: effectiveCampus }),
     enabled: isFeatureEnabled('campus_events'),
   });
 

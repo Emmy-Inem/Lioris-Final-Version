@@ -106,8 +106,8 @@ export default function StudentDashboard() {
 
   // 3. Events (Attending vs Featured)
   const { data: events = [] } = useQuery({
-    queryKey: ['events', 'student', effectiveCampus],
-    queryFn: () => listEvents({ scope: 'student', campusCode: effectiveCampus || undefined }),
+    queryKey: ['events', isSuperAdmin ? 'all' : 'student', effectiveCampus],
+    queryFn: () => listEvents({ scope: isSuperAdmin ? 'all' : 'student', campusCode: effectiveCampus || undefined }),
     enabled: isFeatureEnabled('campus_events'),
   });
 

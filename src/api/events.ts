@@ -7,7 +7,7 @@ import { generateUUID } from '../utils/uuid';
 import { getInstitutionForEmail } from './institutions';
 import { parseRpcError, RpcError } from '../utils/rpcErrors';
 import { resolveMediaUrl as resolveSignedMediaUrl, resolveMediaUrls as resolveSignedMediaUrls } from './signedUrls';
-import { resolveCampusReadScope } from '../utils/campusAccess';
+import { isSuperAdminIdentity, resolveCampusReadScope } from '../utils/campusAccess';
 
 
 let locallyCreatedEvents: CampusEvent[] = [];
@@ -78,7 +78,9 @@ function filterEvents(pool: CampusEvent[], query: EventsQuery, currentUserId?: s
   // Events that have ended automatically disappear after 5 days
   const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
   const now = Date.now();
-  results = results.filter((e) => {
+  // Admins/staff (and scope 'all') keep ended events: listEvents() already exempts them from this rule,
+  // and this second pass silently dropped real events for the super admin.
+  if (!isStaffOrAdmin && query.scope !== 'all') results = results.filter((e) => {
     const endStr = e.endAt || e.startAt;
     if (!endStr) return true;
     const endMs = new Date(endStr).getTime();
@@ -135,6 +137,7 @@ function filterEvents(pool: CampusEvent[], query: EventsQuery, currentUserId?: s
 
 export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]> {
   let userCampus = 'GLOBAL';
+  let isStaffOrAdmin = false;
   try {
     const { data: authData } = await supabase.auth.getUser();
     const stored = await getSessionUser();
@@ -157,19 +160,18 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
       profileCampus ||
       authData?.user?.user_metadata?.campus_code ||
       (authData?.user?.email ? getInstitutionForEmail(authData.user.email)?.code : undefined);
-    userCampus = resolveCampusReadScope(
-      {
-        role: userRole,
-        actualRole: stored?.actualRole || userRole,
-        adminRole: adminRole || stored?.adminRole || authData?.user?.user_metadata?.admin_role,
-        campusCode: inferredCampus || stored?.campusCode,
-        email: authData?.user?.email || stored?.email,
-        isSuperAdmin: ((stored as any)?.isSuperAdmin ?? false) || authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com',
-      },
-      query.campusCode,
-    );
+    const identity = {
+      role: userRole,
+      actualRole: stored?.actualRole || userRole,
+      adminRole: adminRole || stored?.adminRole || authData?.user?.user_metadata?.admin_role,
+      campusCode: inferredCampus || stored?.campusCode,
+      email: authData?.user?.email || stored?.email,
+      isSuperAdmin: ((stored as any)?.isSuperAdmin ?? false) || authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com',
+    };
+    const isSuperAdmin = isSuperAdminIdentity(identity);
+    userCampus = resolveCampusReadScope(identity, query.campusCode);
 
-    const isStaffOrAdmin = userRole === 'admin' || userRole === 'staff';
+    isStaffOrAdmin = isSuperAdmin || userRole === 'admin' || userRole === 'staff' || stored?.actualRole === 'admin';
     const currentUserId = authData?.user?.id;
 
     let listQuery = supabase
@@ -257,7 +259,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     return filterEvents(merged, { ...query, campusCode: userCampus }, currentUserId, isStaffOrAdmin);
   } catch (err) {
     console.warn('[Events] Supabase listEvents error, showing local pool only:', err);
-    return filterEvents([...locallyCreatedEvents], { ...query, campusCode: userCampus });
+    return filterEvents([...locallyCreatedEvents], { ...query, campusCode: userCampus }, undefined, isStaffOrAdmin);
   }
 }
 

@@ -26,6 +26,7 @@ import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { resolveMediaUrl } from '@/api/signedUrls';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { useResourceFileSize } from '@/utils/fileSize';
 import { ReportResourceModal } from './ReportResourceModal';
 
 export interface ResourceCardProps {
@@ -50,6 +51,7 @@ export const ResourceCard = React.memo(function ResourceCard({
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const toast = useToast();
+  const fileSizeLabel = useResourceFileSize(resource);
 
   const [internalBookmarked, setInternalBookmarked] = useState(() => isResourceBookmarked(resource.id));
   const bookmarked = externalBookmarked !== undefined ? externalBookmarked : internalBookmarked;
@@ -223,9 +225,9 @@ export const ResourceCard = React.memo(function ResourceCard({
                 tone="neutral"
               />
             ) : null}
-            {resource.fileSize ? (
+            {fileSizeLabel ? (
               <AppText tone="secondary" variant="caption" style={{ fontSize: 10.5 }}>
-                {resource.fileSize}
+                {fileSizeLabel}
               </AppText>
             ) : null}
           </View>
@@ -330,7 +332,7 @@ export const ResourceCard = React.memo(function ResourceCard({
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <AppButton
-              label={downloaded ? 'Saved' : 'Download'}
+              label={downloaded ? 'Saved' : fileSizeLabel ? `Download · ${fileSizeLabel}` : 'Download'}
               variant={downloaded ? 'secondary' : 'primary'}
               onPress={handleDownload}
               loading={downloading}

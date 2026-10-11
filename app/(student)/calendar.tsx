@@ -13,6 +13,9 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { CampusMapModal } from '@/components/CampusMapModal';
 import { listEvents } from '@/api/events';
+import { useAuth } from '@/auth/AuthContext';
+import { useCampusScope } from '@/hooks/useCampusScope';
+import { isSuperAdminIdentity } from '@/utils/campusAccess';
 
 const TABS = ['Monthly Grid', 'Agenda'] as const;
 
@@ -20,10 +23,19 @@ export default function CalendarScreen() {
  const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
  const { isFeatureEnabled } = useFeatureFlags();
+ const { user } = useAuth();
+ const { campusCode, activeCampusCode } = useCampusScope();
+ const isSuperAdmin = isSuperAdminIdentity(user);
+ const currentCampus = isSuperAdmin
+   ? (activeCampusCode && activeCampusCode !== 'GLOBAL' && activeCampusCode !== 'ALL' ? activeCampusCode : 'ALL')
+   : campusCode;
  const [tab, setTab] = useState<(typeof TABS)[number]>('Monthly Grid');
   const [mapModalOpen, setMapModalOpen] = useState(false);
 
- const { data: events } = useQuery({ queryKey: ['events', 'student', 'calendar'], queryFn: () => listEvents({ scope: 'student' }) });
+ const { data: events } = useQuery({
+   queryKey: ['events', isSuperAdmin ? 'all' : 'student', 'calendar', currentCampus],
+   queryFn: () => listEvents({ scope: isSuperAdmin ? 'all' : 'student', campusCode: currentCampus }),
+ });
 
  if (!isFeatureEnabled('utility_cards')) {
   return (
