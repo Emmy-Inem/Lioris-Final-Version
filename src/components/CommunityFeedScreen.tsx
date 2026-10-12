@@ -1072,7 +1072,19 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   return (
     <ScreenContainer glow={false}>
       {isDesktop ? (
-        <View style={{ flexDirection: 'row', gap: 24, flex: 1, paddingTop: spacing.md, paddingBottom: 30, alignItems: 'flex-start' }}>
+        <ScrollView
+          style={{ flex: 1, width: '100%', minHeight: 0 }}
+          showsVerticalScrollIndicator={true}
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={160}
+          onScroll={(e) => {
+            const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+            if (contentSize.height - (layoutMeasurement.height + contentOffset.y) < 420) {
+              handleLoadMore();
+            }
+          }}
+        >
+        <View style={{ flexDirection: 'row', gap: 24, paddingTop: spacing.md, paddingBottom: 60, alignItems: 'flex-start' }}>
           {/* Main Feed Column */}
           <View style={{ flex: 1, minWidth: 0 }}>
             {/* Desktop Screen Title & Actions Header */}
@@ -1484,11 +1496,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               renderItem={({ item }) => (
                 <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} forceScopeBadge={showAllCampuses} />
               )}
-              showsVerticalScrollIndicator={true}
-              onRefresh={handleRefresh}
-              refreshing={isRefetching || manualRefreshing}
-              alwaysBounceVertical
-              overScrollMode="always"
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
               onEndReached={handleLoadMore}
               onEndReachedThreshold={0.4}
               ListFooterComponent={
@@ -1668,6 +1677,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             </SolidCard>
           </View>
         </View>
+        </ScrollView>
       ) : (
       /* Mobile Single Column FlatList */
       <FlatList

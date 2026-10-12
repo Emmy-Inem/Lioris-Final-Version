@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useReducedMotion } from'@/theme/useReducedMotion';
@@ -59,6 +59,8 @@ export function ActionSheetModal({ visible, onClose, children }: ActionSheetModa
             {
               width: '100%',
               maxWidth: 500,
+              maxHeight: '88%',
+              overflow: 'hidden',
               backgroundColor: colors.surface,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
@@ -71,10 +73,16 @@ export function ActionSheetModal({ visible, onClose, children }: ActionSheetModa
           ]}
         >
           {/* Mobile Sheet Grab Handle */}
-          <View style={{ alignItems: 'center', marginBottom: 12 }}>
+          <View style={{ alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
             <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
           </View>
-          {children}
+          <ScrollView
+            style={{ flexGrow: 0, flexShrink: 1, minHeight: 0, width: '100%' }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {children}
+          </ScrollView>
         </Animated.View>
       </View>
     </Modal>

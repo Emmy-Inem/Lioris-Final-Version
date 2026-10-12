@@ -72,7 +72,7 @@ export function AppButton({
  borderRadius: isSmall ? radius.pill : radius.md,
  minHeight: isSmall ? 34 : minTouchTarget,
  paddingHorizontal: isSmall ? spacing.md : spacing.lg,
- paddingVertical: isSmall ? 4 : undefined,
+ paddingVertical: isSmall ? 6 : 10,
  opacity: disabled ? 0.5 : 1,
  width: fullWidth ? '100%' : undefined,
  },
@@ -99,6 +99,7 @@ const styles = StyleSheet.create({
  base: {
  alignItems: 'center',
  justifyContent: 'center',
+ flexShrink: 0,
  },
  content: {
  flexDirection: 'row',

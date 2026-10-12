@@ -113,13 +113,15 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  }
 
  return (
- <View>
+ <>
  {/* 3-Way Segmented Control Bar */}
+ <View style={{ flexShrink: 0, marginBottom: spacing.md }}>
  <ScrollView
  horizontal
  showsHorizontalScrollIndicator={false}
- contentContainerStyle={{ gap: spacing.xs, marginBottom: spacing.md }}
- style={{ flex: 1, minWidth: 0 }}
+ contentContainerStyle={{ gap: spacing.xs }}
+ style={{ flexGrow: 0, flexShrink: 0 }}
+ {...({ 'data-horizontal-scroll': 'true' } as any)}
  >
  <Pressable
  onPress={() => {
@@ -177,7 +179,14 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  </Pressable>
  )}
  </ScrollView>
+ </View>
 
+ <ScrollView
+ style={{ flex: 1, minHeight: 0, width: '100%' }}
+ showsVerticalScrollIndicator={false}
+ keyboardShouldPersistTaps="handled"
+ contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 140 }}
+ >
  {/* Resource Upload Submissions Queue */}
  {section === 'resources' ? (
  <View>
@@ -329,6 +338,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  ) : null}
  </View>
  ) : null}
+ </ScrollView>
 
  {/* Document Inspector Modal */}
   <Modal visible={!!previewResource} transparent animationType="fade" onRequestClose={() => setPreviewResource(null)}>
@@ -351,9 +361,10 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
           maxHeight: '85%',
           width: '100%',
           maxWidth: 560,
+          overflow: 'hidden',
         }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, flexShrink: 0 }}>
           <AppText variant="h3" weight="bold">
             Resource Submission Preview
           </AppText>
@@ -363,7 +374,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
         </View>
 
         {previewResource ? (
-          <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flexGrow: 0, flexShrink: 1, minHeight: 0, width: '100%' }} showsVerticalScrollIndicator={false}>
             <AppText variant="body" weight="bold" style={{ marginBottom: 4 }}>
               {previewResource.title}
             </AppText>
@@ -389,12 +400,12 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
           </ScrollView>
         ) : null}
 
-        <View style={{ marginTop: spacing.md }}>
+        <View style={{ marginTop: spacing.md, flexShrink: 0 }}>
           <AppButton label="Close Preview" onPress={() => setPreviewResource(null)} />
         </View>
       </View>
     </View>
   </Modal>
- </View>
+ </>
  );
 }

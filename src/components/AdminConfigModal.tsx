@@ -61,13 +61,8 @@ export function AdminConfigModal({
         }}
       >
         <Animated.View style={[{ width: '100%', maxWidth: 540, maxHeight: '90%' }, animatedStyle]}>
-          <SolidCard radius={20} style={{ width: '100%', maxHeight: '100%' }}>
-            <ScrollView
-              style={{ width: '100%' }}
-              contentContainerStyle={{ paddingBottom: spacing.sm }}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
+          <SolidCard radius={20} style={{ width: '100%', maxHeight: '100%', overflow: 'hidden' }}>
+            <View style={{ flexShrink: 0 }}>
               <AppText variant="h3" weight="bold" style={{ marginBottom: description ? spacing.xs : spacing.md }}>
                 {title}
               </AppText>
@@ -76,23 +71,30 @@ export function AdminConfigModal({
                   {description}
                 </AppText>
               ) : null}
+            </View>
 
+            <ScrollView
+              style={{ flexGrow: 0, flexShrink: 1, minHeight: 0, width: '100%' }}
+              contentContainerStyle={{ paddingBottom: spacing.sm }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               {children}
-
-              <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.lg }}>
-                <AppButton label="Cancel" variant="ghost" onPress={onClose} />
-                {onConfirm ? (
-                  <AppButton
-                    label={confirmLabel}
-                    variant={confirmDestructive ? 'accent' : 'primary'}
-                    onPress={() => {
-                      onConfirm();
-                      onClose();
-                    }}
-                  />
-                ) : null}
-              </View>
             </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.md, flexShrink: 0 }}>
+              <AppButton label="Cancel" variant="ghost" onPress={onClose} />
+              {onConfirm ? (
+                <AppButton
+                  label={confirmLabel}
+                  variant={confirmDestructive ? 'accent' : 'primary'}
+                  onPress={() => {
+                    onConfirm();
+                    onClose();
+                  }}
+                />
+              ) : null}
+            </View>
           </SolidCard>
         </Animated.View>
       </KeyboardAvoidingView>

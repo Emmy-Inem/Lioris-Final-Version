@@ -188,7 +188,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
           </View>
 
  {isCreating || editingResource ? (
- <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg }}>
+ <ScrollView style={{ flexGrow: 0, flexShrink: 1, minHeight: 0, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
  <AppText variant="h3"weight="bold">
  {editingResource ? `Edit Resource: ${editingResource.title}` : 'Add Academic Resource'}
@@ -258,9 +258,9 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  />
  </ScrollView>
  ) : (
- <View style={{ padding: spacing.lg, flex: 1 }}>
+ <View style={{ padding: spacing.lg, flex: 1, minHeight: 0 }}>
  {/* Category Filter bar */}
- <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ gap: 6, marginBottom: spacing.sm }}>
+ <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ gap: 6, marginBottom: spacing.sm }}>
  <Pressable
  onPress={() => setSelectedCategory('all')}
  style={{

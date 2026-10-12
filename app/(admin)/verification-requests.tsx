@@ -534,8 +534,8 @@ export default function VerificationRequestsScreen() {
       <Modal visible={!!inspectDocRequest} transparent animationType="fade" onRequestClose={() => setInspectDocRequest(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: spacing.md }}>
           {inspectDocRequest && (
-            <SolidCard radius={24} style={{ width: '100%', maxWidth: 440, maxHeight: '92%' }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md, gap: spacing.sm }}>
+            <SolidCard radius={24} style={{ width: '100%', maxWidth: 440, maxHeight: '92%', overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md, gap: spacing.sm, flexShrink: 0 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0 }}>
                   <View style={{ flexShrink: 0 }}>
                     <Ionicons name="document-text" size={20} color={colors.brandPrimary} />
@@ -556,7 +556,7 @@ export default function VerificationRequestsScreen() {
               </View>
 
               <ScrollView
-                style={{ flexGrow: 0 }}
+                style={{ flexGrow: 0, flexShrink: 1, minHeight: 0, width: '100%' }}
                 contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.sm }}
                 showsVerticalScrollIndicator={false}
               >
@@ -597,7 +597,7 @@ export default function VerificationRequestsScreen() {
                 </View>
               </ScrollView>
 
-              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexWrap: 'wrap' }}>
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexWrap: 'wrap', flexShrink: 0 }}>
                 <View style={{ flex: 1, minWidth: 130 }}>
                   <AppButton
                     label="Reject"

@@ -63,7 +63,7 @@ export function FormSheet({ visible, onClose, title, subtitle, children, footer,
               <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
             </View>
           ) : null}
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm, flexShrink: 0 }}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <AppText variant="h3" weight="bold">
                 {title}
@@ -79,14 +79,14 @@ export function FormSheet({ visible, onClose, title, subtitle, children, footer,
             </Pressable>
           </View>
           <ScrollView
-            style={{ flexGrow: 0, flexShrink: 1 }}
+            style={{ flexGrow: 0, flexShrink: 1, minHeight: 0, width: '100%' }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ paddingBottom: spacing.sm, gap: spacing.sm }}
           >
             {children}
           </ScrollView>
-          {footer ? <View style={{ paddingTop: spacing.sm }}>{footer}</View> : null}
+          {footer ? <View style={{ paddingTop: spacing.sm, flexShrink: 0 }}>{footer}</View> : null}
         </View>
       </KeyboardAvoidingView>
     </Modal>

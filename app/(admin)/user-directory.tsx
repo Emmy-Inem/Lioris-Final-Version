@@ -1153,9 +1153,15 @@ export default function UserDirectoryScreen() {
       {loading && users.length === 0 ? (
         <ShimmerCardList count={isDesktop ? 6 : 4} />
       ) : isDesktop ? (
-        <View style={{ flexDirection: 'row', gap: 24, flex: 1, minHeight: 0, alignItems: 'stretch' }}>
+        <ScrollView
+          style={{ flex: 1, minHeight: 0, width: '100%' }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 100 }}
+        >
+        <View style={{ flexDirection: 'row', gap: 24, alignItems: 'flex-start' }}>
           {/* Left Column: Search & Filters Rail */}
-          <View style={{ width: 280, gap: spacing.md }}>
+          <View style={{ width: 280, flexShrink: 0, gap: spacing.md }}>
             <SolidCard radius={20} style={{ padding: spacing.md, gap: spacing.sm }}>
               <AppText variant="bodySmall" weight="bold">
                 Search Members
@@ -1234,15 +1240,15 @@ export default function UserDirectoryScreen() {
           </View>
 
           {/* Right Column: User Cards Grid */}
-          <View style={{ flex: 1, minHeight: 0 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <FlatList
-              style={{ flex: 1, minHeight: 0 }}
+              scrollEnabled={false}
               data={filtered}
               keyExtractor={(item) => item.id}
               numColumns={2}
               columnWrapperStyle={{ gap: spacing.md }}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 100, gap: spacing.sm }}
+              contentContainerStyle={{ gap: spacing.sm }}
               renderItem={({ item }) => (
                 <View style={{ flex: 1, minWidth: 0, marginBottom: spacing.xs }}>
                   <SolidCard radius={18} style={{ borderWidth: 1, borderColor: item.suspended ? `${colors.critical}50` : colors.border }}>
@@ -1316,6 +1322,7 @@ export default function UserDirectoryScreen() {
             />
           </View>
         </View>
+        </ScrollView>
       ) : (
         /* Mobile Layout */
         <>
@@ -1559,8 +1566,8 @@ export default function UserDirectoryScreen() {
       <Modal visible={!!detailModalUser} transparent animationType="fade" onRequestClose={() => setDetailModalUser(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
           {detailModalUser && (
-            <SolidCard radius={24} style={{ width: '100%', maxWidth: 440 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, gap: spacing.sm }}>
+            <SolidCard radius={24} style={{ width: '100%', maxWidth: 440, maxHeight: '90%', overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, gap: spacing.sm, flexShrink: 0 }}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold">
                     Identity Record
@@ -1571,6 +1578,7 @@ export default function UserDirectoryScreen() {
  </Pressable>
  </View>
 
+ <ScrollView style={{ flexGrow: 0, flexShrink: 1, minHeight: 0, width: '100%' }} showsVerticalScrollIndicator={false}>
  <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
  <Avatar name={detailModalUser.fullName} size={72} role={detailModalUser.role.toLowerCase() as any} />
  <AppText variant="h3"weight="bold"style={{ marginTop: spacing.xs }}>
@@ -1620,7 +1628,7 @@ export default function UserDirectoryScreen() {
  </View>
  </View>
 
- <View style={{ marginBottom: spacing.md }}>
+ <View style={{ marginBottom: spacing.sm }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
  <AppText variant="bodySmall" weight="bold">Recent Activity & Audit Trail</AppText>
  <Pressable onPress={() => { setDetailModalUser(null); router.push('/(admin)/audit-logs'); }}>
@@ -1653,8 +1661,9 @@ export default function UserDirectoryScreen() {
  </View>
  )}
  </View>
+ </ScrollView>
 
-                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexShrink: 0 }}>
                   {!(currentUser?.isCampusAdmin && detailModalUser.role === 'Admin') && (
                     <View style={{ flex: 1 }}>
                       <AppButton
@@ -1787,8 +1796,8 @@ export default function UserDirectoryScreen() {
  <Modal visible={createModalOpen} transparent animationType="slide"onRequestClose={() => setCreateModalOpen(false)}>
  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
  <Pressable style={{ flex: 1 }} onPress={() => setCreateModalOpen(false)} />
- <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '90%' }}>
- <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+ <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '90%', width: '100%', maxWidth: 560, alignSelf: 'center', overflow: 'hidden' }}>
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, flexShrink: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Ionicons name="person-add" size={20} color={colors.brandPrimary} />
                 <AppText variant="h2" weight="bold">
@@ -1800,7 +1809,7 @@ export default function UserDirectoryScreen() {
  </Pressable>
  </View>
 
- <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, width: '100%',  marginBottom: spacing.md }}>
+ <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flexGrow: 0, flexShrink: 1, minHeight: 0, width: '100%' }}>
  <AppTextField
  label="Full Legal Name"placeholder="e.g. Samuel Adeyinka"value={newFullName}
  onChangeText={setNewFullName}
@@ -1890,14 +1899,14 @@ export default function UserDirectoryScreen() {
  TARGET UNIVERSITY CAMPUS NODE
  </AppText>
                 {currentUser?.isCampusAdmin ? (
-                  <View style={{ padding: spacing.sm, backgroundColor: colors.divider, borderRadius: radius.md, marginBottom: spacing.lg }}>
+                  <View style={{ padding: spacing.sm, backgroundColor: colors.divider, borderRadius: radius.md, marginBottom: spacing.sm }}>
                     <AppText weight="bold">{newCampus}</AppText>
                     <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
                       Locked to your assigned university campus.
                     </AppText>
                   </View>
                 ) : (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.lg }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.sm }}>
                     {activeInstitutions.map((institution) => institution.code).map((c) => (
                       <Pressable
                         key={c}
@@ -1917,13 +1926,15 @@ export default function UserDirectoryScreen() {
                     ))}
                   </View>
                 )}
+ </ScrollView>
 
+ <View style={{ marginTop: spacing.md, flexShrink: 0 }}>
  <AppButton
  label={isProvisioning ? 'Provisioning...' : 'Provision & Send Invitation'}onPress={handleCreateUser}
  disabled={isProvisioning}
  fullWidth
  />
- </ScrollView>
+ </View>
  </View>
  </View>
         </Modal>
@@ -1932,8 +1943,8 @@ export default function UserDirectoryScreen() {
         <Modal visible={!!editModalUser} transparent animationType="slide" onRequestClose={() => setEditModalUser(null)}>
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
             <Pressable style={{ flex: 1 }} onPress={() => setEditModalUser(null)} />
-            <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '90%' }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+            <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.lg, maxHeight: '90%', width: '100%', maxWidth: 560, alignSelf: 'center', overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, flexShrink: 0 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                   <Ionicons name="create-outline" size={20} color={colors.brandPrimary} />
                   <AppText variant="h2" weight="bold">
@@ -1945,7 +1956,7 @@ export default function UserDirectoryScreen() {
                 </Pressable>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false} style={{ width: '100%', marginBottom: spacing.md }}>
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flexGrow: 0, flexShrink: 1, minHeight: 0, width: '100%' }}>
                 <AppTextField
                   label="Full Legal Name"
                   placeholder="Full Name"
@@ -2121,7 +2132,7 @@ export default function UserDirectoryScreen() {
                 {/* Diagnostics: mute activity / job alerts / notification preferences -
                     read-only, for handling complaints ("still seeing someone I muted",
                     "not getting job alert notifications") without the SQL editor. */}
-                <View style={{ backgroundColor: colors.divider, borderRadius: radius.md, marginBottom: spacing.md, overflow: 'hidden' }}>
+                <View style={{ backgroundColor: colors.divider, borderRadius: radius.md, marginBottom: spacing.xs, overflow: 'hidden' }}>
                   <Pressable
                     onPress={toggleDiagnostics}
                     style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md }}
@@ -2201,14 +2212,16 @@ export default function UserDirectoryScreen() {
                     </View>
                   )}
                 </View>
+              </ScrollView>
 
+              <View style={{ marginTop: spacing.md, flexShrink: 0 }}>
                 <AppButton
                   label="Save & Commit Profile Changes"
                   onPress={handleSaveEditedUser}
                   loading={editSaving}
                   fullWidth
                 />
-              </ScrollView>
+              </View>
             </View>
           </View>
         </Modal>

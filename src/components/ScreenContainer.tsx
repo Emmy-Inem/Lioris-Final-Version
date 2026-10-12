@@ -44,19 +44,26 @@ export function ScreenContainer({
    }
  };
 
+ const isDesktopWebBoxed = Platform.OS === 'web' && isDesktop && !scrollable && !fluidWidth;
+
  const content = (
  <View
  style={[
  scrollable ? styles.scrollableContent : styles.flex,
- !noPadding && { paddingHorizontal: containerPadding },
- isDesktop && !fluidWidth && {
+ !isDesktopWebBoxed && !noPadding && { paddingHorizontal: containerPadding },
+ isDesktop && !fluidWidth && !isDesktopWebBoxed && {
  maxWidth: contentMaxWidth,
  width: '100%',
  alignSelf: 'center',
  },
  !scrollable && Platform.OS === 'web' && { flex: 1, minHeight: 0 },
+ isDesktopWebBoxed && ({
+ '--lioris-max-width': `${contentMaxWidth}px`,
+ '--lioris-pad-x': `${noPadding ? 0 : containerPadding}px`,
+ } as any),
  style,
  ]}
+ {...(isDesktopWebBoxed ? ({ 'data-screen-container': 'boxed' } as any) : {})}
  {...rest}
  >
  {children}

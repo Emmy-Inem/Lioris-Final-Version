@@ -405,17 +405,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
               </View>
 
               {/* Filter Pills */}
-              <ScrollView
-                ref={desktopFiltersScrollRef}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                {...({ 'data-horizontal-scroll': 'true' } as any)}
-                style={[
-                  { flex: 1, minWidth: 0 },
-                  Platform.OS === 'web' && ({ overflowX: 'auto', scrollbarWidth: 'none' } as any),
-                ]}
-                contentContainerStyle={{ gap: 8 }}
-              >
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                 {activeFilters.map((f) => {
                   const active = filter === f.key;
                   return (
@@ -428,6 +418,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
+                        flexShrink: 0,
                         gap: 6,
                         paddingHorizontal: 14,
                         paddingVertical: 8,
@@ -452,7 +443,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+              </View>
             </View>
           </GlassCard>
 

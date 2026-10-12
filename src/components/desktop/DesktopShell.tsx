@@ -22,7 +22,7 @@ export function DesktopShell({ children }: DesktopShellProps) {
  <DesktopTopBar />
 
  {/* Dynamic Screen View */}
- <View style={styles.contentView}>
+ <View style={styles.contentView} {...({ 'data-main-work-area': 'true' } as any)}>
  {children}
  </View>
  </View>

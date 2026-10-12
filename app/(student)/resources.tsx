@@ -800,8 +800,8 @@ export default function ResourcesScreen() {
           contentContainerStyle={{ paddingTop: spacing.md, paddingBottom: 60, minHeight: '100%' }}
         >
           {/* Top Header Bar */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-            <View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md }}>
+            <View style={{ flex: 1, minWidth: 280 }}>
               <AppText variant="h1" weight="bold">
                 Campus Resources & Academic Library
               </AppText>
@@ -810,7 +810,7 @@ export default function ResourcesScreen() {
               </AppText>
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm }}>
               {(user?.role === 'admin' || user?.role === 'staff') && (
                 <Pressable
                   onPress={() => setAdminManageOpen(true)}
@@ -1146,17 +1146,7 @@ export default function ResourcesScreen() {
               </View>
 
               {/* Resource Type Pills */}
-              <ScrollView
-                ref={categoriesScrollRef}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                {...({ 'data-horizontal-scroll': 'true' } as any)}
-                style={[
-                  { flex: 1, minWidth: 0 },
-                  Platform.OS === 'web' && ({ overflowX: 'auto', scrollbarWidth: 'none' } as any),
-                ]}
-                contentContainerStyle={{ gap: 8 }}
-              >
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                 {RESOURCE_CATEGORIES.map((c) => {
                   const selected = filters.resourceType === c.filter;
                   return (
@@ -1173,6 +1163,7 @@ export default function ResourcesScreen() {
                         backgroundColor: selected ? colors.brandPrimary : colors.background,
                         borderWidth: 1,
                         borderColor: selected ? colors.brandPrimary : colors.border,
+                        flexShrink: 0,
                       }}
                     >
                       <Ionicons
@@ -1190,7 +1181,7 @@ export default function ResourcesScreen() {
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+              </View>
 
               {/* Filter Modal Trigger */}
               <Pressable

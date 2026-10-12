@@ -39,7 +39,7 @@ export function SegmentedTabs({
       onLayout={(e) => {
         viewportWidthRef.current = e.nativeEvent.layout.width;
       }}
-      style={{ flexGrow: 0 }}
+      style={{ flexGrow: 0, flexShrink: 0 }}
       contentContainerStyle={{ gap: spacing.xs, paddingRight: spacing.md }}
       {...({ 'data-horizontal-scroll': 'true' } as any)}
     >
@@ -88,6 +88,7 @@ export function SegmentedTabs({
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              flexShrink: 0,
               gap: 6,
               paddingHorizontal: 14,
               paddingVertical: 8,

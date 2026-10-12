@@ -467,25 +467,30 @@ export default function SupportDeskScreen() {
                 padding: spacing.lg,
                 borderWidth: 1,
                 borderColor: colors.border,
+                overflow: 'hidden',
               }}
             >
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Modal Header */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-                  <View>
-                    <AppText variant="h2" weight="bold">Ticket Resolution</AppText>
-                    <AppText tone="secondary" variant="caption">
-                      ID: {selectedTicket.id.slice(0, 12)}... • Submitted {new Date(selectedTicket.createdAt).toLocaleString()}
-                    </AppText>
-                  </View>
-                  <Ionicons
-                    name="close"
-                    size={24}
-                    color={colors.textSecondary}
-                    onPress={() => setSelectedTicket(null)}
-                  />
+              {/* Modal Header */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, flexShrink: 0 }}>
+                <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.sm }}>
+                  <AppText variant="h2" weight="bold">Ticket Resolution</AppText>
+                  <AppText tone="secondary" variant="caption">
+                    ID: {selectedTicket.id.slice(0, 12)}... • Submitted {new Date(selectedTicket.createdAt).toLocaleString()}
+                  </AppText>
                 </View>
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={colors.textSecondary}
+                  onPress={() => setSelectedTicket(null)}
+                />
+              </View>
 
+              <ScrollView
+                style={{ flexGrow: 0, flexShrink: 1, minHeight: 0, width: '100%' }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
                 {/* User Info Card */}
                 <SolidCard style={{ padding: spacing.md, marginBottom: spacing.md, backgroundColor: isDark ? '#18181B' : '#F4F4F5' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -646,7 +651,7 @@ export default function SupportDeskScreen() {
                 </View>
 
                 {/* Admin Internal Resolution Notes */}
-                <View style={{ marginBottom: spacing.md }}>
+                <View style={{ marginBottom: spacing.xs }}>
                   <AppText variant="caption" weight="bold" tone="secondary">Resolution Notes & Reply to User:</AppText>
                   <TextInput
                     value={adminNotes}
@@ -669,37 +674,37 @@ export default function SupportDeskScreen() {
                     }}
                   />
                 </View>
-
-                {/* Action Buttons */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: spacing.sm }}>
-                  <AppButton
-                    label="Delete Ticket"
-                    variant="ghost"
-                    size="sm"
-                    onPress={handleDeleteTicket}
-                    loading={actionLoading}
-                  />
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {selectedTicket.status !== 'in_progress' && (
-                      <AppButton
-                        label="In Progress"
-                        variant="secondary"
-                        size="sm"
-                        onPress={() => handleUpdateStatus('in_progress')}
-                        loading={actionLoading}
-                      />
-                    )}
-                    {selectedTicket.status !== 'resolved' && (
-                      <AppButton
-                        label="Mark Resolved"
-                        size="sm"
-                        onPress={() => handleUpdateStatus('resolved')}
-                        loading={actionLoading}
-                      />
-                    )}
-                  </View>
-                </View>
               </ScrollView>
+
+              {/* Action Buttons */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: spacing.md, flexShrink: 0, flexWrap: 'wrap' }}>
+                <AppButton
+                  label="Delete Ticket"
+                  variant="ghost"
+                  size="sm"
+                  onPress={handleDeleteTicket}
+                  loading={actionLoading}
+                />
+                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                  {selectedTicket.status !== 'in_progress' && (
+                    <AppButton
+                      label="In Progress"
+                      variant="secondary"
+                      size="sm"
+                      onPress={() => handleUpdateStatus('in_progress')}
+                      loading={actionLoading}
+                    />
+                  )}
+                  {selectedTicket.status !== 'resolved' && (
+                    <AppButton
+                      label="Mark Resolved"
+                      size="sm"
+                      onPress={() => handleUpdateStatus('resolved')}
+                      loading={actionLoading}
+                    />
+                  )}
+                </View>
+              </View>
             </View>
           </View>
         </Modal>

@@ -69,7 +69,7 @@ export function AdminSectionTabs({
   if (!definition || definition.sections.length < 2) return null;
 
   return (
-    <View style={{ marginBottom: spacing.md }}>
+    <View style={{ marginBottom: spacing.md, flexShrink: 0 }}>
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -85,6 +85,7 @@ export function AdminSectionTabs({
         onContentSizeChange={() => {
           syncScrollPosition(false);
         }}
+        style={{ flexGrow: 0, flexShrink: 0 }}
         contentContainerStyle={{ gap: spacing.xs, paddingRight: spacing.md }}
         {...({ 'data-horizontal-scroll': 'true' } as any)}
       >
@@ -122,9 +123,11 @@ export function AdminSectionTabs({
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
+                flexShrink: 0,
                 gap: 6,
                 minHeight: 38,
                 paddingHorizontal: 14,
+                paddingVertical: 6,
                 borderRadius: radius.pill,
                 backgroundColor: selected ? colors.brandPrimary : colors.surface,
                 borderWidth: 1,

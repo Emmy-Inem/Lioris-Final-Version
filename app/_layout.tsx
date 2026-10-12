@@ -129,8 +129,48 @@ export default function RootLayout() {
             touch-action: pan-x pan-y !important;
           }
 
+          /* Desktop boxed screen layout: keep physical scrollbar at right edge of screen while centering content */
+          [data-screen-container="boxed"] > div[style*="overflow-y: auto"]:not([data-horizontal-scroll="true"]),
+          [data-screen-container="boxed"] > div[style*="overflow-y: scroll"]:not([data-horizontal-scroll="true"]),
+          [data-screen-container="boxed"] > .r-overflowY-156q2ks:not([data-horizontal-scroll="true"]) {
+            width: 100% !important;
+            max-width: none !important;
+            align-self: stretch !important;
+          }
+
+          [data-screen-container="boxed"] > div[style*="overflow-y: auto"]:not([data-horizontal-scroll="true"]) > div,
+          [data-screen-container="boxed"] > div[style*="overflow-y: scroll"]:not([data-horizontal-scroll="true"]) > div,
+          [data-screen-container="boxed"] > .r-overflowY-156q2ks:not([data-horizontal-scroll="true"]) > div {
+            max-width: var(--lioris-max-width, 1240px) !important;
+            width: 100% !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            padding-left: var(--lioris-pad-x, 32px) !important;
+            padding-right: var(--lioris-pad-x, 32px) !important;
+            box-sizing: border-box !important;
+          }
+
+          [data-screen-container="boxed"] > div:not([style*="overflow-y: auto"]):not([style*="overflow-y: scroll"]):not(.r-overflowY-156q2ks),
+          [data-screen-container="boxed"] > [data-horizontal-scroll="true"] {
+            max-width: var(--lioris-max-width, 1240px);
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: var(--lioris-pad-x, 32px);
+            padding-right: var(--lioris-pad-x, 32px);
+            box-sizing: border-box;
+          }
+
+          /* Ensure modal scroll containers always shrink properly so bottom buttons are never cut off */
+          [aria-modal="true"] div[style*="overflow-y: auto"],
+          [aria-modal="true"] div[style*="overflow-y: scroll"],
+          [aria-modal="true"] .r-overflowY-156q2ks {
+            min-height: 0 !important;
+            flex-shrink: 1 !important;
+          }
+
           /* Hide physical scrollbars everywhere on mobile viewports (< 1024px) */
-          @media (max-width: 1024px) {
+          @media (max-width: 1023px) {
             ::-webkit-scrollbar {
               display: none !important;
               width: 0px !important;
@@ -142,26 +182,41 @@ export default function RootLayout() {
             }
           }
 
-          /* On wide desktop, show a subtle translucent scrollbar */
-          @media (min-width: 1025px) {
+          /* On desktop (>= 1024px), show a clean physical scrollbar at the screen edge */
+          @media (min-width: 1024px) {
             ::-webkit-scrollbar {
-              width: 6px;
-              height: 6px;
+              width: 8px;
+              height: 8px;
             }
             ::-webkit-scrollbar-track {
               background: transparent;
             }
             ::-webkit-scrollbar-thumb {
-              background-color: rgba(148, 163, 184, 0.3);
-              border-radius: 3px;
+              background-color: rgba(148, 163, 184, 0.38);
+              border-radius: 4px;
             }
             ::-webkit-scrollbar-thumb:hover {
-              background-color: rgba(148, 163, 184, 0.6);
+              background-color: rgba(148, 163, 184, 0.65);
             }
             * {
               scrollbar-width: thin;
-              scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+              scrollbar-color: rgba(148, 163, 184, 0.38) transparent;
               box-sizing: border-box;
+            }
+
+            /* Override showsVerticalScrollIndicator={false} on primary desktop work-area vertical scroll views */
+            [data-main-work-area="true"] div[style*="overflow-y: auto"]:not([data-horizontal-scroll="true"]),
+            [data-main-work-area="true"] div[style*="overflow-y: scroll"]:not([data-horizontal-scroll="true"]),
+            [data-main-work-area="true"] .r-overflowY-156q2ks:not([data-horizontal-scroll="true"]) {
+              scrollbar-width: thin !important;
+              scrollbar-color: rgba(148, 163, 184, 0.42) transparent !important;
+            }
+            [data-main-work-area="true"] div[style*="overflow-y: auto"]:not([data-horizontal-scroll="true"])::-webkit-scrollbar,
+            [data-main-work-area="true"] div[style*="overflow-y: scroll"]:not([data-horizontal-scroll="true"])::-webkit-scrollbar,
+            [data-main-work-area="true"] .r-overflowY-156q2ks:not([data-horizontal-scroll="true"])::-webkit-scrollbar {
+              display: block !important;
+              width: 8px !important;
+              height: 8px !important;
             }
           }
         `;
@@ -169,11 +224,85 @@ export default function RootLayout() {
       }
     }
     if (typeof window !== 'undefined') {
+      const VERTICAL_SCROLL_SELECTOR =
+        'div[style*="overflow-y: auto"]:not([data-horizontal-scroll="true"]), div[style*="overflow-y: scroll"]:not([data-horizontal-scroll="true"]), .r-overflowY-156q2ks:not([data-horizontal-scroll="true"])';
+
+      const isElementVisible = (el: HTMLElement | null): boolean => {
+        if (!el || el.offsetWidth <= 0 || el.offsetHeight <= 0 || el.getClientRects().length === 0) {
+          return false;
+        }
+        let cur: HTMLElement | null = el;
+        while (cur && cur !== document.body) {
+          if (cur.getAttribute('aria-hidden') === 'true') return false;
+          const inlineStyle = cur.style;
+          if (inlineStyle && (inlineStyle.display === 'none' || inlineStyle.visibility === 'hidden')) {
+            return false;
+          }
+          cur = cur.parentElement;
+        }
+        return true;
+      };
+
+      const findActiveVerticalScrollContainer = (): HTMLElement | null => {
+        // 1. If a visible modal is open, prioritize its scrollable body
+        const modals = Array.from(document.querySelectorAll('[aria-modal="true"]')) as HTMLElement[];
+        for (let i = modals.length - 1; i >= 0; i--) {
+          const modal = modals[i];
+          if (!isElementVisible(modal)) continue;
+          const modalScrollers = Array.from(modal.querySelectorAll(VERTICAL_SCROLL_SELECTOR)) as HTMLElement[];
+          const activeModalScroller = modalScrollers.find(
+            (el) => isElementVisible(el) && el.scrollHeight > el.clientHeight + 1
+          );
+          if (activeModalScroller) return activeModalScroller;
+        }
+
+        // 2. If focus is already inside a visible scrollable container in the main work area, use it
+        const mainWorkArea = document.querySelector('[data-main-work-area="true"]') as HTMLElement | null;
+        const activeEl = document.activeElement as HTMLElement | null;
+        if (activeEl && (!mainWorkArea || mainWorkArea.contains(activeEl))) {
+          const focusedScroller = activeEl.closest(VERTICAL_SCROLL_SELECTOR) as HTMLElement | null;
+          if (
+            focusedScroller &&
+            (!mainWorkArea || mainWorkArea.contains(focusedScroller)) &&
+            isElementVisible(focusedScroller) &&
+            focusedScroller.scrollHeight > focusedScroller.clientHeight + 1
+          ) {
+            return focusedScroller;
+          }
+        }
+
+        // 3. Find the primary visible vertical scroll container in the active screen
+        const searchRoot: ParentNode = mainWorkArea || document;
+        const candidates = (Array.from(searchRoot.querySelectorAll(VERTICAL_SCROLL_SELECTOR)) as HTMLElement[]).filter(
+          (el) => isElementVisible(el)
+        );
+        const scrollableCandidates = candidates.filter((el) => el.scrollHeight > el.clientHeight + 1);
+        const pool = scrollableCandidates.length > 0 ? scrollableCandidates : candidates;
+
+        if (pool.length === 0) return null;
+
+        let best = pool[0];
+        let bestArea = best.clientWidth * best.clientHeight;
+        for (let i = 1; i < pool.length; i++) {
+          const area = pool[i].clientWidth * pool[i].clientHeight;
+          if (area > bestArea) {
+            best = pool[i];
+            bestArea = area;
+          }
+        }
+        return best;
+      };
+
       const handleGlobalKeyboardScroll = (e: KeyboardEvent) => {
-        // Do not intercept if user is typing in an input, textarea, or contentEditable
-        const activeTag = (document.activeElement?.tagName || '').toLowerCase();
-        const isEditable = (document.activeElement as HTMLElement)?.isContentEditable;
+        const activeEl = document.activeElement as HTMLElement | null;
+        const activeTag = (activeEl?.tagName || '').toLowerCase();
+        const isEditable = activeEl?.isContentEditable;
         if (['input', 'textarea', 'select'].includes(activeTag) || isEditable) {
+          return;
+        }
+
+        // Allow Space to activate focused buttons naturally
+        if ((e.key === ' ' || e.key === 'Space') && (activeTag === 'button' || activeEl?.getAttribute('role') === 'button')) {
           return;
         }
 
@@ -182,19 +311,16 @@ export default function RootLayout() {
           return;
         }
 
-        // Fast target lookup without forcing synchronous style recalculation across all DOM elements
-        const targetContainer =
-          (document.activeElement?.closest('div[style*="overflow-y: auto"], div[style*="overflow-y: scroll"], .r-overflowY-156q2ks') as HTMLElement) ||
-          (document.querySelector('div[style*="overflow-y: auto"], div[style*="overflow-y: scroll"], .r-overflowY-156q2ks') as HTMLElement) ||
-          (document.scrollingElement as HTMLElement);
-
+        const targetContainer = findActiveVerticalScrollContainer() || (document.scrollingElement as HTMLElement);
         if (!targetContainer) return;
 
         let deltaY = 0;
         if (e.key === 'ArrowDown') deltaY = 120;
         else if (e.key === 'ArrowUp') deltaY = -120;
-        else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey) || (e.key === 'Space' && !e.shiftKey)) deltaY = (targetContainer.clientHeight || window.innerHeight) * 0.85;
-        else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey) || (e.key === 'Space' && e.shiftKey)) deltaY = -(targetContainer.clientHeight || window.innerHeight) * 0.85;
+        else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey) || (e.key === 'Space' && !e.shiftKey))
+          deltaY = (targetContainer.clientHeight || window.innerHeight) * 0.85;
+        else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey) || (e.key === 'Space' && e.shiftKey))
+          deltaY = -(targetContainer.clientHeight || window.innerHeight) * 0.85;
         else if (e.key === 'Home') {
           e.preventDefault();
           targetContainer.scrollTo({ top: 0, behavior: 'smooth' });
@@ -211,9 +337,63 @@ export default function RootLayout() {
         }
       };
 
+      const handleGlobalWheelScroll = (e: WheelEvent) => {
+        if (e.defaultPrevented || e.ctrlKey || e.deltaY === 0 || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+          return;
+        }
+
+        const targetEl = e.target instanceof HTMLElement ? e.target : null;
+        if (!targetEl) return;
+
+        const activeTag = targetEl.tagName.toLowerCase();
+        if (activeTag === 'textarea' || activeTag === 'select') return;
+
+        // Check if cursor is already inside a vertically scrollable element that can scroll in this direction
+        let cur: HTMLElement | null = targetEl;
+        while (cur && cur !== document.body && cur !== document.documentElement) {
+          if (cur.getAttribute('data-horizontal-scroll') !== 'true') {
+            const canScrollVertically = cur.scrollHeight > cur.clientHeight + 1;
+            if (canScrollVertically) {
+              const inlineOverflowY = cur.style?.overflowY;
+              const isScrollNode =
+                inlineOverflowY === 'auto' ||
+                inlineOverflowY === 'scroll' ||
+                cur.classList.contains('r-overflowY-156q2ks') ||
+                window.getComputedStyle(cur).overflowY === 'auto' ||
+                window.getComputedStyle(cur).overflowY === 'scroll';
+
+              if (isScrollNode) {
+                const canScrollDown = e.deltaY > 0 && cur.scrollTop + cur.clientHeight < cur.scrollHeight - 1;
+                const canScrollUp = e.deltaY < 0 && cur.scrollTop > 0;
+                if (canScrollDown || canScrollUp) {
+                  // Native wheel scrolling will handle this container directly
+                  return;
+                }
+              }
+            }
+          }
+          cur = cur.parentElement;
+        }
+
+        // Only forward wheel events when inside the main work area, an open modal, or when no desktop shell is present
+        const inModal = Boolean(targetEl.closest('[aria-modal="true"]'));
+        const mainWorkArea = document.querySelector('[data-main-work-area="true"]');
+        const inMainArea = !mainWorkArea || mainWorkArea.contains(targetEl);
+        if (!inModal && !inMainArea) {
+          return;
+        }
+
+        const fallbackScroller = findActiveVerticalScrollContainer();
+        if (fallbackScroller && fallbackScroller.scrollHeight > fallbackScroller.clientHeight + 1) {
+          fallbackScroller.scrollBy({ top: e.deltaY, behavior: 'auto' });
+        }
+      };
+
       window.addEventListener('keydown', handleGlobalKeyboardScroll, { passive: false });
+      window.addEventListener('wheel', handleGlobalWheelScroll, { passive: true });
       return () => {
         window.removeEventListener('keydown', handleGlobalKeyboardScroll);
+        window.removeEventListener('wheel', handleGlobalWheelScroll);
       };
     }
   }, []);

@@ -379,7 +379,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  }
 
   return (
-    <View style={{ flex: 1, minHeight: 0 }}>
+    <>
       {/* Target Type Filter Bar */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.md }}>
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -601,7 +601,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
               />
             )}
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm, flexShrink: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0, paddingRight: spacing.xs }}>
                 <Ionicons name="shield-half" size={22} color={colors.critical} />
                 <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold" style={{ flexShrink: 1 }}>
@@ -613,7 +613,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
               </Pressable>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ flexGrow: 0, flexShrink: 1, minHeight: 0, width: '100%' }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
                 Select disciplinary penalty for report on {actionModalReport?.targetType}:
               </AppText>
@@ -667,19 +667,19 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
                   onChangeText={setAdminModNote}
                 />
               </View>
-
-              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
-                <View style={{ flex: 1 }}>
-                  <AppButton label="Cancel" variant="ghost" onPress={() => setActionModalReport(null)} disabled={applyingPenalty} fullWidth />
-                </View>
-                <View style={{ flex: 2 }}>
-                  <AppButton label="Apply Penalty & Log Audit" onPress={handleConfirmTakedown} loading={applyingPenalty} fullWidth />
-                </View>
-              </View>
             </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexShrink: 0 }}>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Cancel" variant="ghost" onPress={() => setActionModalReport(null)} disabled={applyingPenalty} fullWidth />
+              </View>
+              <View style={{ flex: 2 }}>
+                <AppButton label="Apply Penalty & Log Audit" onPress={handleConfirmTakedown} loading={applyingPenalty} fullWidth />
+              </View>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </>
   );
 }

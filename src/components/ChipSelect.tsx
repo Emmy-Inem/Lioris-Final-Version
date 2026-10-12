@@ -64,7 +64,7 @@ export function ChipSelect<T extends string>({ options, selected, onToggle, scro
           viewportWidthRef.current = e.nativeEvent.layout.width;
         }}
         contentContainerStyle={{ gap: spacing.sm, paddingRight: spacing.md }}
-        style={{ flexGrow: 0 }}
+        style={{ flexGrow: 0, flexShrink: 0 }}
         {...({ 'data-horizontal-scroll': 'true' } as any)}
       >
         {options.map((option) => {
@@ -83,6 +83,7 @@ export function ChipSelect<T extends string>({ options, selected, onToggle, scro
               accessibilityState={{ checked: isSelected }}
               accessibilityLabel={option}
               style={{
+                flexShrink: 0,
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
                 borderRadius: radius.pill,

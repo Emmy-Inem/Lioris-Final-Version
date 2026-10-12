@@ -210,16 +210,7 @@ export default function MarketplaceScreen() {
               </View>
 
               {/* Category Pills */}
-              <ScrollView
-                ref={categoriesScrollRef}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={[
-                  { flex: 1, minWidth: 0 },
-                  Platform.OS === 'web' && ({ overflowX: 'auto', scrollbarWidth: 'none' } as any),
-                ]}
-                contentContainerStyle={{ gap: 8 }}
-              >
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                 {CATEGORIES.map((cat) => {
                   const isSelected = category === cat.id;
                   return (
@@ -229,6 +220,7 @@ export default function MarketplaceScreen() {
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
+                        flexShrink: 0,
                         gap: 6,
                         paddingHorizontal: 14,
                         paddingVertical: 8,
@@ -253,7 +245,7 @@ export default function MarketplaceScreen() {
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+              </View>
             </View>
           </SolidCard>
 

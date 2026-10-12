@@ -695,7 +695,7 @@ export function EventDetailScreen() {
   );
 
   return (
-    <ScreenContainer glow={true} style={{ paddingHorizontal: isDesktop ? 24 : 0 }}>
+    <ScreenContainer glow={true}>
       {/* Top Desktop Breadcrumb & Navigation Bar */}
       {isDesktop && (
         <View

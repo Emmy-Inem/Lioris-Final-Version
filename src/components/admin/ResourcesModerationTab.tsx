@@ -385,7 +385,7 @@ export function ResourcesModerationTab() {
  horizontal
  showsHorizontalScrollIndicator={false}
  contentContainerStyle={{ gap: spacing.xs, marginBottom: spacing.md }}
- style={{ flex: 1, minWidth: 0 }}
+ style={{ flexGrow: 0, flexShrink: 0 }}
  >
  <Pressable
  onPress={() => {
