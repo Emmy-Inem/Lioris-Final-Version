@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Pressable, Switch, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../AppText';
@@ -18,6 +18,8 @@ import {
   CampusInput,
   CampusOverview,
   createInstitution,
+  deleteInstitution,
+  getCampusDeleteImpact,
   listCampusOverview,
   listCampuses,
   listWaitlist,
@@ -60,6 +62,8 @@ export function CampusManager() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [busyCode, setBusyCode] = useState<string | null>(null);
+  const [seedCommunities, setSeedCommunities] = useState(true);
+  const [del, setDel] = useState<null | { campus: CampusOverview; impact: Record<string, number> | null; typed: string; busy: boolean; error: string | null }>(null);
   const [linksFor, setLinksFor] = useState<string | null>(null);
   const [mfa, setMfa] = useState<null | { title: string; retry: () => Promise<void> }>(null);
 
@@ -82,6 +86,8 @@ export function CampusManager() {
     queryClient.invalidateQueries({ queryKey: ['campuses'] });
     queryClient.invalidateQueries({ queryKey: ['waitlist'] });
     queryClient.invalidateQueries({ queryKey: ['portal-links'] });
+    queryClient.invalidateQueries({ queryKey: ['campus-activity'] });
+    queryClient.invalidateQueries({ queryKey: ['communities'] });
   }
 
   function openCreate(request?: WaitlistEntry) {
@@ -136,6 +142,7 @@ export function CampusManager() {
       websiteUrl: form.website.trim() || undefined,
       allowUnresolvedDomains: options.allowUnresolvedDomains,
       waitlistEntryId: formOpen.request?.id,
+      seedCommunities: formOpen.mode === 'create' ? seedCommunities : undefined,
       seedPortalLinks: formOpen.mode === 'create'
         ? [
             form.studentPortal.trim() ? { title: 'Student Portal', url: form.studentPortal.trim(), category: 'Academic', icon: 'school-outline' } : null,
@@ -207,6 +214,63 @@ export function CampusManager() {
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
   const editing = formOpen?.mode === 'edit';
 
+  async function openDelete(c: CampusOverview): Promise<void> {
+    setDel({ campus: c, impact: null, typed: '', busy: false, error: null });
+    try {
+      const { impact } = await getCampusDeleteImpact(c.code);
+      setDel((d) => (d && d.campus.code === c.code ? { ...d, impact } : d));
+    } catch (err: any) {
+      if (err?.code === MFA_REQUIRED_CODE) {
+        setDel(null);
+        setMfa({ title: 'Verify to delete a campus', retry: () => openDelete(c) });
+      } else {
+        setDel((d) => (d ? { ...d, error: err?.message || 'Could not check what this campus contains.' } : d));
+      }
+    }
+  }
+
+  async function confirmDelete(): Promise<void> {
+    if (!del || del.busy) return;
+    const current = del;
+    const c = current.campus;
+    setDel({ ...current, busy: true, error: null });
+    try {
+      await deleteInstitution(c.code, current.typed);
+      haptics.success();
+      setDel(null);
+      refresh();
+      Alert.alert('Campus deleted', `${c.name} (${c.code}) and its campus content were removed. Its members were moved to the Global network.`);
+    } catch (err: any) {
+      haptics.error();
+      if (err?.code === MFA_REQUIRED_CODE) {
+        setDel({ ...current, busy: false });
+        setMfa({ title: 'Verify to delete a campus', retry: confirmDelete });
+      } else {
+        setDel({ ...current, busy: false, error: err?.message || 'Could not delete this campus. Nothing was changed.' });
+      }
+    }
+  }
+
+  const deleteReady = !!del && !!del.impact && del.typed.trim().toUpperCase() === del.campus.code && !del.busy;
+  const nonGlobal = rows.filter((c) => c.code !== 'GLOBAL');
+  const liveCount = nonGlobal.filter((c) => c.isActive !== false).length;
+  const domainReadyCount = nonGlobal.filter((c) => (c.emailDomains ?? []).length > 0).length;
+  const totalMembers = rows.reduce((acc, c) => acc + (c.memberCount ?? 0), 0);
+
+  function fillUrlsFromPrimaryDomain() {
+    const primary = form.domains[0];
+    if (!primary) return;
+    haptics.light();
+    setForm((f) => ({
+      ...f,
+      website: f.website.trim() || `https://www.${primary}`,
+      studentPortal: f.studentPortal.trim() || `https://portal.${primary}`,
+      libraryUrl: f.libraryUrl.trim() || `https://library.${primary}`,
+      lmsUrl: f.lmsUrl.trim() || `https://lms.${primary}`,
+    }));
+  }
+  const impactRows = del?.impact ? Object.entries(del.impact).sort((a, b) => b[1] - a[1]) : [];
+
   return (
     <View style={{ gap: spacing.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
@@ -216,6 +280,11 @@ export function CampusManager() {
         <AppButton label="+ Add campus" size="sm" onPress={() => openCreate()} />
       </View>
 
+      {nonGlobal.length > 0 ? (
+        <AppText variant="caption" tone="secondary">
+          {liveCount}/{nonGlobal.length} live · {domainReadyCount} with auto-verify domains{hasCounts ? ` · ${totalMembers} total members` : ''}
+        </AppText>
+      ) : null}
       {(requests.data ?? []).length > 0 ? (
         <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.brandPrimary, gap: spacing.sm }}>
           <AppText weight="bold" variant="bodySmall">
@@ -300,6 +369,15 @@ export function CampusManager() {
               )
             ) : null}
 
+            {hasCounts && !global && c.portalLinkCount === 0 ? (
+              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                <Ionicons name="information-circle-outline" size={15} color={colors.warning} />
+                <AppText variant="caption" style={{ color: colors.warning, flex: 1 }}>
+                  Setup incomplete: add portal links so students can reach their school services.
+                </AppText>
+              </View>
+            ) : null}
+
             {hasCounts ? (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
                 <AppText variant="caption" tone="secondary">
@@ -316,6 +394,7 @@ export function CampusManager() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: spacing.sm }}>
               {!global ? <AppButton label="Edit" size="sm" variant="secondary" icon="create-outline" onPress={() => openEdit(c)} /> : null}
               <AppButton label="Portal links" size="sm" variant="secondary" icon="link-outline" onPress={() => setLinksFor(c.code)} />
+              {!global ? <AppButton label="Delete" size="sm" variant="ghost" icon="trash-outline" onPress={() => void openDelete(c)} /> : null}
               {!global ? (
                 <AppButton label={off ? 'Turn on' : 'Turn off'} size="sm" variant="ghost" loading={busyCode === c.code} onPress={() => toggleActive(c)} />
               ) : null}
@@ -426,13 +505,102 @@ export function CampusManager() {
         <AppTextField label="Website (optional)" value={form.website} onChangeText={(v) => set('website', v)} placeholder="https://www.lasu.edu.ng" autoCapitalize="none" keyboardType="url" />
         {!editing ? (
           <View style={{ gap: spacing.xs }}>
-            <AppText weight="bold" variant="bodySmall">Starter services (optional)</AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs }}>
+              <AppText weight="bold" variant="bodySmall">Starter services (optional)</AppText>
+              {form.domains[0] ? (
+                <Pressable onPress={fillUrlsFromPrimaryDomain} hitSlop={8}>
+                  <AppText variant="caption" weight="bold" tone="brand">
+                    Auto-fill from @{form.domains[0]}
+                  </AppText>
+                </Pressable>
+              ) : null}
+            </View>
             <AppText variant="caption" tone="secondary">
               Add the main services now. They become available to the new campus immediately and can be edited later.
             </AppText>
             <AppTextField label="Student portal" value={form.studentPortal} onChangeText={(v) => set('studentPortal', v)} placeholder="https://portal.university.edu" autoCapitalize="none" keyboardType="url" />
             <AppTextField label="Library" value={form.libraryUrl} onChangeText={(v) => set('libraryUrl', v)} placeholder="https://library.university.edu" autoCapitalize="none" keyboardType="url" />
             <AppTextField label="Learning platform" value={form.lmsUrl} onChangeText={(v) => set('lmsUrl', v)} placeholder="https://lms.university.edu" autoCapitalize="none" keyboardType="url" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xs }}>
+              <View style={{ flex: 1 }}>
+                <AppText weight="semiBold" variant="bodySmall">Create starter communities</AppText>
+                <AppText variant="caption" tone="secondary">
+                  Adds Academic Exchange, Campus Life, Tech & Innovation and Careers spaces for this campus.
+                </AppText>
+              </View>
+              <Switch value={seedCommunities} onValueChange={setSeedCommunities} accessibilityLabel="Create starter communities" />
+            </View>
+          </View>
+        ) : null}
+      </FormSheet>
+
+      <FormSheet
+        visible={!!del}
+        onClose={() => (del?.busy ? undefined : setDel(null))}
+        title={del ? `Delete ${del.campus.name}?` : 'Delete campus'}
+        subtitle="This permanently removes the campus and everything scoped to it. It cannot be undone."
+        maxWidth={560}
+        footer={
+          <View style={{ gap: spacing.xs }}>
+            {del?.error ? (
+              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
+                <Ionicons name="alert-circle" size={16} color={colors.critical} style={{ marginTop: 1 }} />
+                <AppText variant="caption" weight="semiBold" style={{ color: colors.critical, flex: 1 }}>
+                  {del.error}
+                </AppText>
+              </View>
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Cancel" variant="ghost" onPress={() => setDel(null)} disabled={del?.busy} fullWidth />
+              </View>
+              <View style={{ flex: 2 }}>
+                <AppButton label="Delete permanently" variant="primary" icon="trash-outline" onPress={() => void confirmDelete()} disabled={!deleteReady} loading={del?.busy} fullWidth />
+              </View>
+            </View>
+          </View>
+        }
+      >
+        {del ? (
+          <View style={{ gap: spacing.sm }}>
+            <AppText variant="bodySmall" weight="bold">
+              What will happen
+            </AppText>
+            {del.impact === null && !del.error ? (
+              <AppText variant="caption" tone="secondary">Checking what this campus contains…</AppText>
+            ) : null}
+            {del.impact ? (
+              <View style={{ gap: 4 }}>
+                <AppText variant="caption" tone="secondary">
+                  {(del.impact.profiles ?? 0) > 0
+                    ? `${del.impact.profiles} member(s) keep their accounts and move to the Global network.`
+                    : 'No members belong to this campus.'}
+                </AppText>
+                {impactRows.filter(([table]) => table !== 'profiles').length === 0 ? (
+                  <AppText variant="caption" tone="secondary">No campus content will be removed.</AppText>
+                ) : (
+                  <>
+                    <AppText variant="caption" tone="secondary">Permanently deleted:</AppText>
+                    {impactRows.filter(([table]) => table !== 'profiles').map(([table, count]) => (
+                      <AppText key={table} variant="caption" style={{ color: colors.critical }}>
+                        • {count} × {table.replace(/_/g, ' ')}
+                      </AppText>
+                    ))}
+                  </>
+                )}
+                <AppText variant="caption" tone="secondary">
+                  Its email domains are released and can be claimed by another campus. Uploaded files in storage are not touched.
+                </AppText>
+              </View>
+            ) : null}
+            <AppTextField
+              label={`Type ${del.campus.code} to confirm`}
+              value={del.typed}
+              onChangeText={(v) => setDel((d) => (d ? { ...d, typed: v.slice(0, 16) } : d))}
+              placeholder={del.campus.code}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
           </View>
         ) : null}
       </FormSheet>

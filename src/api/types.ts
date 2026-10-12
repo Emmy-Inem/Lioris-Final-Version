@@ -474,6 +474,7 @@ export type AuditLogAction =
  | 'portal_link_updated'
  | 'portal_link_deleted'
  | 'institution_provisioned'
+ | 'institution_deleted'
  | 'platform_config_updated'
  | 'domain_authority_updated'
  | 'tenant_toggles_updated'

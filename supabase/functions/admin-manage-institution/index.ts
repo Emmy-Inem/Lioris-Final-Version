@@ -52,6 +52,9 @@ interface Body {
   allowUnresolvedDomains?: unknown;
   waitlistEntryId?: unknown;
   seedPortalLinks?: unknown;
+  seedCommunities?: unknown;
+  confirmCode?: unknown;
+  memberMode?: unknown;
 }
 
 // Mirrors campuses_guard() so the admin gets a precise message instead of a database error.
@@ -160,8 +163,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     const action = b.action;
-    if (action !== 'create' && action !== 'update' && action !== 'set_active') {
-      throw new Fail(400, 'bad_request', 'action must be create, update or set_active.');
+    if (action !== 'create' && action !== 'update' && action !== 'set_active' && action !== 'delete_impact' && action !== 'delete') {
+      throw new Fail(400, 'bad_request', 'action must be create, update, set_active, delete_impact or delete.');
     }
     const code = typeof b.code === 'string' ? b.code.trim().toUpperCase() : '';
     if (!CODE_RE.test(code) || code === 'GLOBAL') {
@@ -176,6 +179,34 @@ Deno.serve(async (req: Request) => {
       .eq('code', code)
       .maybeSingle();
     if (lookupError) throw new Fail(500, 'db_error', 'Could not look up the campus.');
+
+    // ---------------------------------------------------------------- delete_impact / delete
+    if (action === 'delete_impact' || action === 'delete') {
+      if (!existing) throw new Fail(404, 'not_found', 'That campus does not exist.');
+      const { data: impact, error: impactError } = await admin.rpc('campus_delete_impact', { p_code: code });
+      if (impactError) throw new Fail(500, 'db_error', 'Could not work out what deleting this campus would remove. Has the 20261027010000 migration been applied?');
+      const counts = (impact ?? {}) as Record<string, number>;
+      if (action === 'delete_impact') {
+        return jsonResponse(req, { success: true, campus: existing, impact: counts, memberCount: counts.profiles ?? 0 }, 200);
+      }
+
+      // Irreversible: the caller must have typed the campus code itself.
+      const confirmCode = typeof b.confirmCode === 'string' ? b.confirmCode.trim().toUpperCase() : '';
+      if (confirmCode !== code) {
+        throw new Fail(409, 'confirm_required', `Type ${code} to confirm that you want to permanently delete ${existing.name}.`, { impact: counts });
+      }
+      const memberMode = b.memberMode === 'block' ? 'block' : 'reassign';
+      const { data: result, error: deleteError } = await admin.rpc('admin_delete_campus', { p_code: code, p_members: memberMode });
+      if (deleteError) {
+        const m = /^(protected_campus|not_found|has_members|cleanup_failed|bad_request):\s*(.*)$/s.exec(deleteError.message ?? '');
+        if (m) throw new Fail(m[1] === 'not_found' ? 404 : 409, m[1], m[2]);
+        console.error('[admin-manage-institution] delete failed:', deleteError.message);
+        throw new Fail(500, 'db_error', 'The campus could not be deleted. Nothing was changed.');
+      }
+      await audit(admin, caller.id, 'institution_deleted', existing.id, code,
+        `Permanently deleted campus ${existing.name} (${code})`, { name: existing.name, domains: existing.email_domains, result });
+      return jsonResponse(req, { success: true, deleted: true, code, result }, 200);
+    }
 
     // ---------------------------------------------------------------- set_active
     if (action === 'set_active') {
@@ -283,6 +314,33 @@ Deno.serve(async (req: Request) => {
       if (rows.length > 0) {
         const { error: seedError } = await admin.from('portal_links').insert(rows);
         if (seedError) warnings.push('The campus was created, but its starter portal links could not be added.');
+      }
+
+      if (b.seedCommunities === true) {
+        const label = (shortName ?? code);
+        const slug = code.toLowerCase();
+        const color = primaryColor ?? '#2563EB';
+        const communities = [
+          { s: 'academics', l: `${label} Academic Exchange`, cat: 'Academic & Research', icon: 'school-outline', d: `Course discussions, study circles and academic support at ${name}.`, mod: 'Academic Moderator', rules: ['Keep discussions focused on learning.', 'Credit authors and sources.', 'Do not share restricted assessment material.'], banner: color },
+          { s: 'campus-life', l: `${label} Campus Life`, cat: 'Campus Life', icon: 'people-outline', d: `Student life, events and everyday conversations around ${name}.`, mod: 'Campus Moderator', rules: ['Protect personal information.', 'Do not post unverified emergency information.', 'Keep conversations respectful.'], banner: '#1D4ED8' },
+          { s: 'tech-innovation', l: `${label} Tech & Innovation`, cat: 'Tech & Innovation', icon: 'code-slash-outline', d: `Projects, technical learning and competitions for ${label} students.`, mod: 'Innovation Moderator', rules: ['Share reproducible technical details where possible.', 'Respect project ownership.', 'Keep collaboration constructive.'], banner: '#B45309' },
+          { s: 'careers', l: `${label} Careers & Opportunities`, cat: 'Career & Jobs', icon: 'briefcase-outline', d: `Internships, jobs and professional development for ${label} students and alumni.`, mod: 'Careers Moderator', rules: ['Only share genuine opportunities.', 'Never ask applicants for payment.', 'Credit the original source.'], banner: '#7C3AED' },
+        ].map((c) => ({
+          slug: `c/${slug}-${c.s}`,
+          label: c.l.slice(0, 80),
+          category: c.cat,
+          campus_code: code,
+          icon: c.icon,
+          description: c.d.slice(0, 300),
+          moderator_badge: c.mod,
+          moderator_title: `${label} ${c.mod}s`.slice(0, 80),
+          rules: c.rules,
+          banner_color: c.banner,
+          accent_color: c.banner,
+          approval_status: 'approved',
+        }));
+        const { error: communityError } = await admin.from('forum_communities').upsert(communities, { onConflict: 'slug', ignoreDuplicates: true });
+        if (communityError) warnings.push('The campus was created, but its starter communities could not be added.');
       }
 
       if (isUuid(b.waitlistEntryId)) {

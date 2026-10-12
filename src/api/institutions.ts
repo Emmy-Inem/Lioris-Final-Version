@@ -36,6 +36,7 @@ export const LAUNCH_INSTITUTIONS: Institution[] = [
   { code: 'NOUN', name: 'National Open University of Nigeria', domain: 'noun.edu.ng', shortName: 'NOUN', location: 'Abuja (National)', primaryColor: '#0284C7' },
   { code: 'ESUT', name: 'Enugu State University of Science and Technology', domain: 'esut.edu.ng', shortName: 'ESUT', location: 'Agbani, Enugu', primaryColor: '#0D9488' },
   { code: 'MUN', name: 'Madonna University, Nigeria', domain: 'madonnauniversity.edu.ng', shortName: 'MUN', location: 'Elele, Rivers • Okija, Anambra • Akpugo, Enugu', primaryColor: '#7C1D3A', websiteUrl: 'https://www.madonnauniversity.edu.ng/' },
+  { code: 'JSIIT', name: 'Jigawa State Institute of Information Technology (JSPICT)', domain: 'jspict.edu.ng', shortName: 'JSIIT', location: 'Kazaure, Jigawa', primaryColor: '#166534', websiteUrl: 'https://www.jspict.edu.ng' },
 ];
 
 function rowToInstitution(row: any): Institution {
@@ -66,6 +67,20 @@ function mergeIntoRegistry(fresh: Institution[]) {
  LAUNCH_INSTITUTIONS.push(inst);
  }
  }
+  // The database is the source of truth: a campus deleted there must also leave the built-in list. Only prune
+  // when the answer clearly is a full campus list (it contains GLOBAL), never on a partial reply.
+  if (fresh.some((inst) => inst.code === 'GLOBAL')) {
+    const known = new Set(fresh.map((inst) => inst.code));
+    for (let i = LAUNCH_INSTITUTIONS.length - 1; i >= 0; i--) {
+      if (!known.has(LAUNCH_INSTITUTIONS[i].code)) LAUNCH_INSTITUTIONS.splice(i, 1);
+    }
+  }
+}
+
+/** Drops a campus from the in-memory registry (after it was deleted). */
+function removeFromRegistry(code: string) {
+  const idx = LAUNCH_INSTITUTIONS.findIndex((li) => li.code === code);
+  if (idx >= 0) LAUNCH_INSTITUTIONS.splice(idx, 1);
 }
 
 /** Every campus the database knows (new ones included), also refreshing the shared registry. */
@@ -106,6 +121,8 @@ export interface CampusInput {
  websiteUrl?: string;
  /** Starter links to publish with a brand-new campus. */
  seedPortalLinks?: Array<{ title: string; url: string; category?: string; icon?: string }>;
+  /** Create the four standard discussion communities (academics, campus life, tech, careers) for a new campus. */
+  seedCommunities?: boolean;
  /** The waitlist request this campus answers; marked approved once the campus exists. */
  waitlistEntryId?: string;
  /** Add a domain even though DNS says it does not exist (after the admin confirmed). */
@@ -157,6 +174,28 @@ export async function setInstitutionActive(code: string, isActive: boolean, conf
  const institution = rowToInstitution(data.campus ?? {});
  if (institution.code) mergeIntoRegistry([institution]);
  return institution;
+}
+
+export interface CampusDeleteImpact {
+  /** Rows per table that belong to the campus (members are listed under `profiles`). */
+  impact: Record<string, number>;
+  memberCount: number;
+}
+
+/** What permanently deleting a campus would touch. Read-only; Super Admin only. */
+export async function getCampusDeleteImpact(code: string): Promise<CampusDeleteImpact> {
+  const data = await callManageInstitution({ action: 'delete_impact', code: code.trim().toUpperCase() });
+  return { impact: data.impact ?? {}, memberCount: data.memberCount ?? 0 };
+}
+
+/**
+ * Permanently deletes a campus and everything scoped to it. Members keep their accounts and are moved to the
+ * Global network. `confirmCode` must be the campus code typed by the admin.
+ */
+export async function deleteInstitution(code: string, confirmCode: string): Promise<void> {
+  const upper = code.trim().toUpperCase();
+  await callManageInstitution({ action: 'delete', code: upper, confirmCode: confirmCode.trim().toUpperCase(), memberMode: 'reassign' });
+  removeFromRegistry(upper);
 }
 
 export function getInstitutionForEmail(email: string): Institution | null {

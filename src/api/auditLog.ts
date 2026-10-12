@@ -66,6 +66,7 @@ export async function recordAuditLogEntry(payload: RecordAuditLogEntryPayload): 
 
 export interface AuditLogQuery {
  action?: AuditLogAction;
+ targetType?: AuditLogEntry['targetType'];
  institutionCode?: string;
  /**
   * Scopes results to entries where this id appears either as the actor
@@ -136,6 +137,9 @@ export async function listAuditLogEntriesPage(query: AuditLogQuery = {}): Promis
  }
  if (query.action) {
  queryBuilder = queryBuilder.eq('action', query.action);
+ }
+ if (query.targetType) {
+ queryBuilder = queryBuilder.eq('entity_type', query.targetType);
  }
  if (query.institutionCode) {
  queryBuilder = queryBuilder.eq('metadata->>institutionCode', query.institutionCode);

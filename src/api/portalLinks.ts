@@ -96,6 +96,15 @@ export const DEFAULT_CAMPUS_PORTAL_LINKS: Record<string, PortalLink[]> = {
     { id: 'mun-5', campusCode: 'MUN', title: 'Fees & Payment Guide', url: 'https://www.madonnauniversity.edu.ng/mode-of-payment-2/', category: 'Finance', icon: 'card-outline', active: true, displayOrder: 5 },
     { id: 'mun-6', campusCode: 'MUN', title: 'Campus & Facilities', url: 'https://www.madonnauniversity.edu.ng/campus-facilities/', category: 'Campus Services', icon: 'business-outline', active: true, displayOrder: 6 },
   ],
+  JSIIT: [
+    { id: 'jsiit-1', campusCode: 'JSIIT', title: 'Students Portal', url: 'https://www.students.jspict.edu.ng/', category: 'Academic', icon: 'school-outline', active: true, displayOrder: 1 },
+    { id: 'jsiit-2', campusCode: 'JSIIT', title: 'Digital Library', url: 'https://elibrary.jspict.edu.ng/Index.html', category: 'Library', icon: 'book-outline', active: true, displayOrder: 2 },
+    { id: 'jsiit-3', campusCode: 'JSIIT', title: 'Admission & Application Portal', url: 'https://application.jspict.edu.ng/', category: 'Admissions', icon: 'document-text-outline', active: true, displayOrder: 3 },
+    { id: 'jsiit-4', campusCode: 'JSIIT', title: 'Hostel Allocation', url: 'https://www.hostel.jspict.edu.ng/', category: 'Housing', icon: 'home-outline', active: true, displayOrder: 4 },
+    { id: 'jsiit-5', campusCode: 'JSIIT', title: 'Alumni Portal', url: 'https://www.alumni.jspict.edu.ng/', category: 'Alumni', icon: 'people-outline', active: true, displayOrder: 5 },
+    { id: 'jsiit-6', campusCode: 'JSIIT', title: 'Staff Portal', url: 'https://hrm.jspict.edu.ng/', category: 'Staff', icon: 'briefcase-outline', active: true, displayOrder: 6 },
+    { id: 'jsiit-7', campusCode: 'JSIIT', title: 'Official Website', url: 'https://www.jspict.edu.ng', category: 'Central Portal', icon: 'globe-outline', active: true, displayOrder: 7 },
+  ],
   GLOBAL: [
     { id: 'glob-1', campusCode: 'GLOBAL', title: 'National Academic Repository (JAMB)', url: 'https://efacility.jamb.gov.ng/', category: 'National', icon: 'school-outline', active: true, displayOrder: 1 },
     { id: 'glob-2', campusCode: 'GLOBAL', title: 'National Universities Commission (NUC)', url: 'https://www.nuc.edu.ng/', category: 'Commission', icon: 'globe-outline', active: true, displayOrder: 2 },

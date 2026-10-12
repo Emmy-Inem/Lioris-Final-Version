@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { LAUNCH_INSTITUTIONS } from './institutions';
 
 export interface AnalyticsEvent {
   eventType: 'page_view' | 'feature_use' | 'session_start';
@@ -151,7 +152,7 @@ export async function fetchAdminAnalyticsSummary(
 
     // Campus aggregation - initialize with known launch institutions so all appear
     const campusMap = new Map<string, { total: number; real: number; verified: number; active7d: number }>();
-    const DEFAULT_CAMPUS_CODES = ['UI', 'UNILAG', 'FUNAAB', 'UNN', 'OAU', 'CU', 'KDU', 'NOUN', 'ESUT', 'MUN'];
+    const DEFAULT_CAMPUS_CODES = LAUNCH_INSTITUTIONS.filter((inst) => inst.code !== 'GLOBAL' && inst.isActive !== false).map((inst) => inst.code);
     for (const code of DEFAULT_CAMPUS_CODES) {
       campusMap.set(code, { total: 0, real: 0, verified: 0, active7d: 0 });
     }

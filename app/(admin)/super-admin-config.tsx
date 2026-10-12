@@ -12,6 +12,8 @@ import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { SuperAdminGate } from '@/auth/SuperAdminGate';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { CampusManager } from '@/components/admin/CampusManager';
+import { CampusActivityFeed } from '@/components/admin/CampusActivityFeed';
+import { getInstitutionForEmail } from '@/api/institutions';
 import { supabase } from '@/api/supabase';
 import {
   clearPlatformSettingsCache,
@@ -25,8 +27,10 @@ import { useResponsive } from '@/hooks/useResponsive';
 /**
  * Platform > Campuses & Security. Only settings that actually do something live here:
  *   - Campuses: the universities on the platform, adding one, and requests from new universities
+ *   - Domain & Auto-Verification Tester: checks which campus an institutional email resolves to
  *   - Uploads: the file-size limits every upload checks (see src/api/platformSettings.ts)
  *   - Maintenance mode: shows members a maintenance screen (see <MaintenanceGate/>)
+ *   - Campus activity: live audit trail of campus provisioning, edits, toggles, and deletions
  * Broadcasts and portal links are on the Console; feature switches have their own tab.
  */
 export default function CampusesAndSecurityScreen() {
@@ -42,6 +46,9 @@ export default function CampusesAndSecurityScreen() {
 
   const [maintenance, setMaintenance] = useState(false);
   const [maintenanceBusy, setMaintenanceBusy] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+
+  const matchedInstitution = testEmail.includes('@') ? getInstitutionForEmail(testEmail) : null;
 
   useEffect(() => {
     getStorageQuotas().then((q) => {
@@ -151,12 +158,52 @@ export default function CampusesAndSecurityScreen() {
             Campuses & Security
           </AppText>
           <AppText tone="secondary" variant="caption">
-            The universities on Lioris, upload limits and maintenance mode
+            The universities on Lioris, domain auto-verification, upload limits and maintenance mode
           </AppText>
         </View>
 
         {/* Campuses */}
         <CampusManager />
+
+        {/* Domain & Auto-Verification Tester */}
+        <View style={{ gap: spacing.sm }}>
+          <AppText variant="h3" weight="bold">Domain & Verification Check</AppText>
+          <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.border, gap: spacing.sm }}>
+            <AppText tone="secondary" variant="caption">
+              Test any student or staff email address to confirm which active campus it routes to and whether it qualifies for automatic institutional verification.
+            </AppText>
+            <AppTextField
+              label=""
+              value={testEmail}
+              onChangeText={setTestEmail}
+              placeholder="e.g. student@jspict.edu.ng"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              leftIcon="mail-outline"
+            />
+            {testEmail.trim().includes('@') ? (
+              matchedInstitution ? (
+                <View style={{ padding: spacing.sm, borderRadius: 12, backgroundColor: colors.pastelPrimaryBg, gap: 2 }}>
+                  <AppText variant="bodySmall" weight="bold" tone="brand">
+                    Auto-verifies into {matchedInstitution.name} ({matchedInstitution.code})
+                  </AppText>
+                  <AppText variant="caption" tone="secondary">
+                    Matched institutional domain @{matchedInstitution.domain}{matchedInstitution.location ? ` · ${matchedInstitution.location}` : ''}
+                  </AppText>
+                </View>
+              ) : (
+                <View style={{ padding: spacing.sm, borderRadius: 12, borderWidth: 1, borderColor: colors.warning, gap: 2 }}>
+                  <AppText variant="bodySmall" weight="semiBold" style={{ color: colors.warning }}>
+                    No active campus domain match
+                  </AppText>
+                  <AppText variant="caption" tone="secondary">
+                    Signups with this address will not auto-verify and must submit a student ID or admission letter for review.
+                  </AppText>
+                </View>
+              )
+            ) : null}
+          </SolidCard>
+        </View>
 
         {/* Uploads */}
         <View style={{ gap: spacing.sm }}>
@@ -197,6 +244,9 @@ export default function CampusesAndSecurityScreen() {
             </View>
           </SolidCard>
         </View>
+
+        {/* Campus Audit Trail */}
+        <CampusActivityFeed />
       </ScrollView>
 
       <AdminConfigModal

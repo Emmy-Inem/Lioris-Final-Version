@@ -95,6 +95,12 @@ export const CAMPUS_CENTERS: Record<string, CampusCenter> = {
     latitude: 5.1017,
     longitude: 6.8176,
   },
+  JSIIT: {
+    code: 'JSIIT',
+    name: 'Jigawa State Institute of Information Technology (Kazaure)',
+    latitude: 12.65,
+    longitude: 8.4,
+  },
 };
 
 export const CAMPUS_LANDMARKS: CampusLandmark[] = [
@@ -1843,6 +1849,51 @@ export const CAMPUS_LANDMARKS: CampusLandmark[] = [
     longitude: 6.8171,
     description: 'Academic buildings and lecture facilities serving Madonna University students at Elele.',
     walkingTip: 'Use live map results and on-campus signs to locate a specific faculty.',
+  },
+  // JIGAWA STATE INSTITUTE OF INFORMATION TECHNOLOGY (JSPICT), KAZAURE
+  {
+    id: 'jsiit-kazaure-campus',
+    name: 'JSIIT / JSPICT Main Campus (Kazaure)',
+    shortCode: 'KAZAURE',
+    campus: 'JSIIT',
+    category: 'Administrative',
+    latitude: 12.6500,
+    longitude: 8.4000,
+    description: 'Main campus hub for Jigawa State Institute of Information Technology (JSPICT) in Kazaure, Jigawa State.',
+    walkingTip: 'Use live map results and campus signposts for administrative offices and admissions.',
+  },
+  {
+    id: 'jsiit-digital-library',
+    name: 'JSPICT Digital Library & E-Learning Centre',
+    shortCode: 'ELIBRARY',
+    campus: 'JSIIT',
+    category: 'Library',
+    latitude: 12.6506,
+    longitude: 8.4005,
+    description: 'Digital library, e-resources, and study spaces serving ND, HND, and international diploma students.',
+    walkingTip: 'Check campus signs for computer workstations and reading halls.',
+  },
+  {
+    id: 'jsiit-computing-complex',
+    name: 'Computing & Engineering Academic Complex',
+    shortCode: 'ICT LABS',
+    campus: 'JSIIT',
+    category: 'Lecture Hall',
+    latitude: 12.6511,
+    longitude: 8.3996,
+    description: 'Lecture halls and laboratories for Computer Science, Computer Engineering, Electrical/Electronics, and Networking.',
+    walkingTip: 'Confirm specific department lab blocks via campus directory boards.',
+  },
+  {
+    id: 'jsiit-student-hostel',
+    name: 'JSIIT Student Hostels (Kazaure)',
+    shortCode: 'HOSTEL',
+    campus: 'JSIIT',
+    category: 'Hostel',
+    latitude: 12.6493,
+    longitude: 8.4008,
+    description: 'On-campus student accommodation managed through the JSPICT hostel allocation portal.',
+    walkingTip: 'Follow main campus walkways from the academic block toward the residential wing.',
   },
 ];
 
