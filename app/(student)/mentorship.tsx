@@ -65,7 +65,7 @@ export default function StudentMentorshipScreen() {
   const renderMentors = (list: typeof others) => (
     <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
       {list.map((mentor) => (
-        <View key={mentor.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 } : undefined}>
+        <View key={mentor.id} style={isDesktop ? { flexGrow: 1, flexBasis: '31%', minWidth: 320 } : undefined}>
           <MentorCard mentor={mentor} onRequested={refresh} />
         </View>
       ))}
@@ -229,9 +229,13 @@ export default function StudentMentorshipScreen() {
                 <AppText variant="h3" weight="bold">
                   Active ({activeOnes.length})
                 </AppText>
-                {activeOnes.map((m) => (
-                  <MentorshipListCard key={m.id} mentorship={m} viewerIsMentor={false} onPress={() => open(m.id)} />
-                ))}
+                <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.sm }}>
+                  {activeOnes.map((m) => (
+                    <View key={m.id} style={isDesktop ? { flexGrow: 1, flexBasis: '48%', minWidth: 340 } : undefined}>
+                      <MentorshipListCard mentorship={m} viewerIsMentor={false} onPress={() => open(m.id)} />
+                    </View>
+                  ))}
+                </View>
               </>
             ) : null}
             {waiting.length > 0 ? (
@@ -239,9 +243,13 @@ export default function StudentMentorshipScreen() {
                 <AppText variant="h3" weight="bold">
                   Waiting for a reply ({waiting.length})
                 </AppText>
-                {waiting.map((m) => (
-                  <MentorshipListCard key={m.id} mentorship={m} viewerIsMentor={false} onPress={() => open(m.id)} />
-                ))}
+                <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.sm }}>
+                  {waiting.map((m) => (
+                    <View key={m.id} style={isDesktop ? { flexGrow: 1, flexBasis: '48%', minWidth: 340 } : undefined}>
+                      <MentorshipListCard mentorship={m} viewerIsMentor={false} onPress={() => open(m.id)} />
+                    </View>
+                  ))}
+                </View>
               </>
             ) : null}
             {past.length > 0 ? (
@@ -249,9 +257,13 @@ export default function StudentMentorshipScreen() {
                 <AppText variant="h3" weight="bold">
                   History ({past.length})
                 </AppText>
-                {past.map((m) => (
-                  <MentorshipListCard key={m.id} mentorship={m} viewerIsMentor={false} onPress={() => open(m.id)} />
-                ))}
+                <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.sm }}>
+                  {past.map((m) => (
+                    <View key={m.id} style={isDesktop ? { flexGrow: 1, flexBasis: '48%', minWidth: 340 } : undefined}>
+                      <MentorshipListCard mentorship={m} viewerIsMentor={false} onPress={() => open(m.id)} />
+                    </View>
+                  ))}
+                </View>
               </>
             ) : null}
           </>

@@ -200,7 +200,7 @@ export default function StaffAnnouncementsScreen() {
         ) : announcements && announcements.length > 0 ? (
           <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
             {announcements.map((a) => (
-              <View key={a.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 580 } : undefined}>
+              <View key={a.id} style={isDesktop ? { flexGrow: 1, flexBasis: '48%', minWidth: 340 } : undefined}>
                 <AnnouncementCard announcement={a} />
                 {a.expiresAt ? (
                   <AppText variant="caption" tone="secondary" style={{ marginTop: -spacing.sm, marginBottom: spacing.sm, marginLeft: 4 }}>

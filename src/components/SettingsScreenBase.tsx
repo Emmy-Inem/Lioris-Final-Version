@@ -1005,7 +1005,7 @@ export function SettingsScreen() {
         </View>
 
         {/* One vertical list, grouped by category (no tabs to switch between) */}
-        <View style={{ width: '100%', maxWidth: isDesktop ? 820 : undefined, alignSelf: 'center', gap: spacing.md }}>
+        <View style={{ width: '100%', gap: spacing.md }}>
           {/* Category Controls Bar */}
           <View
             style={{
@@ -1143,7 +1143,7 @@ export function SettingsScreen() {
                   </View>
                 )}
 
-                <View style={{ paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm }}>
+                <View style={{ paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm, flexDirection: isDesktop ? 'row' : 'column', flexWrap: isDesktop ? 'wrap' : 'nowrap' }}>
                   <AppButton
                     label="Edit Profile Details"
                     variant="primary"
@@ -1415,7 +1415,7 @@ export function SettingsScreen() {
                         </AppText>
                       </View>
 
-                      <View style={{ gap: 8 }}>
+                      <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 10 } : { gap: 8 }}>
                         {accentPresets.map((preset) => {
                           const isSelected = (!customAccent && preset.isDefault) || customAccent === preset.id;
                           const displayPrimary = isDark ? preset.primaryDark : preset.primaryLight;
@@ -1447,7 +1447,7 @@ export function SettingsScreen() {
                                     ? 'rgba(255,255,255,0.04)'
                                     : 'rgba(0,0,0,0.02)'
                                   : colors.surface,
-                                gap: 12,
+                                gap: 12, flexGrow: isDesktop ? 1 : undefined, flexBasis: isDesktop ? '48%' : undefined, minWidth: isDesktop ? 280 : undefined,
                               })}
                             >
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>

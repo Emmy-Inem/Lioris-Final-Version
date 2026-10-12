@@ -432,7 +432,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}
       >
         {/* Cover Photo Header */}
-        <View style={{ height: isDesktop ? 220 : 150, position: 'relative', width: '100%', overflow: 'hidden' }}>
+        <View style={{ height: isDesktop ? 220 : 150, position: 'relative', width: isDesktop ? undefined : '100%', marginHorizontal: isDesktop ? 32 : 0, marginTop: isDesktop ? 20 : 0, borderRadius: isDesktop ? 22 : 0, overflow: 'hidden' }}>
           {activeCover ? (
             <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
           ) : (

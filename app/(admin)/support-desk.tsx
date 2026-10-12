@@ -372,13 +372,16 @@ export default function SupportDeskScreen() {
         <QueueItemSkeletonList count={4} />
       ) : (
         <FlatList
+          key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}
           style={{ flex: 1, minHeight: 0 }}
           data={tickets ?? []}
           keyExtractor={(item) => item.id}
+          numColumns={isDesktop ? 2 : 1}
+          columnWrapperStyle={isDesktop ? { gap: spacing.md } : undefined}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150, gap: spacing.sm }}
           renderItem={({ item }) => (
-            <SolidCard frosted style={{ padding: spacing.md }}>
+            <SolidCard frosted style={{ flex: isDesktop ? 1 : undefined, minWidth: 0, padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
                   <Avatar name={item.userName} size={38} role={(item.userRole as any) || 'student'} />

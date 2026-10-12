@@ -29,8 +29,8 @@ export function useResponsive(): ResponsiveInfo {
  numColumns = 2;
  }
 
- const contentMaxWidth = isWideDesktop ? 1440 : isDesktop ? 1240 : 1000;
- const containerPadding = isDesktop ? 32 : isTablet ? 24 : 16;
+ const contentMaxWidth = isWideDesktop ? 1680 : isDesktop ? 1480 : 1000;
+ const containerPadding = isWideDesktop ? 40 : isDesktop ? 32 : isTablet ? 24 : 16;
 
  return {
  width,

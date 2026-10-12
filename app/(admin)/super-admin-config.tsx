@@ -205,44 +205,46 @@ export default function CampusesAndSecurityScreen() {
           </SolidCard>
         </View>
 
-        {/* Uploads */}
-        <View style={{ gap: spacing.sm }}>
-          <AppText variant="h3" weight="bold">Uploads</AppText>
-          <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.border, gap: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <AppText weight="bold" variant="bodySmall">File size limits</AppText>
-                <AppText tone="secondary" variant="caption">
-                  Images (photos, covers): {quotas.maxImageMb} MB · Documents (notes, slides, PDFs): {quotas.maxPdfMb} MB
-                </AppText>
+        <View style={isDesktop ? { flexDirection: 'row', gap: spacing.md, alignItems: 'stretch' } : { gap: spacing.lg }}>
+          {/* Uploads */}
+          <View style={{ gap: spacing.sm, flex: 1 }}>
+            <AppText variant="h3" weight="bold">Uploads</AppText>
+            <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.border, gap: spacing.sm, flex: 1, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText weight="bold" variant="bodySmall">File size limits</AppText>
+                  <AppText tone="secondary" variant="caption">
+                    Images (photos, covers): {quotas.maxImageMb} MB · Documents (notes, slides, PDFs): {quotas.maxPdfMb} MB
+                  </AppText>
+                </View>
+                <AppButton label="Change" size="sm" variant="secondary" onPress={() => setQuotaOpen(true)} />
               </View>
-              <AppButton label="Change" size="sm" variant="secondary" onPress={() => setQuotaOpen(true)} />
-            </View>
-          </SolidCard>
-        </View>
+            </SolidCard>
+          </View>
 
-        {/* Maintenance */}
-        <View style={{ gap: spacing.sm }}>
-          <AppText variant="h3" weight="bold">Maintenance</AppText>
-          <SolidCard radius={18} style={{ borderWidth: 1, borderColor: maintenance ? colors.critical : colors.border }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <AppText weight="bold" variant="bodySmall" style={{ color: colors.critical }}>
-                  Maintenance mode
-                </AppText>
-                <AppText tone="secondary" variant="caption">
-                  Members see a &quot;being updated&quot; screen; admins keep full access. It does not block the database, so use it
-                  for planned updates rather than as a security control.
-                </AppText>
+          {/* Maintenance */}
+          <View style={{ gap: spacing.sm, flex: 1 }}>
+            <AppText variant="h3" weight="bold">Maintenance</AppText>
+            <SolidCard radius={18} style={{ borderWidth: 1, borderColor: maintenance ? colors.critical : colors.border, flex: 1, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText weight="bold" variant="bodySmall" style={{ color: colors.critical }}>
+                    Maintenance mode
+                  </AppText>
+                  <AppText tone="secondary" variant="caption">
+                    Members see a &quot;being updated&quot; screen; admins keep full access. It does not block the database, so use it
+                    for planned updates rather than as a security control.
+                  </AppText>
+                </View>
+                <Switch
+                  value={maintenance}
+                  disabled={maintenanceBusy}
+                  onValueChange={toggleMaintenance}
+                  trackColor={{ false: colors.divider, true: colors.critical }}
+                />
               </View>
-              <Switch
-                value={maintenance}
-                disabled={maintenanceBusy}
-                onValueChange={toggleMaintenance}
-                trackColor={{ false: colors.divider, true: colors.critical }}
-              />
-            </View>
-          </SolidCard>
+            </SolidCard>
+          </View>
         </View>
 
         {/* Campus Audit Trail */}

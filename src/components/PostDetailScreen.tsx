@@ -517,8 +517,7 @@ export function PostDetailScreen() {
  <ScrollView ref={scrollViewRef} style={{ flex: 1, width: '100%' }}
  showsVerticalScrollIndicator={false}
  keyboardShouldPersistTaps="handled"
- contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 120,
-    maxWidth: isDesktop ? 820 : undefined, width: '100%', alignSelf: 'center' }}
+ contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 120, width: '100%' }}
  >
  {/* Full-Screen Master Thread Card */}
  <SolidCard frosted radius={24} style={{ marginBottom: spacing.md }}>
@@ -968,7 +967,7 @@ export function PostDetailScreen() {
             alignItems: 'center',
           }}
         >
-          <View style={{ width: '100%', maxWidth: isDesktop ? 800 : undefined }}>
+          <View style={{ width: '100%' }}>
             {replyingToComment ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: `${colors.brandPrimary}15`, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm, marginBottom: 4 }}>
                 <AppText variant="caption" tone="brand" weight="bold">Replying to @{replyingToComment.authorName}</AppText>

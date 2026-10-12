@@ -180,7 +180,7 @@ export default function StudyGroupsScreen() {
 
         <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.md }}>
           {filtered.map((g) => (
-            <View key={g.id} style={isDesktop ? { flexGrow: 1, flexBasis: 0, minWidth: 340, maxWidth: 560 } : undefined}>
+            <View key={g.id} style={isDesktop ? { flexGrow: 1, flexBasis: '31%', minWidth: 340 } : undefined}>
               <StudyGroupCard group={g} onJoined={refresh} />
             </View>
           ))}

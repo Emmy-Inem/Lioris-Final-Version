@@ -1236,7 +1236,7 @@ export default function ResourcesScreen() {
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
               {displayedResources.map((res) => (
-                <View key={res.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 560 }}>
+                <View key={res.id} style={{ flexGrow: 1, flexBasis: '31%', minWidth: 320 }}>
                   {isMineView ? <MyUploadStatusBanner resource={res} /> : null}
                   <ResourceCard
                     resource={res}

@@ -39,7 +39,8 @@ const CONDITIONS = ['All Conditions', 'New', 'Like New', 'Fair'];
 
 export default function MarketplaceScreen() {
  const { colors, spacing, radius } = useTheme();
- const { isDesktop } = useResponsive();
+ const { isDesktop, isWideDesktop } = useResponsive();
+ const marketCols = isWideDesktop ? 4 : isDesktop ? 3 : 2;
  const toast = useToast();
  const queryClient = useQueryClient();
  const { user } = useAuth();
@@ -366,9 +367,10 @@ export default function MarketplaceScreen() {
  </View>
 
  <FlatList
+ key={`market-${marketCols}`}
  data={listings ?? []}
  keyExtractor={(item) => item.id}
- numColumns={2}
+ numColumns={marketCols}
  columnWrapperStyle={{ gap: spacing.md }}
  contentContainerStyle={{ gap: spacing.md, paddingBottom: 130 }}
  renderItem={({ item }) => <MarketplaceItemCard item={item} />}

@@ -271,7 +271,7 @@ export function MentorshipSpace({ mentorshipId, role }: { mentorshipId: string; 
         style={{ flex: 1, width: '100%' }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 140, gap: spacing.md, maxWidth: 860, alignSelf: 'center', width: '100%' }}
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 140, gap: spacing.md, width: '100%' }}
       >
         <Pressable onPress={goBack} hitSlop={8} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: spacing.xs }}>
           <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />

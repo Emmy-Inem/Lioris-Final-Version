@@ -323,9 +323,9 @@ export default function AlumniGivingScreen() {
           description={tab === 'browse' ? 'Check back soon, or start your own.' : 'Campaigns you start appear here, including ones still under review.'}
         />
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md, paddingBottom: isDesktop ? 60 : 130 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md, paddingBottom: isDesktop ? 60 : 130, ...(isDesktop ? { flexDirection: 'row', flexWrap: 'wrap' } : {}) }}>
           {list.map((c) => (
-            <View key={c.id}>
+            <View key={c.id} style={isDesktop ? { flexGrow: 1, flexBasis: '48%', minWidth: 340 } : undefined}>
               {tab === 'mine' && c.reviewStatus !== 'approved' && (
                 <View style={{ marginBottom: 6 }}>
                   <Badge

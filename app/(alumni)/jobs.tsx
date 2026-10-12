@@ -485,12 +485,16 @@ export default function AlumniJobsScreen() {
           />
         ) : (
           <FlatList
+            key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}
             data={jobs}
             keyExtractor={(item) => item.id}
+            numColumns={isDesktop ? 2 : 1}
+            columnWrapperStyle={isDesktop ? { gap: spacing.md } : undefined}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130, gap: spacing.sm }}
             renderItem={({ item }) => (
               <Pressable
+                style={isDesktop ? { flex: 1, minWidth: 0 } : undefined}
                 onPress={() => handleOpenJobDetail(item)}
               >
                 <SolidCard

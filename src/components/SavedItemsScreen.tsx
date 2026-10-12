@@ -208,8 +208,9 @@ export function SavedItemsScreen() {
             onAction={() => router.push(`/${roleGroup}/feed` as any)}
           />
         ) : (
-          visible.map((item) => (
-            <SolidCard key={item.id} radius={18} style={{ padding: spacing.md }}>
+          <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.sm }}>
+          {visible.map((item) => (
+            <SolidCard key={item.id} radius={18} style={{ padding: spacing.md, ...(isDesktop ? { flexGrow: 1, flexBasis: '48%', minWidth: 340 } : {}) }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
                 <View
                   style={{
@@ -264,7 +265,8 @@ export function SavedItemsScreen() {
                 </Pressable>
               </View>
             </SolidCard>
-          ))
+          ))}
+          </View>
         )}
       </ScrollView>
     </ScreenContainer>

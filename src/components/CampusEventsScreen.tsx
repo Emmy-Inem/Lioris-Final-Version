@@ -482,10 +482,11 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
               {filtered.map((event) => (
                 <View
                   key={event.id}
-                  style={{
-                    width: isDesktop ? 320 : '100%',
-                    maxWidth: '100%',
-                  }}
+                  style={
+                    isDesktop
+                      ? { flexGrow: 1, flexBasis: '30%', minWidth: 320 }
+                      : { width: '100%' }
+                  }
                 >
                   <EventCard event={event} />
                 </View>

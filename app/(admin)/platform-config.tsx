@@ -171,33 +171,35 @@ export default function PlatformConsoleScreen() {
           />
         </SolidCard>
 
-        {/* Portal links */}
-        <SolidCard radius={20}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            <Ionicons name="link-outline" size={22} color={colors.textSecondary} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <AppText weight="bold" variant="bodySmall">University portal links</AppText>
-              <AppText tone="secondary" variant="caption">
-                The shortcuts members see on their home screen (student portal, library, LMS…)
-              </AppText>
+        <View style={isDesktop ? { flexDirection: 'row', gap: spacing.md } : { gap: spacing.lg }}>
+          {/* Portal links */}
+          <SolidCard radius={20} style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <Ionicons name="link-outline" size={22} color={colors.textSecondary} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <AppText weight="bold" variant="bodySmall">University portal links</AppText>
+                <AppText tone="secondary" variant="caption">
+                  The shortcuts members see on their home screen (student portal, library, LMS…)
+                </AppText>
+              </View>
+              <AppButton label="Manage" size="sm" variant="secondary" onPress={() => setPortalLinksOpen(true)} />
             </View>
-            <AppButton label="Manage" size="sm" variant="secondary" onPress={() => setPortalLinksOpen(true)} />
-          </View>
-        </SolidCard>
+          </SolidCard>
 
-        {/* Look & feel */}
-        <SolidCard radius={20}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            <Ionicons name="color-wand-outline" size={22} color={colors.textSecondary} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <AppText weight="bold" variant="bodySmall">Liquid Glass Studio</AppText>
-              <AppText tone="secondary" variant="caption">
-                Tune blur, shine and tint of the glass surfaces on this device
-              </AppText>
+          {/* Look & feel */}
+          <SolidCard radius={20} style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <Ionicons name="color-wand-outline" size={22} color={colors.textSecondary} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <AppText weight="bold" variant="bodySmall">Liquid Glass Studio</AppText>
+                <AppText tone="secondary" variant="caption">
+                  Tune blur, shine and tint of the glass surfaces on this device
+                </AppText>
+              </View>
+              <AppButton label="Open" size="sm" variant="secondary" onPress={() => setGlassStudioOpen(true)} />
             </View>
-            <AppButton label="Open" size="sm" variant="secondary" onPress={() => setGlassStudioOpen(true)} />
-          </View>
-        </SolidCard>
+          </SolidCard>
+        </View>
       </ScrollView>
 
       <ManagePortalLinksModal visible={portalLinksOpen} onClose={() => setPortalLinksOpen(false)} />

@@ -169,9 +169,7 @@ export default function ExploreForumsScreen() {
           paddingTop: spacing.xs,
           paddingHorizontal: isDesktop ? 0 : 2,
           gap: spacing.md,
-          maxWidth: isDesktop ? 860 : undefined,
           width: '100%',
-          alignSelf: 'center',
         }}
         showsVerticalScrollIndicator={false}
       >
@@ -361,8 +359,8 @@ export default function ExploreForumsScreen() {
           })}
         </ScrollView>
 
-        {/* Community Directory List - Mobile Optimized */}
-        <View style={{ gap: spacing.md }}>
+        {/* Community Directory List - Mobile & Desktop Optimized */}
+        <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.md }}>
           {filtered.map((ch) => {
             const joined = isJoined(ch);
             const liveStat = communityStatsMap?.get(ch.id);
@@ -379,6 +377,7 @@ export default function ExploreForumsScreen() {
                   borderLeftWidth: 4,
                   borderLeftColor: ch.accentColor,
                   gap: 10,
+                  ...(isDesktop ? { flexGrow: 1, flexBasis: '48%', minWidth: 360, justifyContent: 'space-between' } : {}),
                 }}
               >
                 {/* Header row - Responsive flex wrapping on mobile */}

@@ -214,9 +214,12 @@ export default function TakedownRequestsScreen() {
         </SolidCard>
       ) : (
         <FlatList
+          key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}
           style={{ flex: 1, minHeight: 0 }}
           data={data ?? []}
           keyExtractor={(item) => item.id}
+          numColumns={isDesktop ? 2 : 1}
+          columnWrapperStyle={isDesktop ? { gap: spacing.md } : undefined}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 150, gap: spacing.sm }}
           ListEmptyComponent={
@@ -226,7 +229,7 @@ export default function TakedownRequestsScreen() {
             />
           }
           renderItem={({ item }) => (
-            <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.border }}>
+            <SolidCard radius={18} style={{ flex: isDesktop ? 1 : undefined, minWidth: 0, borderWidth: 1, borderColor: colors.border }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, flexWrap: 'wrap' }}>
                 {item.status === 'pending' ? (
                   <Pressable

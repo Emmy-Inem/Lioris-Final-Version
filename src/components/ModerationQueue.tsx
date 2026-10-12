@@ -418,7 +418,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
             {filteredReports.map((item) => (
-              <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 320, maxWidth: 580 }}>
+              <View key={item.id} style={{ flexGrow: 1, flexBasis: '48%', minWidth: 340 }}>
                 <SolidCard radius={20} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.critical}40` }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
                     <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>

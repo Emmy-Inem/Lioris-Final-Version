@@ -129,38 +129,6 @@ export default function RootLayout() {
             touch-action: pan-x pan-y !important;
           }
 
-          /* Desktop boxed screen layout: keep physical scrollbar at right edge of screen while centering content */
-          [data-screen-container="boxed"] > div[style*="overflow-y: auto"]:not([data-horizontal-scroll="true"]),
-          [data-screen-container="boxed"] > div[style*="overflow-y: scroll"]:not([data-horizontal-scroll="true"]),
-          [data-screen-container="boxed"] > .r-overflowY-156q2ks:not([data-horizontal-scroll="true"]) {
-            width: 100% !important;
-            max-width: none !important;
-            align-self: stretch !important;
-          }
-
-          [data-screen-container="boxed"] > div[style*="overflow-y: auto"]:not([data-horizontal-scroll="true"]) > div,
-          [data-screen-container="boxed"] > div[style*="overflow-y: scroll"]:not([data-horizontal-scroll="true"]) > div,
-          [data-screen-container="boxed"] > .r-overflowY-156q2ks:not([data-horizontal-scroll="true"]) > div {
-            max-width: var(--lioris-max-width, 1240px) !important;
-            width: 100% !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            padding-left: var(--lioris-pad-x, 32px) !important;
-            padding-right: var(--lioris-pad-x, 32px) !important;
-            box-sizing: border-box !important;
-          }
-
-          [data-screen-container="boxed"] > div:not([style*="overflow-y: auto"]):not([style*="overflow-y: scroll"]):not(.r-overflowY-156q2ks),
-          [data-screen-container="boxed"] > [data-horizontal-scroll="true"] {
-            max-width: var(--lioris-max-width, 1240px);
-            width: 100%;
-            margin-left: auto;
-            margin-right: auto;
-            padding-left: var(--lioris-pad-x, 32px);
-            padding-right: var(--lioris-pad-x, 32px);
-            box-sizing: border-box;
-          }
-
           /* Ensure modal scroll containers always shrink properly so bottom buttons are never cut off */
           [aria-modal="true"] div[style*="overflow-y: auto"],
           [aria-modal="true"] div[style*="overflow-y: scroll"],
@@ -182,7 +150,18 @@ export default function RootLayout() {
             }
           }
 
-          /* On desktop (>= 1024px), show a clean physical scrollbar at the screen edge */
+          /* On desktop (>= 1024px), show a clean physical scrollbar at the screen edge while keeping full page margins */
+          @media (min-width: 1024px) {
+            :root {
+              --lioris-pad-x: 32px;
+            }
+          }
+          @media (min-width: 1440px) {
+            :root {
+              --lioris-pad-x: 40px;
+            }
+          }
+
           @media (min-width: 1024px) {
             ::-webkit-scrollbar {
               width: 8px;
@@ -202,6 +181,30 @@ export default function RootLayout() {
               scrollbar-width: thin;
               scrollbar-color: rgba(148, 163, 184, 0.38) transparent;
               box-sizing: border-box;
+            }
+
+            /* Extend top-level vertical scroll views inside padded ScreenContainer to the right screen edge so the physical scrollbar sits at the screen edge while content retains right margin */
+            [data-screen-container="padded"] > .r-overflowY-156q2ks:not([data-horizontal-scroll="true"]):not(:has(> .r-overflowY-156q2ks)),
+            [data-screen-container="padded"] > div:not(.r-flexDirection-18u37iz):not([style*="flex-direction: row"]):not(.r-overflowY-156q2ks) > .r-overflowY-156q2ks:not([data-horizontal-scroll="true"]):not(:has(> .r-overflowY-156q2ks)) {
+              width: calc(100% + var(--lioris-pad-x, 32px)) !important;
+              margin-right: calc(-1 * var(--lioris-pad-x, 32px)) !important;
+              padding-right: var(--lioris-pad-x, 32px) !important;
+              box-sizing: border-box !important;
+            }
+
+            /* Handle RefreshControl-wrapped vertical ScrollViews on web (outer RefreshControl View + inner ScrollViewBase) */
+            [data-screen-container="padded"] > .r-overflowY-156q2ks:not([data-horizontal-scroll="true"]):has(> .r-overflowY-156q2ks),
+            [data-screen-container="padded"] > div:not(.r-flexDirection-18u37iz):not([style*="flex-direction: row"]):not(.r-overflowY-156q2ks) > .r-overflowY-156q2ks:not([data-horizontal-scroll="true"]):has(> .r-overflowY-156q2ks) {
+              width: calc(100% + var(--lioris-pad-x, 32px)) !important;
+              margin-right: calc(-1 * var(--lioris-pad-x, 32px)) !important;
+              overflow-y: hidden !important;
+              box-sizing: border-box !important;
+            }
+            [data-screen-container="padded"] > .r-overflowY-156q2ks:not([data-horizontal-scroll="true"]) > .r-overflowY-156q2ks,
+            [data-screen-container="padded"] > div:not(.r-flexDirection-18u37iz):not([style*="flex-direction: row"]):not(.r-overflowY-156q2ks) > .r-overflowY-156q2ks:not([data-horizontal-scroll="true"]) > .r-overflowY-156q2ks {
+              width: 100% !important;
+              padding-right: var(--lioris-pad-x, 32px) !important;
+              box-sizing: border-box !important;
             }
 
             /* Override showsVerticalScrollIndicator={false} on primary desktop work-area vertical scroll views */
