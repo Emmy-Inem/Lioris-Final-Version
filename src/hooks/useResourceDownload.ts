@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Resource } from '@/api/types';
 import { trackResourceDownload } from '@/api/resources';
@@ -41,7 +41,9 @@ export function useResourceDownload(resource: Pick<Resource, 'id' | 'title' | 'f
       } else {
         toast.success(
           result.outcome === 'shared'
-            ? `Choose where to save ${resource.title}.`
+            ? Platform.OS === 'ios'
+              ? `Tap “Save to Files” to keep ${resource.title}.`
+              : `Choose where to save ${resource.title}.`
             : result.outcome === 'opened'
             ? `Opening ${resource.title}.`
             : `Downloading ${resource.title}.`,

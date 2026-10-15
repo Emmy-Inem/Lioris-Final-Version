@@ -46,9 +46,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         'Lioris uses your photo library so you can choose a profile photo and upload study documents.',
       NSPhotoLibraryAddUsageDescription:
         'Lioris saves downloaded study guides, past questions, and event passes to your photo library.',
-      // Downloaded study material lives in Documents/Downloads and shows up in Files > On My iPhone > Lioris.
-      UIFileSharingEnabled: true,
-      LSSupportsOpeningDocumentsInPlace: true,
       ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ['remote-notification'],
     },

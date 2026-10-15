@@ -7,7 +7,7 @@ export { safeFileName, mimeTypeForFileName } from './fileNames';
 export type DownloadOutcome =
   /** Web: the browser was handed a "save as" download. */
   | 'downloaded'
-  /** Native: the file was saved on the device (Android: the folder the person chose; iOS: Files > Lioris). */
+  /** Native: the file was saved on the device (Android: the folder the person chose). */
   | 'saved'
   /** Native: the file was written to the device and the share / save sheet was shown. */
   | 'shared'
@@ -63,8 +63,7 @@ export async function shareLocalFile(uri: string, fileName: string, mimeType?: s
  * Native: the bytes are downloaded into the app's cache and then SAVED, not opened:
  *   - Android: into a folder the person picks once (e.g. Downloads) with the system folder picker; it is
  *     remembered. If they dismiss the picker, the share sheet is shown instead.
- *   - iOS: into the app's Documents/Downloads folder, which is visible in the Files app under
- *     "On My iPhone > Lioris" (UIFileSharingEnabled + LSSupportsOpeningDocumentsInPlace).
+ *   - iOS: the system sheet with "Save to Files" (iOS apps cannot write to a shared Downloads folder).
  * Falls back to the share sheet, then to the browser, only when saving is not possible.
  *
  * Throws when the transfer itself fails, so callers never claim a download that did not happen.
@@ -121,14 +120,11 @@ export async function downloadRemoteFile(url: string, fileName: string, mimeType
         }
       }
       if (done) return { outcome: 'saved', localUri: saved.uri, location: 'the folder you chose' };
-    } else {
-      const folder = new Directory(Paths.document, 'Downloads');
-      if (!folder.exists) folder.create({ intermediates: true, idempotent: true });
-      const target = new File(folder, fileName);
-      if (target.exists) target.delete();
-      await saved.copy(target);
-      return { outcome: 'saved', localUri: target.uri, location: 'Files > On My iPhone > Lioris > Downloads' };
     }
+    // iOS has no public "Downloads" folder an app may write to without a native config change (a store
+    // release). The share sheet's "Save to Files" is the platform's real download. To save straight into
+    // Files > On My iPhone > Lioris instead, add UIFileSharingEnabled + LSSupportsOpeningDocumentsInPlace
+    // to ios.infoPlist in the next native release and write the file into Paths.document.
 
     if (await shareLocalFile(saved.uri, fileName, type)) return { outcome: 'shared', localUri: saved.uri };
   } catch (err) {

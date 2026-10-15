@@ -5,7 +5,7 @@ import { attachmentFileName, mimeTypeForFileName } from './fileNames';
 
 /**
  * Attachments on study-group posts and chat messages used to be handed to the system browser, which
- * just displays the file. On a phone this SAVES it (Android: chosen folder, iOS: Files > Lioris) and
+ * just displays the file. On a phone this SAVES it (Android: chosen folder, iOS: Save to Files) and
  * tells the person where it went. On the web it keeps opening in a new tab.
  */
 export async function saveAttachment(url: string, storedRef: string): Promise<void> {
@@ -17,7 +17,9 @@ export async function saveAttachment(url: string, storedRef: string): Promise<vo
   const mime = mimeTypeForFileName(fileName);
   try {
     const result = await downloadRemoteFile(url, fileName, mime);
-    if (result.outcome === 'saved') {
+    if (result.outcome === 'shared' && Platform.OS === 'ios') {
+      // the share sheet is already open; "Save to Files" is the download
+    } else if (result.outcome === 'saved') {
       const uri = result.localUri;
       Alert.alert(
         'Download complete',
