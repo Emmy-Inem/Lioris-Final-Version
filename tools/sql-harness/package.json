@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "test": "node run.mjs",
-    "parse": "node parse-check.mjs"
+    "parse": "node parse-check.mjs",
+    "audit": "node audit-remediation.mjs",
+    "audit:before": "node audit-remediation.mjs --before"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.0"

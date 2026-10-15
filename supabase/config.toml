@@ -77,3 +77,7 @@ verify_jwt = false
 
 [functions.report-client-error]
 verify_jwt = false
+
+# Pre-login by definition. Rate limited per IP and per handle inside the function.
+[functions.login-with-username]
+verify_jwt = false
