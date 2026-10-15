@@ -5,7 +5,7 @@ import { assertWithinStorageQuota } from './platformSettings';
 import { supabase } from './supabase';
 import { getInstitutionByCode, getInstitutionForEmail } from './institutions';
 import { clearTokens, getSessionUser } from '../auth/tokenStorage';
-import { persistCampus, getStoredCampus } from '@/hooks/useViewScope';
+import { persistCampus } from '@/hooks/useViewScope';
 import { getFriendlyErrorMessage } from '../utils/errors';
 
 export function nextLevelXp(level: number): number {
@@ -198,11 +198,6 @@ export async function getMyProfile(user?: {
 
     if (data) {
       const emailLower = (resolvedUser.email || '').toLowerCase().trim();
-      const isPersonalAccount =
-        emailLower.endsWith('@gmail.com') ||
-        emailLower.endsWith('@yahoo.com') ||
-        emailLower.endsWith('@hotmail.com') ||
-        emailLower.endsWith('@outlook.com');
       const isMasterAdmin = emailLower === 'inememmanuel@gmail.com';
       const dbRole = isMasterAdmin ? 'admin' : ((data.role || resolvedUser.role) as UserRole);
       const isAdmin = dbRole === 'admin' || isMasterAdmin;
@@ -211,41 +206,31 @@ export async function getMyProfile(user?: {
         : ((data.admin_role as 'super_admin' | 'campus_admin' | null | undefined) || (isAdmin ? (data.campus_code === 'GLOBAL' ? 'super_admin' : 'campus_admin') : null));
       const isSuperAdmin = isAdmin && resolvedAdminRole === 'super_admin';
 
-     const matchedInst = resolvedUser.email ? getInstitutionForEmail(resolvedUser.email) : null;
-     const isOfficialEmail = !!(matchedInst && matchedInst.code !== 'GLOBAL' && !isPersonalAccount);
-     const isDbVerified = data.verification_status === 'verified';
-
-     // Admins are always verified; DB-verified or official-email users are verified
-     // unless explicitly rejected (rejected status overrides official email)
-     const isVerified =
-       isAdmin ||
-       ((isDbVerified || isOfficialEmail) && data.verification_status !== 'rejected');
+     // Verification is decided on the SERVER and nowhere else. The old code also treated "has an
+     // institutional e-mail" as verified here and tried to write 'verified' back to the profile;
+     // the database refuses that write (members cannot verify themselves), so the screen said
+     // "verified" while every campus query - which follows profiles.verification_status - still
+     // answered "no access". Institutional addresses are verified by the auth trigger when the
+     // inbox is confirmed (supabase_email_confirmation_2026.sql), so there is nothing to infer.
+     const isVerified = isAdmin || data.verification_status === 'verified';
 
      const verificationStatus: 'none' | 'pending' | 'verified' = isVerified
        ? 'verified'
        : (data.verification_status === 'pending' ? 'pending' : 'none');
 
-     // Quietly sync verified status if official institutional email and not yet verified
-     if (isOfficialEmail && !isAdmin && data.verification_status !== 'verified') {
-       supabase.from('profiles').update({ verification_status: 'verified' }).eq('id', resolvedUser.id).then(() => {}, () => {});
-     }
-
       let rawCampus = isSuperAdmin ? 'GLOBAL' : data.campus_code;
       if (!isSuperAdmin && (!rawCampus || rawCampus === 'GLOBAL')) {
         const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: null }));
+        // Only the campus this member chose at sign-up (their own account metadata). A value left in
+        // device storage by a previous account on a shared phone must never be written to this one.
         const metaCampus = authData?.user?.user_metadata?.campus_code as string | undefined;
-        const stored = await getStoredCampus();
-        const candidate = (metaCampus && metaCampus !== 'GLOBAL')
-          ? metaCampus
-          : (stored && stored !== 'GLOBAL')
-          ? stored
-          : undefined;
+        const candidate = metaCampus && metaCampus !== 'GLOBAL' ? metaCampus : undefined;
 
         if (candidate) {
           rawCampus = candidate;
           persistCampus(candidate);
+          // The server decides; a refusal (e.g. an institutional e-mail locked to another campus) is fine.
           supabase.rpc('set_my_campus_code', { p_campus_code: candidate }).then(() => {}, () => {});
-          supabase.from('profiles').update({ campus_code: candidate }).eq('id', resolvedUser.id).then(() => {}, () => {});
         }
       }
 
@@ -562,7 +547,9 @@ export async function updateMyProfile(
    if (patch.linkedinUrl !== undefined) dbPatch.linkedin_url = patch.linkedinUrl ? patch.linkedinUrl.trim() : null;
 
     if (userId !== 'me') {
-      const { error } = await supabase.from('profiles').update(dbPatch).eq('id', userId);
+      // `.select('id')` so a write that matched zero rows (RLS, signed-out session) is an error
+      // instead of a silent "success".
+      const { data: written, error } = await supabase.from('profiles').update(dbPatch).eq('id', userId).select('id');
       if (error) {
         if (error.code === '23505' || /unique|duplicate/i.test(error.message)) {
           throw new Error('This username is already taken. Please choose another.');
@@ -570,27 +557,44 @@ export async function updateMyProfile(
         console.warn('[Profile] Supabase update warning:', error.message);
         throw new Error(getFriendlyErrorMessage(error, 'Could not update your profile. Please try again.'));
       }
+      if (!written || written.length === 0) {
+        throw new Error('Your profile could not be saved. Please sign in again and retry.');
+      }
 
-     if (patch.institutionCode !== undefined) {
-       const cleanCode = patch.institutionCode.trim().toUpperCase();
-       try {
-         await supabase.rpc('set_my_campus_code', { p_campus_code: cleanCode });
-       } catch {
-         // non-blocking
-       }
-       try {
-         await supabase.auth.updateUser({ data: { campus_code: cleanCode } });
-       } catch {
-         // non-blocking
-       }
-     }
-   }
- } catch (err: any) {
-   if (err?.message?.includes('already taken') || (err?.message && !err.message.includes('fetch'))) {
-     throw err;
-   }
-   // Session fallback for offline/network
- }
+      if (patch.institutionCode !== undefined) {
+        // The database is authoritative about the campus (institutional e-mails and verified members
+        // are locked). Read back what actually stuck so the app never shows a campus the server
+        // refused - supabase-js returns { error } instead of throwing, so this must be inspected.
+        const cleanCode = patch.institutionCode.trim().toUpperCase();
+        const { error: campusError } = await supabase.rpc('set_my_campus_code', { p_campus_code: cleanCode });
+        const { data: stuck } = await supabase.from('profiles').select('campus_code').eq('id', userId).maybeSingle();
+        const savedCampus = (stuck?.campus_code as string | undefined) || undefined;
+        if (savedCampus && savedCampus !== cleanCode) {
+          updated.institutionCode = savedCampus;
+          const savedInst = getInstitutionByCode(savedCampus);
+          if (savedInst) updated.institutionName = savedInst.name;
+          persistCampus(savedCampus);
+          if (campusError) {
+            throw new Error(
+              /locked|verified/i.test(campusError.message ?? '')
+                ? `Your campus is locked to ${savedInst?.name ?? savedCampus}. Contact support if that is wrong.`
+                : getFriendlyErrorMessage(campusError, 'Could not change your campus. Please try again.'),
+            );
+          }
+        }
+        try {
+          await supabase.auth.updateUser({ data: { campus_code: savedCampus ?? cleanCode } });
+        } catch {
+          // non-blocking: account metadata is a convenience copy
+        }
+      }
+    }
+  } catch (err: any) {
+    // Never pretend a failed save worked: the old "session fallback" kept the edit in memory only and
+    // returned success, so the next reload silently reverted it.
+    if (err instanceof Error && err.message) throw err;
+    throw new Error('Could not update your profile. Please check your connection and try again.');
+  }
 
  profileState.set(userId, updated);
  return updated;
@@ -840,4 +844,146 @@ export async function setCampusAmbassadorStatus(userId: string, isAmbassador: bo
   if (cached) {
     profileState.set(userId, { ...cached, isCampusAmbassador: isAmbassador });
   }
+}
+
+
+// ---------------------------------------------------------------------------
+// Own-row access and onboarding, backed by server functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Columns every signed-in member may read on ANY profile. Everything private (email, student id,
+ * push token, last-login, ...) is NOT in this list on purpose: since the audit remediation
+ * (supabase/migrations/20261028000000_audit_remediation.sql) the database refuses those columns on
+ * direct reads, and a select that names one fails the WHOLE request with 42501.
+ */
+export const PUBLIC_PROFILE_COLUMNS =
+  'id, full_name, username, role, campus_code, department, faculty, level, bio, interests, avatar_url, banner_url, verification_status, trust_score, is_suspended, onboarding_complete, admin_role, is_campus_ambassador';
+
+/**
+ * The caller's OWN profile row, private columns included (email, onboarding_step, deactivated_at).
+ * Uses the get_my_profile() RPC; if the RPC is unavailable it degrades to the publicly readable
+ * columns, so callers must treat the private ones as optional. Returns null only when no row can be
+ * read at all (signed out, or the request failed).
+ */
+export async function getOwnProfileRow(userId?: string): Promise<Record<string, any> | null> {
+  let id = userId;
+  if (!id) {
+    const { data } = await supabase.auth.getUser().catch(() => ({ data: null as any }));
+    id = data?.user?.id;
+    if (!id) id = (await getSessionUser())?.id;
+  }
+  if (!id) return null;
+
+  try {
+    const { data, error } = await supabase.rpc('get_my_profile');
+    if (!error && data) {
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row && row.id === id) return row;
+    }
+  } catch {
+    // fall through to the column read
+  }
+
+  try {
+    const { data, error } = await supabase.from('profiles').select(PUBLIC_PROFILE_COLUMNS).eq('id', id).maybeSingle();
+    if (!error && data) return data as Record<string, any>;
+  } catch {
+    // network failure: nothing to return
+  }
+  return null;
+}
+
+export interface SavedAcademicProfile {
+  campusCode: string;
+  department: string;
+  faculty: string | null;
+  verificationStatus: string;
+  /** True when the server kept a campus other than the one the member asked for. */
+  campusLocked: boolean;
+  lockReason: 'email_domain' | 'verified' | null;
+}
+
+/**
+ * Saves campus + department (+ optional faculty, level, bio) through save_academic_profile() and
+ * returns what the SERVER stored. Institutional e-mail addresses and verified members are locked to
+ * their campus; the caller must display `campusCode`, never the value it asked for.
+ */
+export async function saveAcademicProfile(input: {
+  campusCode: string;
+  department: string;
+  faculty?: string | null;
+  level?: string | null;
+  bio?: string | null;
+}): Promise<SavedAcademicProfile> {
+  const { data, error } = await supabase.rpc('save_academic_profile', {
+    p_campus_code: input.campusCode,
+    p_department: input.department,
+    p_faculty: input.faculty ?? null,
+    p_level: input.level ?? null,
+    p_bio: input.bio ?? null,
+  });
+  if (error && (error.code === 'PGRST202' || /could not find the function/i.test(error.message ?? ''))) {
+    // Database not migrated yet (no save_academic_profile function): legacy path, but still reads back
+    // what the server actually kept instead of trusting the value that was asked for.
+    const me = await supabase.auth.getUser().catch(() => ({ data: null as any }));
+    const uid: string | undefined = me.data?.user?.id;
+    await updateMyProfile({
+      institutionCode: input.campusCode,
+      department: input.department,
+      faculty: input.faculty ?? undefined,
+      academicLevel: input.level ?? undefined,
+      bio: input.bio ?? undefined,
+    });
+    const row = uid ? await getOwnProfileRow(uid) : null;
+    const keptCampus = String(row?.campus_code ?? input.campusCode);
+    persistCampus(keptCampus);
+    return {
+      campusCode: keptCampus,
+      department: String(row?.department ?? input.department),
+      faculty: (row?.faculty as string | null) ?? null,
+      verificationStatus: String(row?.verification_status ?? 'unverified'),
+      campusLocked: keptCampus !== input.campusCode.toUpperCase(),
+      lockReason: null,
+    };
+  }
+  if (error) {
+    const msg = error.message ?? '';
+    if (/department_required/i.test(msg)) throw new Error('Please choose your department to continue.');
+    if (/invalid_campus/i.test(msg)) throw new Error('Please choose your university from the list.');
+    throw new Error(getFriendlyErrorMessage(error, 'We could not save your academic profile. Check your connection and try again.'));
+  }
+  const row = (data ?? {}) as Record<string, any>;
+  const campusCode = String(row.campus_code ?? input.campusCode);
+  invalidateProfileCache((await supabase.auth.getUser().catch(() => ({ data: null as any }))).data?.user?.id ?? '');
+  persistCampus(campusCode);
+  return {
+    campusCode,
+    department: String(row.department ?? input.department),
+    faculty: row.faculty ?? null,
+    verificationStatus: String(row.verification_status ?? 'unverified'),
+    campusLocked: row.campus_locked === true,
+    lockReason: row.lock_reason === 'email_domain' || row.lock_reason === 'verified' ? row.lock_reason : null,
+  };
+}
+
+/**
+ * Marks onboarding finished ON THE SERVER and reports the real outcome. Throws when the database
+ * refused (for example campus or department still missing) so the app never walks a member into the
+ * dashboard that the next sign-in would bounce back to onboarding.
+ */
+export async function completeOnboardingOnServer(): Promise<{ onboardingComplete: boolean; campusCode: string | null; department: string | null }> {
+  const { data, error } = await supabase.rpc('complete_my_onboarding');
+  if (error) {
+    if (/academic_profile_incomplete/i.test(error.message ?? '')) {
+      throw new Error('ACADEMIC_PROFILE_INCOMPLETE');
+    }
+    throw new Error(getFriendlyErrorMessage(error, 'We could not finish setting up your account. Check your connection and try again.'));
+  }
+  const row = (data ?? {}) as Record<string, any>;
+  return {
+    onboardingComplete: row.onboarding_complete === true,
+    campusCode: (row.campus_code as string | null) ?? null,
+    department: (row.department as string | null) ?? null,
+  };
 }

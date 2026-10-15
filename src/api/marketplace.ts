@@ -13,6 +13,7 @@ export interface MarketplaceQuery {
 import { isUserBlocked, isUserMuted } from './connections';
 import { getInstitutionForEmail } from './institutions';
 import { isItemSavedSync, toggleSavedItem } from './bookmarks';
+import { getOwnProfileRow } from './profile';
 
 // Listings this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch. This is never
@@ -316,11 +317,8 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
  throw new Error('You need to be signed in to publish a listing.');
  }
 
- const { data: profile } = await supabase
- .from('profiles')
- .select('campus_code, role, verification_status, email, is_suspended')
- .eq('id', sellerId)
- .maybeSingle();
+ // The caller's own row via get_my_profile(): direct reads of profiles.email are refused by the database.
+ const profile = await getOwnProfileRow(sellerId);
 
  if (profile?.is_suspended) {
    throw new Error('Your account is currently suspended from creating marketplace listings.');
@@ -332,8 +330,10 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
     profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     (profile as any)?.admin_role === 'super_admin';
-  const isEdu = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
-  const isVerified = isPrivilegedUser || profile?.verification_status === 'verified' || isEdu;
+  // Verified means verified BY THE SERVER (profiles.verification_status). An e-mail domain is never
+  // treated as proof here: the database applies the same rule, so a client-side shortcut only
+  // produced "you are verified" screens followed by permission errors.
+  const isVerified = isPrivilegedUser || profile?.verification_status === 'verified';
  if (!isVerified) {
    throw new Error('Only verified students can create listings on the campus marketplace. Please verify your student status.');
  }

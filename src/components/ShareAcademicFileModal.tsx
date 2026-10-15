@@ -90,7 +90,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  if (Platform.OS === 'web' && typeof document !== 'undefined') {
  const input = document.createElement('input');
  input.type = 'file';
- input.accept = '.pdf,.zip,.rar,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,image/*';
+ input.accept = '.pdf,.zip,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.png,.jpg,.jpeg';
  input.style.display = 'none';
  document.body.appendChild(input);
  input.onchange = async (e: Event) => {
@@ -127,7 +127,8 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  'application/vnd.ms-excel',
  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
  'text/plain',
- 'image/*',
+ 'image/jpeg',
+ 'image/png',
  ],
  copyToCacheDirectory: true,
  });
@@ -190,13 +191,21 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
  : `${Math.round(realBytes / 1024)} KB`;
 
  const fileNameLower = (selectedFile?.name || '').toLowerCase();
- let fileType: 'PDF' | 'ZIP' | 'EPUB' | 'DOC' | 'PPT' | 'XLS' | 'TXT' | 'IMG' = 'PDF';
- if (fileNameLower.endsWith('.zip') || fileNameLower.endsWith('.rar')) fileType = 'ZIP';
+ // Only types the storage bucket really accepts. Everything else used to fall through to "PDF", so a
+ // .webp / .rar / .epub was stored under a .pdf name with a PDF content type and downloaded corrupted.
+ let fileType: 'PDF' | 'ZIP' | 'DOC' | 'PPT' | 'XLS' | 'TXT' | 'IMG' | null = null;
+ if (fileNameLower.endsWith('.pdf')) fileType = 'PDF';
+ else if (fileNameLower.endsWith('.zip')) fileType = 'ZIP';
  else if (fileNameLower.endsWith('.doc') || fileNameLower.endsWith('.docx')) fileType = 'DOC';
  else if (fileNameLower.endsWith('.ppt') || fileNameLower.endsWith('.pptx')) fileType = 'PPT';
  else if (fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.xlsx')) fileType = 'XLS';
  else if (fileNameLower.endsWith('.txt')) fileType = 'TXT';
  else if (fileNameLower.endsWith('.png') || fileNameLower.endsWith('.jpg') || fileNameLower.endsWith('.jpeg')) fileType = 'IMG';
+ if (!fileType) {
+ setIsUploading(false);
+ setErrorMessage('That file type is not supported. Share a PDF, Word, PowerPoint, Excel, ZIP, text file or a JPG/PNG image.');
+ return;
+ }
 
  try {
  await onUpload({

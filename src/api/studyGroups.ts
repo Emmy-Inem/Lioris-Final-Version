@@ -12,6 +12,7 @@ import { isUserBlocked, isUserMuted } from './connections';
 import { assertUuid } from '../utils/postgrest';
 import { RpcError, throwIfRpcError } from '../utils/rpcErrors';
 import { uploadMediaFile } from './storage';
+import { getOwnProfileRow } from './profile';
 
 /**
  * Study pods client. Discovery and every change go through database functions (see
@@ -126,11 +127,7 @@ function podArgs(p: CreateStudyGroupPayload) {
 
 export async function createStudyGroup(payload: CreateStudyGroupPayload): Promise<StudyGroup> {
   const session = await requireSession();
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, verification_status, email, is_suspended')
-    .eq('id', session.userId)
-    .maybeSingle();
+  const profile = await getOwnProfileRow(session.userId);
 
   if (profile?.is_suspended) {
     throw new Error('Your account is currently suspended from creating study pods.');
@@ -141,8 +138,7 @@ export async function createStudyGroup(payload: CreateStudyGroupPayload): Promis
     profile?.role === 'staff' ||
     profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     (profile as any)?.admin_role === 'super_admin';
-  const isEdu = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
-  const isVerified = isPrivilegedUser || profile?.verification_status === 'verified' || isEdu;
+  const isVerified = isPrivilegedUser || profile?.verification_status === 'verified';
   if (!isVerified) {
     throw new Error('Only verified student accounts can create study pods. Please verify your student status.');
   }

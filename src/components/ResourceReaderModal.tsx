@@ -19,7 +19,6 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
 import { Resource } from '@/api/types';
 import {
-  trackResourceDownload,
   getResourceRatingSummary,
   getMyResourceRating,
   submitResourceRating,
@@ -28,10 +27,9 @@ import {
 import { useResourceBookmarks } from '@/utils/resourceBookmarks';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
-import { isSafeHttpUrl } from '@/utils/safeUrl';
-import { resolveMediaUrl } from '@/api/signedUrls';
-import { openExternalUrl } from '@/utils/openExternalUrl';
 import { useResourceFileSize } from '@/utils/fileSize';
+import { useResourceDownload } from '@/hooks/useResourceDownload';
+import { useSignedUrl, READER_MIN_FRESH_MS } from '@/api/signedUrls';
 import { ReportResourceForm } from './ReportResourceModal';
 
 interface ResourceReaderModalProps {
@@ -53,8 +51,7 @@ export function ResourceReaderModal({
   const { isBookmarked, toggleBookmark } = useResourceBookmarks();
 
   const fileSizeLabel = useResourceFileSize(resource);
-  const [downloading, setDownloading] = useState(false);
-  const [downloaded, setDownloaded] = useState(false);
+  const { download: handleDownload, downloading, downloaded } = useResourceDownload(resource);
   const [activeTab, setActiveTab] = useState<'preview' | 'notes'>('preview');
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -104,6 +101,18 @@ export function ResourceReaderModal({
     };
   }, [resource?.id, isOwnUpload]);
 
+  // Inline preview is only offered for PDFs. The file lives in a PRIVATE bucket, so the preview must use a
+  // signed URL for the signed-in reader - the old Google Docs viewer URL pointed at the stored
+  // (non-public) address, so Google fetched an error page and the preview was always blank.
+  // (Declared before the early return below: hooks must run on every render.)
+  const isPdf =
+    !!resource?.fileUrl &&
+    (resource.fileType === 'PDF' || resource.fileUrl.toLowerCase().split('?')[0].endsWith('.pdf'));
+  const previewState = useSignedUrl('resources', isPdf && visible && activeTab === 'preview' ? resource?.fileUrl : null, {
+    minFreshMs: READER_MIN_FRESH_MS,
+  });
+  const viewerUrl = isPdf && Platform.OS === 'web' ? previewState.url : null;
+
   if (!resource) return null;
 
   const bookmarked = isBookmarked(resource.id);
@@ -148,45 +157,6 @@ export function ResourceReaderModal({
       toast.info(`Removed "${resource!.title}" from bookmarks.`);
     }
   }
-
-  async function handleDownload() {
-    if (!resource) return;
-    haptics.light();
-    setDownloading(true);
-    try {
-      if (resource.fileUrl) {
-        let openUrl = resource.fileUrl;
-        const signed = await resolveMediaUrl('resources', resource.fileUrl);
-        if (signed) {
-          openUrl = signed;
-        }
-        if (!isSafeHttpUrl(openUrl) || !(await openExternalUrl(openUrl))) {
-          Alert.alert('Download Unavailable', 'This resource has an invalid or unsafe file link.');
-          return;
-        }
-        setDownloaded(true);
-        trackResourceDownload(resource.id).catch(() => {});
-        toast.success(`Download started for ${resource.title}.`);
-      } else {
-        // Nothing to download. Say so rather than pretending a note was saved.
-        Alert.alert('No file attached', 'The person who shared this did not attach a file, so there is nothing to download.');
-      }
-    } catch {
-      Alert.alert('Download Failed', 'Could not open this file. Please try again.');
-    } finally {
-      setDownloading(false);
-    }
-  }
-
-  // Google Docs Viewer API URL - only for direct PDF/document files
-  const isDirectPdf =
-    !!resource.fileUrl &&
-    isSafeHttpUrl(resource.fileUrl) &&
-    resource.fileUrl.toLowerCase().includes('.pdf');
-
-  const viewerUrl = isDirectPdf
-    ? `https://docs.google.com/viewer?url=${encodeURIComponent(resource.fileUrl!)}&embedded=true`
-    : null;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -279,7 +249,7 @@ export function ResourceReaderModal({
 
             <View style={{ flexShrink: 0 }}>
               <AppButton
-                label={downloaded ? 'Saved' : fileSizeLabel ? `Download · ${fileSizeLabel}` : 'Download'}
+                label={downloaded ? 'Downloaded' : fileSizeLabel ? `Download · ${fileSizeLabel}` : 'Download'}
                 variant={downloaded ? 'secondary' : 'primary'}
                 size="sm"
                 loading={downloading}
@@ -378,32 +348,9 @@ export function ResourceReaderModal({
                   backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
                 }}
               />
-            ) : viewerUrl ? (
-              // Native fallback: Web link button or direct preview
-              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
-                <Ionicons name="document-text-outline" size={56} color={colors.textSecondary} style={{ marginBottom: spacing.md }} />
-                <AppText variant="h2" weight="bold" style={{ textAlign: 'center', marginBottom: spacing.xs }}>
-                  {resource.title}
-                </AppText>
-                <AppText tone="secondary" style={{ textAlign: 'center', marginBottom: spacing.lg, maxWidth: 360 }}>
-                  Ready to read online without downloading. Tap below to launch the document viewer.
-                </AppText>
-                <View style={{ flexDirection: 'row', gap: spacing.md }}>
-                  <AppButton
-                    label="Open In Browser Viewer ↗"
-                    onPress={() => { void openExternalUrl(viewerUrl); }}
-                    variant="primary"
-                  />
-                  <AppButton
-                    label={fileSizeLabel ? `Download To Device · ${fileSizeLabel}` : 'Download To Device'}
-                    onPress={handleDownload}
-                    variant="secondary"
-                  />
-                </View>
-              </View>
             ) : (
-              // No inline preview: either a non-PDF upload or no file at all. Show only what the
-              // uploader actually provided; nothing is generated here.
+              // No inline preview: a non-PDF file, a phone/tablet, a preview still loading, or no file at
+              // all. The person can always download; nothing is generated here.
               <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: Math.max(insets.bottom, spacing.lg) }}>
                 <View
                   style={{
@@ -427,12 +374,24 @@ export function ResourceReaderModal({
                     </AppText>
                   ) : null}
 
-                  {resource.fileUrl && !isDirectPdf ? (
-                    <AppButton
-                      label="Open file ↗"
-                      onPress={() => { void openExternalUrl(resource.fileUrl!); }}
-                      variant="primary"
-                    />
+                  {resource.fileUrl ? (
+                    <View style={{ gap: spacing.sm }}>
+                      {isPdf && Platform.OS === 'web' && previewState.loading ? (
+                        <AppText tone="secondary" variant="bodySmall">Preparing preview…</AppText>
+                      ) : null}
+                      {isPdf && Platform.OS === 'web' && !previewState.loading && previewState.error ? (
+                        <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 20 }}>
+                          A preview is not available for this file. You can still download it.
+                        </AppText>
+                      ) : null}
+                      <AppButton
+                        label={downloaded ? 'Download again' : fileSizeLabel ? `Download · ${fileSizeLabel}` : 'Download'}
+                        onPress={handleDownload}
+                        loading={downloading}
+                        variant="primary"
+                        fullWidth
+                      />
+                    </View>
                   ) : (
                     <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 20 }}>
                       No file is attached to this resource, so there is nothing to preview or download.

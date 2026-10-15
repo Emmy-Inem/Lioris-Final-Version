@@ -9,6 +9,8 @@ import { getInstitutionForEmail } from './institutions';
 import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
 import { assertUuid } from '../utils/postgrest';
 import { isSuperAdminIdentity, resolveCampusReadScope } from '../utils/campusAccess';
+import { getOwnProfileRow } from './profile';
+import { resourceFileTypeFromMime } from '../utils/fileNames';
 
 // Content types a resource upload may be stored with.
 const ALLOWED_RESOURCE_MIME_TYPES = new Set([
@@ -24,9 +26,24 @@ const ALLOWED_RESOURCE_MIME_TYPES = new Set([
  'text/plain',
  'image/jpeg',
  'image/png',
- 'image/webp',
- 'image/gif',
 ]);
+
+// Extension each allowed content type is stored under. The extension used to come only from the
+// uploader's "file type" guess, so a Word file picked while the guess said PDF was stored as .pdf.
+const MIME_EXTENSIONS: Record<string, string> = {
+ 'application/pdf': 'pdf',
+ 'application/zip': 'zip',
+ 'application/x-zip-compressed': 'zip',
+ 'application/msword': 'doc',
+ 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+ 'application/vnd.ms-powerpoint': 'ppt',
+ 'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+ 'application/vnd.ms-excel': 'xls',
+ 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+ 'text/plain': 'txt',
+ 'image/jpeg': 'jpg',
+ 'image/png': 'png',
+};
 
 let locallyCreatedResources: Resource[] = [];
 
@@ -189,7 +206,7 @@ function mapResourceRow(row: any): Resource {
     // were indistinguishable to the student who submitted it.
     approvalStatus: row.rejection_reason ? 'rejected' : row.is_approved ? 'approved' : 'pending',
     rejectionReason: row.rejection_reason ?? null,
-    fileType: row.file_mime_type?.includes('zip') ? 'ZIP' : 'PDF',
+    fileType: resourceFileTypeFromMime(row.file_mime_type, row.file_url),
     campusCode: row.campus_code || 'GLOBAL',
     academicLevel: row.academic_level,
     semester: row.semester,
@@ -509,11 +526,8 @@ export async function createResource(
   // back to false/NULL on INSERT for anyone whose role is not admin or staff,
   // no matter what the client sends. Reporting 'approved' here for a student
   // upload was simply wrong: the row is always created pending for them.
-  const { data: uploaderProfile } = await supabase
-    .from('profiles')
-    .select('campus_code, role, verification_status, email, is_suspended')
-    .eq('id', uploaderId)
-    .maybeSingle();
+  // The caller's own row via get_my_profile(): direct reads of profiles.email are refused by the database.
+  const uploaderProfile = await getOwnProfileRow(uploaderId);
 
   if (uploaderProfile?.is_suspended) {
     throw new Error('Your account is currently suspended from uploading resources.');
@@ -525,8 +539,8 @@ export async function createResource(
     uploaderProfile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     (uploaderProfile as any)?.admin_role === 'super_admin';
-  const isEdu = !!(uploaderProfile?.email && uploaderProfile.email.toLowerCase().endsWith('.edu.ng') && uploaderProfile.verification_status !== 'rejected');
-  const isVerified = isPrivilegedUser || uploaderProfile?.verification_status === 'verified' || isEdu;
+  // Verified = verified by the server (see profiles.verification_status); the database enforces the same rule.
+  const isVerified = isPrivilegedUser || uploaderProfile?.verification_status === 'verified';
   if (!isVerified) {
     throw new Error('Only verified student accounts can upload academic resources. Please verify your student status.');
   }
@@ -545,18 +559,22 @@ export async function createResource(
  else if (ft === 'TXT') { fileExt = 'txt'; mimeType = 'text/plain'; }
  else if (ft === 'IMG') { fileExt = 'jpg'; mimeType = 'image/jpeg'; }
 
- const storagePath = `${uploaderId}/${resourceId}.${fileExt}`;
-
  // Only allow-listed content types are ever stored; a client-supplied mime
  // type outside the list falls back to the one derived from the file type.
  const storedMimeType =
  payload.fileMimeType && ALLOWED_RESOURCE_MIME_TYPES.has(payload.fileMimeType.toLowerCase())
  ? payload.fileMimeType.toLowerCase()
  : mimeType;
+ const storagePath = `${uploaderId}/${resourceId}.${MIME_EXTENSIONS[storedMimeType] ?? fileExt}`;
 
- // If binary file blob is provided, upload directly to Supabase Storage.
+ // A resource row without a file is the "download does nothing" bug: the list shows a card whose
+ // file does not exist. Never create one - if the file could not be read, fail loudly.
+ if (!fileBlob) {
+ throw new Error('We could not read the selected file. Please choose it again and retry.');
+ }
+
  // supabase-js resolves with `{ error }` rather than throwing, so it must be checked.
- if (fileBlob) {
+ {
  const uploadBytes = fileBlob instanceof ArrayBuffer ? fileBlob.byteLength : (fileBlob as Blob).size;
  await assertWithinStorageQuota(uploadBytes, ft === 'IMG' ? 'image' : 'document');
  const { error: uploadError } = await supabase.storage.from('resources').upload(storagePath, fileBlob, {

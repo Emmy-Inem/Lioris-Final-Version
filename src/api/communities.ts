@@ -4,6 +4,7 @@ import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 import { FORUM_COMMUNITIES } from '../constants/forumCommunities';
 import { resolveCampusReadScope } from '../utils/campusAccess';
+import { getOwnProfileRow } from './profile';
 
 export interface ForumCommunityRecord {
   id: string;
@@ -159,17 +160,12 @@ export async function proposeCommunity(payload: ProposeCommunityPayload): Promis
     throw new Error('You need to be signed in to propose a community.');
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, campus_code, is_campus_ambassador, verification_status, email')
-    .eq('id', userId)
-    .single();
+  const profile = await getOwnProfileRow(userId);
 
   const isMasterAdmin =
     profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com';
-  const isEduEmail = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
-  const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || isMasterAdmin || profile?.verification_status === 'verified' || isEduEmail || profile?.is_campus_ambassador;
+  const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || isMasterAdmin || profile?.verification_status === 'verified' || profile?.is_campus_ambassador;
   const isAmbassadorOrAdmin = profile?.is_campus_ambassador || profile?.role === 'admin' || profile?.role === 'staff' || isMasterAdmin;
 
   if (!isVerified) {

@@ -12,8 +12,8 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useAdvanceOnboarding } from '@/auth/useAdvanceOnboarding';
 import { useToast } from '@/context/ToastContext';
-import { updateMyProfile, uploadAvatarImage } from '@/api/profile';
-import { getInstitutionForEmail } from '@/api/institutions';
+import { updateMyProfile, uploadAvatarImage, saveAcademicProfile } from '@/api/profile';
+import { getInstitutionByCode, getInstitutionForEmail } from '@/api/institutions';
 import { useCampusRegistry } from '@/hooks/useCampusRegistry';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
@@ -174,6 +174,7 @@ export default function BuildProfileScreen() {
           await uploadAvatarImage(user.id, uploadPayload, ext);
         } catch (uploadErr) {
           console.warn('[BuildProfile] Avatar upload failed:', uploadErr);
+          toast.info('Your photo could not be uploaded. You can add it later from your profile.');
           if (photoUri && (/^https?:\/\//i.test(photoUri) || /^[A-Za-z0-9_-]+$/.test(photoUri))) {
             try {
               await updateMyProfile({ avatarUrl: photoUri });
@@ -184,17 +185,29 @@ export default function BuildProfileScreen() {
         }
       }
 
-      persistCampus(campusCode);
-      await updateMyProfile({
-        institutionCode: campusCode,
+      // The DATABASE decides the campus (institutional e-mails and verified members are locked to theirs)
+      // and answers with what it stored. The screen used to write the profile directly, the guard trigger
+      // silently reverted a refused campus, and the app carried on showing the campus the member had picked.
+      const saved = await saveAcademicProfile({
+        campusCode,
         department,
-        faculty: faculty || undefined,
-        academicLevel: user?.role === 'alumni' ? 'Alumni' : level,
-        bio: bio.trim() || undefined,
+        faculty: faculty || null,
+        level: user?.role === 'alumni' ? 'Alumni' : level,
+        bio: bio.trim() || null,
       });
+      if (saved.campusLocked) {
+        const lockedName = getInstitutionByCode(saved.campusCode)?.name ?? saved.campusCode;
+        setCampusCode(saved.campusCode);
+        toast.info(
+          saved.lockReason === 'email_domain'
+            ? `Your school e-mail belongs to ${lockedName}, so that is your campus.`
+            : `You are verified at ${lockedName}, so your campus stays the same.`,
+        );
+      }
+      persistCampus(saved.campusCode);
 
       // Synchronously update AuthContext session user so subsequent onboarding steps have campusCode & department
-      await updateUser({ campusCode, department });
+      await updateUser({ campusCode: saved.campusCode, department: saved.department });
 
       await advance();
     } catch (err: any) {
@@ -273,6 +286,11 @@ export default function BuildProfileScreen() {
                 key={inst.code}
                 onPress={() => {
                   haptics.light();
+                  if (detectedCampus && inst.code !== detectedCampus) {
+                    // The server locks an institutional e-mail to its own campus; say so now instead of after Continue.
+                    toast.info(`Your school e-mail belongs to ${getInstitutionByCode(detectedCampus)?.name ?? detectedCampus}, so that is your campus.`);
+                    return;
+                  }
                   userPickedCampus.current = true;
                   setCampusCode(inst.code);
                   setErrorMessage(null);

@@ -188,102 +188,122 @@ export interface SubmitVerificationPayload {
  photoBlob?: Blob;
 }
 
+/** Evidence types the private `verifications` bucket accepts. */
+const EVIDENCE_TYPES: Record<string, string> = {
+ 'image/jpeg': 'jpg',
+ 'image/jpg': 'jpg',
+ 'image/png': 'png',
+ 'image/webp': 'webp',
+ 'application/pdf': 'pdf',
+};
+
+/** True when supabase-js reports that an RPC does not exist (database not migrated yet). */
+function isMissingFunction(error: { code?: string; message?: string } | null | undefined): boolean {
+ if (!error) return false;
+ return error.code === 'PGRST202' || error.code === '42883' || /could not find the function|does not exist/i.test(error.message ?? '');
+}
+
+function friendlySubmitError(message: string): string {
+ if (/campus_required/i.test(message)) return 'Choose your university in your profile first, then apply for verification.';
+ if (/already_verified/i.test(message)) return 'Your account is already verified.';
+ if (/account_suspended/i.test(message)) return 'Your account is suspended, so it cannot apply for verification.';
+ if (/not_applicable/i.test(message)) return 'Only students and alumni apply for verification.';
+ if (/invalid_document/i.test(message)) return 'Your document did not upload correctly. Please attach it again.';
+ return 'We could not submit your verification request. Please try again.';
+}
+
 export async function submitVerificationRequest(payload: SubmitVerificationPayload): Promise<VerificationRequest> {
  const reqId = generateUUID();
- let photoUrl = payload.documentPhotoUri || null;
- let documentPath: string | null = null;
 
- try {
  const { data: authData } = await supabase.auth.getUser();
  let authUserId = authData?.user?.id;
  if (!authUserId) {
  const stored = await getSessionUser();
  if (stored?.id) authUserId = stored.id;
  }
+ // Reporting "pending" for a request nobody stored leaves the applicant waiting for a review that will
+ // never happen, so every failure below throws.
+ if (!authUserId) throw new Error('Your session has expired. Please sign in again to apply.');
 
- if (authUserId) {
  let photoBlobToUpload = payload.photoBlob;
  if (!photoBlobToUpload && payload.documentPhotoUri) {
  try {
  const resp = await fetch(payload.documentPhotoUri);
  photoBlobToUpload = await resp.blob();
  } catch {
- // keep URI as is
+ // reported below
  }
  }
  // Evidence is mandatory: an application with no document gives a moderator nothing to check.
  if (!photoBlobToUpload) {
  throw new Error('Please attach a clear photo of your student ID, admission letter or certificate.');
  }
- {
- const filePath = `${authUserId}/${reqId}.jpg`;
+
+ // Store the file under its REAL type. It used to be forced to image/jpeg + .jpg whatever was picked, so a
+ // PNG/WebP/PDF landed mislabelled and could not be opened by the reviewer.
+ const mime = (photoBlobToUpload.type || '').toLowerCase().split(';')[0].trim() || 'image/jpeg';
+ const ext = EVIDENCE_TYPES[mime];
+ if (!ext) throw new Error('That file type is not supported. Attach a JPG, PNG, WebP or PDF.');
+ if (photoBlobToUpload.size > 10 * 1024 * 1024) throw new Error('That file is larger than 10 MB. Attach a smaller photo or scan.');
+
+ const filePath = `${authUserId}/${reqId}.${ext}`;
  const { error: uploadError } = await supabase.storage.from(VERIFICATIONS_BUCKET).upload(filePath, photoBlobToUpload, {
- contentType: 'image/jpeg',
- upsert: true,
+ contentType: mime === 'image/jpg' ? 'image/jpeg' : mime,
+ upsert: false,
  });
  if (uploadError) {
  throw new Error('We could not upload your document. Please check your connection and try again.');
  }
- // Persist the storage PATH, not a signed URL. A signed URL expires (the old code baked in a
- // 30-day one), so any review after that window showed the admin a dead link. Reviewers mint a
- // fresh 5-minute signed URL at the moment they open the document instead.
- documentPath = filePath;
- photoUrl = filePath;
+
+ // The server derives campus and role from the PROFILE (the client used to guess the campus from the
+ // typed university name with substring matches such as includes('UI')), records the request and flips
+ // the profile to pending in ONE transaction.
+ let row: any = null;
+ const { data: rpcData, error: rpcError } = await supabase.rpc('submit_verification_request', {
+ p_document_path: filePath,
+ p_document_type: payload.documentType,
+ p_document_reference: payload.documentReference || null,
+ });
+ if (!rpcError) {
+ row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+ } else if (isMissingFunction(rpcError)) {
+ // Database not migrated yet: legacy path (campus still read from the profile, never guessed).
+ const { data: me } = await supabase.from('profiles').select('campus_code, role').eq('id', authUserId).maybeSingle();
+ const { data: inserted, error } = await supabase
+ .from('verifications')
+ .insert({
+ id: reqId,
+ user_id: authUserId,
+ campus_code: me?.campus_code || 'GLOBAL',
+ requested_role: me?.role === 'alumni' ? 'alumni' : 'student',
+ id_card_front_url: filePath,
+ status: 'pending',
+ review_notes: payload.documentReference ? `${payload.documentType}: ${payload.documentReference}` : payload.documentType,
+ })
+ .select('*')
+ .maybeSingle();
+ if (error) throw new Error('We could not submit your verification request. Please try again.');
+ row = inserted;
+ const { error: pendingError } = await supabase.from('profiles').update({ verification_status: 'pending' }).eq('id', authUserId);
+ if (pendingError) console.warn('[Verification] Could not mark the profile pending:', pendingError.message);
+ } else {
+ // Do not leave an orphaned upload behind when the request was refused.
+ supabase.storage.from(VERIFICATIONS_BUCKET).remove([filePath]).then(() => {}, () => {});
+ throw new Error(friendlySubmitError(rpcError.message ?? ''));
  }
 
-        let campusCode = 'GLOBAL';
-        const { data: userProfile } = await supabase.from('profiles').select('campus_code').eq('id', authUserId).maybeSingle();
-        if (userProfile?.campus_code) {
-          campusCode = userProfile.campus_code;
-        } else if (payload.institutionClaimed) {
-          const upper = payload.institutionClaimed.toUpperCase();
-          if (upper.includes('UNILAG')) campusCode = 'UNILAG';
-          else if (upper.includes('UI') || upper.includes('IBADAN')) campusCode = 'UI';
-          else if (upper.includes('OAU') || upper.includes('IFE')) campusCode = 'OAU';
-          else if (upper.includes('UNN') || upper.includes('NSUKKA')) campusCode = 'UNN';
-          else if (upper.includes('FUNAAB') || upper.includes('ABEOKUTA')) campusCode = 'FUNAAB';
-          else if (upper.includes('CU') || upper.includes('COVENANT')) campusCode = 'CU';
-          else if (upper.includes('KDU') || upper.includes('KOLADAISI')) campusCode = 'KDU';
-          else if (upper.includes('NOUN') || upper.includes('NATIONAL OPEN')) campusCode = 'NOUN';
-          else if (upper.includes('ESUT') || upper.includes('ENUGU STATE')) campusCode = 'ESUT';
-          else if (upper.includes('MADONNA') || upper.includes('MADONNA UNIVERSITY')) campusCode = 'MUN';
-        }
-
-        const { error } = await supabase.from('verifications').insert({
-          id: reqId,
-          user_id: authUserId,
-          campus_code: campusCode,
-          requested_role: 'student',
-          id_card_front_url: photoUrl,
-          status: 'pending',
-          review_notes: payload.documentReference
-            ? `${payload.documentType}: ${payload.documentReference}`
-            : payload.documentType,
-        });
-        if (error) {
-          throw new Error('We could not submit your verification request. Please try again.');
-        }
-
-        // Sync pending status to user's profile in database
-        await supabase.from('profiles').update({ verification_status: 'pending' }).eq('id', authUserId);
-      }
-    } catch (err) {
-      // Surface the failure: reporting "pending" for a request that was never stored
-      // leaves the applicant waiting for a review that will never happen.
-      console.warn('[Verification] Submission failed:', err);
-      throw err instanceof Error ? err : new Error('Verification submission failed.');
-    }
-
-    const created: VerificationRequest = {
-      id: reqId,
-      ...payload,
-      documentReference: payload.documentReference || undefined,
-      documentPhotoUri: photoUrl,
-      documentStoragePath: documentPath,
-      submittedAt: new Date().toISOString(),
-      status: 'pending',
-    };
-
+ const created: VerificationRequest = {
+ id: row?.id ?? reqId,
+ userId: authUserId,
+ applicantName: payload.applicantName,
+ documentType: payload.documentType,
+ documentReference: payload.documentReference || undefined,
+ institutionClaimed: row?.campus_code ?? payload.institutionClaimed,
+ documentPhotoUri: row?.id_card_front_url ?? filePath,
+ documentStoragePath: row?.id_card_front_url ?? filePath,
+ submittedAt: row?.created_at ?? new Date().toISOString(),
+ status: 'pending',
+ };
  verificationState = [...verificationState, created];
  return created;
 }
@@ -305,7 +325,7 @@ function mapVerificationRow(row: any): VerificationRequest {
      : 'pending') as VerificationRequest['status'],
   documentPhotoUri: row.id_card_front_url,
   documentStoragePath: resolveVerificationDocumentPath(row.id_card_front_url),
-  rejectionReason: parsed.rejectionReason ?? null,
+  rejectionReason: row.rejection_reason ?? parsed.rejectionReason ?? null,
   reviewedAt: row.reviewed_at ?? null,
  };
 }
@@ -422,22 +442,74 @@ export interface RespondToVerificationOptions {
  skipNotification?: boolean;
 }
 
+function friendlyReviewError(message: string): string {
+ if (/unauthorized_campus_scope/i.test(message)) return 'That request belongs to another campus. Only its Campus Admin or the Super Admin can decide it.';
+ if (/permission_disabled/i.test(message)) return 'ID verification is switched off for your role by the Super Admin.';
+ if (/already_reviewed/i.test(message)) return 'Someone already decided this request. Refresh the queue.';
+ if (/reason_required/i.test(message)) return 'A rejection needs a reason - the applicant has to know what to fix.';
+ if (/conflict_of_interest/i.test(message)) return 'You cannot review your own request.';
+ if (/not_found/i.test(message)) return 'That request no longer exists.';
+ return 'The decision could not be saved. Please try again.';
+}
+
 /**
- * Records a reviewer's decision.
- *
- * Two things were broken here and both were silent:
- *
- * 1. A rejection wrote `verification_status = 'none'`. `verification_status_type` is
- *    `('unverified','pending','verified','rejected')` - `'none'` is not a member, so Postgres
- *    rejected the UPDATE, the error was swallowed by the catch below, and the applicant was left
- *    sitting in `pending` forever while the admin's screen said "rejected".
- * 2. The rejection reason was never written anywhere the applicant could read it, so even a
- *    successful rejection told them nothing they could act on.
- *
- * Failures now propagate instead of being logged and ignored: a decision the database refused
- * must not be reported to the reviewer as a decision that stuck.
+ * Records a reviewer's decision through review_verification_request(): the request, the applicant's
+ * profile status and the audit entry change together or not at all, the reviewer's authority is
+ * checked against the REQUEST's campus (a Campus Admin cannot decide another campus's applicants)
+ * and the applicant is notified by the database. Before this, the app wrote the two rows separately -
+ * when the second write failed the request left the queue as "decided" while the student stayed
+ * pending forever.
  */
 export async function respondToVerificationRequest(
+ id: string,
+ status: 'approved' | 'rejected',
+ options: RespondToVerificationOptions = {},
+): Promise<VerificationRequest | undefined> {
+ const reason = options.reason?.trim();
+ if (status === 'rejected' && !reason) {
+  throw new Error('A rejection needs a reason - the applicant has to know what to fix.');
+ }
+
+ const { data, error } = await supabase.rpc('review_verification_request', {
+  p_request_id: id,
+  p_approve: status === 'approved',
+  p_reason: reason ?? null,
+ });
+ if (error) {
+  if (isMissingFunction(error)) return respondToVerificationRequestLegacy(id, status, options);
+  throw new Error(friendlyReviewError(error.message ?? ''));
+ }
+
+ const result = (data ?? {}) as { user_id?: string };
+ if (result.user_id) invalidateProfileCache(result.user_id);
+
+ let updated: VerificationRequest | undefined;
+ verificationState = verificationState.map((v) => {
+  if (v.id !== id) return v;
+  updated = { ...v, status, rejectionReason: reason ?? null };
+  return updated;
+ });
+ if (!updated) {
+  try {
+   const { data: vRow } = await supabase
+    .from('verifications')
+    .select('*, profiles!verifications_user_id_fkey(full_name, role, campus_code)')
+    .eq('id', id)
+    .maybeSingle();
+   if (vRow) updated = { ...mapVerificationRow(vRow), status };
+  } catch {
+   // the decision is stored; the row only feeds the caller's optimistic UI
+  }
+ }
+ return updated;
+}
+
+/**
+ * LEGACY two-step decision, used only while the database has no review_verification_request()
+ * function (migration 20261028000000 not applied yet). It is NOT atomic: the request can be marked
+ * decided while the profile update fails.
+ */
+async function respondToVerificationRequestLegacy(
  id: string,
  status: 'approved' | 'rejected',
  options: RespondToVerificationOptions = {},

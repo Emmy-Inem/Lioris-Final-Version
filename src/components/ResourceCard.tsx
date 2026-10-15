@@ -13,7 +13,6 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
 import { Resource } from '@/api/types';
 import {
-  trackResourceDownload,
   toggleResourceUpvote,
   isResourceUpvotedByMe,
   getResourceRatingSummary,
@@ -23,10 +22,8 @@ import {
 import { isResourceBookmarked, toggleResourceBookmark } from '@/utils/resourceBookmarks';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
-import { isSafeHttpUrl } from '@/utils/safeUrl';
-import { resolveMediaUrl } from '@/api/signedUrls';
-import { openExternalUrl } from '@/utils/openExternalUrl';
 import { useResourceFileSize } from '@/utils/fileSize';
+import { useResourceDownload } from '@/hooks/useResourceDownload';
 import { ReportResourceModal } from './ReportResourceModal';
 
 export interface ResourceCardProps {
@@ -56,8 +53,7 @@ export const ResourceCard = React.memo(function ResourceCard({
   const [internalBookmarked, setInternalBookmarked] = useState(() => isResourceBookmarked(resource.id));
   const bookmarked = externalBookmarked !== undefined ? externalBookmarked : internalBookmarked;
 
-  const [downloading, setDownloading] = useState(false);
-  const [downloaded, setDownloaded] = useState(false);
+  const { download: handleDownload, downloading, downloaded } = useResourceDownload(resource);
   const [upvoted, setUpvoted] = useState(false);
   const [upvotes, setUpvotes] = useState(resource.likesCount);
   const [upvoting, setUpvoting] = useState(false);
@@ -116,35 +112,6 @@ export const ResourceCard = React.memo(function ResourceCard({
       toast.success(`Bookmarked "${resource.title}"`);
     } else {
       toast.info(`Removed "${resource.title}" from bookmarks`);
-    }
-  }
-
-  async function handleDownload() {
-    if (downloading) return;
-    haptics.light();
-    setDownloading(true);
-    try {
-      if (resource.fileUrl) {
-        let openUrl = resource.fileUrl;
-        const signed = await resolveMediaUrl('resources', resource.fileUrl);
-        if (signed) {
-          openUrl = signed;
-        }
-        if (!isSafeHttpUrl(openUrl) || !(await openExternalUrl(openUrl))) {
-          Alert.alert('Download Unavailable', 'This resource has an invalid or unsafe file link.');
-          return;
-        }
-        setDownloaded(true);
-        trackResourceDownload(resource.id).catch(() => {});
-        toast.success(`Download started for ${resource.title}`);
-      } else {
-        // Nothing to download. Say so rather than pretending a note was saved.
-        Alert.alert('No file attached', 'The person who shared this did not attach a file, so there is nothing to download.');
-      }
-    } catch {
-      Alert.alert('Download Failed', 'Could not open this file. Please try again.');
-    } finally {
-      setDownloading(false);
     }
   }
 
@@ -332,7 +299,7 @@ export const ResourceCard = React.memo(function ResourceCard({
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <AppButton
-              label={downloaded ? 'Saved' : fileSizeLabel ? `Download · ${fileSizeLabel}` : 'Download'}
+              label={downloaded ? 'Downloaded' : fileSizeLabel ? `Download · ${fileSizeLabel}` : 'Download'}
               variant={downloaded ? 'secondary' : 'primary'}
               onPress={handleDownload}
               loading={downloading}

@@ -8,6 +8,7 @@ import { getInstitutionForEmail } from './institutions';
 import { parseRpcError, RpcError } from '../utils/rpcErrors';
 import { resolveMediaUrl as resolveSignedMediaUrl, resolveMediaUrls as resolveSignedMediaUrls } from './signedUrls';
 import { isSuperAdminIdentity, resolveCampusReadScope } from '../utils/campusAccess';
+import { getOwnProfileRow } from './profile';
 
 
 let locallyCreatedEvents: CampusEvent[] = [];
@@ -386,11 +387,8 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
  throw new Error('You need to be signed in to publish an event.');
  }
 
- const { data: profile } = await supabase
- .from('profiles')
- .select('campus_code, role, verification_status, email, is_suspended')
- .eq('id', organizerId)
- .maybeSingle();
+ // The caller's own row via get_my_profile(): direct reads of profiles.email are refused by the database.
+ const profile = await getOwnProfileRow(organizerId);
 
  if (profile?.is_suspended) {
    throw new Error('Your account is currently suspended from publishing events.');
@@ -402,8 +400,7 @@ export async function createEvent(payload: CreateEventPayload): Promise<CampusEv
     profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     (profile as any)?.admin_role === 'super_admin';
-  const isEdu = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
-  const isVerified = isPrivilegedUser || profile?.verification_status === 'verified' || isEdu;
+  const isVerified = isPrivilegedUser || profile?.verification_status === 'verified';
  if (!isVerified) {
    throw new Error('Only verified student accounts can create and host campus events. Please verify your student status.');
  }

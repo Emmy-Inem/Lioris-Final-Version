@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from'react';
-import { Alert, Platform } from 'react-native';
+import { Alert, AppState, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import * as authApi from'@/api/auth';
@@ -19,6 +19,7 @@ import { registerForPushNotificationsAsync } from'@/notifications/push';
 import { supabase } from '@/api/supabase';
 import { queryClient } from '@/api/queryClient';
 import { loadBlockedUserIds } from '@/api/connections';
+import { getOwnProfileRow, completeOnboardingOnServer } from '@/api/profile';
 import { clearLocalNotificationsCache } from '@/api/notifications';
 import { resetToDefaultCampusScope, persistCampus } from '@/hooks/useViewScope';
 import { clearSavedItemsMemoryCache } from '@/api/bookmarks';
@@ -256,6 +257,27 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
   };
 }
 
+/**
+ * Loads the signed-in member's own profile row with a bounded wait and ONE retry.
+ *
+ * The old code gave the profile query 3 seconds, once, and on a miss silently fell back to the cached
+ * (or default 'student') role and `onboarding_complete = false` - then PERSISTED that guess. A slow
+ * Nigerian mobile connection was enough to send a finished account back through onboarding, or an
+ * admin into the student portal. Returns null only if both attempts fail; callers must then keep what
+ * they already know instead of overwriting it with defaults.
+ */
+async function fetchOwnProfile(userId: string, timeoutMs = 6000): Promise<any | null> {
+  const attempt = () =>
+    Promise.race([
+      getOwnProfileRow(userId),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+    ]);
+  const first = await attempt().catch(() => null);
+  if (first) return first;
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  return attempt().catch(() => null);
+}
+
 function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
@@ -332,40 +354,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // 2. Check active Supabase OAuth session with failsafe timeout
+      // The cached account is already on screen: do not hold the app on a spinner while the network
+      // re-validates it (on a slow connection that spinner was the whole startup).
+      if (mounted && userRef.current) setIsLoading(false);
+
+      // 2. Check the active Supabase session. A timeout is NOT "signed out": it only means the
+      //    network is slow, and the auth listener below delivers the session as soon as it resolves.
       try {
         const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
-          setTimeout(() => resolve({ data: { session: null } }), 4000)
+        const timeoutPromise = new Promise<{ timedOut: true }>((resolve) =>
+          setTimeout(() => resolve({ timedOut: true }), 8000),
         );
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
+        const outcome = await Promise.race([sessionPromise, timeoutPromise]);
+        const timedOut = 'timedOut' in outcome;
+        const session = timedOut ? null : outcome.data.session;
         if (session?.user && mounted) {
-          // Securely query verified database profile for role with 3s timeout
           const userEmail = (session.user.email ?? '').toLowerCase().trim();
           const isMasterAdminEmail = userEmail === 'inememmanuel@gmail.com';
 
-          let profile: any = null;
-          try {
-            const profilePromise = supabase
-              .from('profiles')
-              .select('role, full_name, onboarding_complete, onboarding_step, department, admin_role, campus_code, avatar_url, banner_url')
-              .eq('id', session.user.id)
-              .maybeSingle();
-            const profileTimeout = new Promise<{ data: null; error?: any }>((resolve) =>
-              setTimeout(() => resolve({ data: null }), 3000)
-            );
-            const { data, error } = await Promise.race([profilePromise, profileTimeout]);
-            if (!error && data) {
-              profile = data;
-            } else if (error) {
-              const { data: fallbackData } = await supabase
-                .from('profiles')
-                .select('role, full_name, onboarding_complete, onboarding_step, department, campus_code, avatar_url, banner_url')
-                .eq('id', session.user.id)
-                .maybeSingle();
-              if (fallbackData) profile = fallbackData;
-            }
-          } catch {}
+          const profile = await fetchOwnProfile(session.user.id);
 
           const storedUser = await getSessionUser();
           const fallbackRole = (storedUser?.actualRole || userRef.current?.actualRole || 'student') as UserRole;
@@ -375,7 +382,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && adminRole === 'super_admin');
           const isCampusAdmin = role === 'admin' && !isSuperAdmin;
           const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || storedUser?.fullName || userRef.current?.fullName || userEmail.split('@')[0] || 'Campus Member';
-          
+
           const activeRole =
             (userRef.current?.actualRole === 'admin' && userRef.current?.role) ||
             (storedUser?.actualRole === 'admin' && storedUser?.role)
@@ -416,18 +423,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               ? (userRef.current?.mfaVerified ?? storedUser?.mfaVerified ?? !roleRequiresMfa(activeRole))
               : !roleRequiresMfa(activeRole),
           };
-          await persist(nextUser);
+          // A failed profile read must not overwrite a good cached projection with guesses.
+          if (profile || !storedUser) await persist(nextUser);
           await setTokens(session.access_token, session.refresh_token ?? session.access_token);
           userRef.current = nextUser;
           setUser(nextUser);
           loadBlockedUserIds().catch(() => {});
-        } else if (mounted) {
-          // No active Supabase session (expired/invalid refresh token, or the
-          // failsafe timeout above lost the race) - don't leave the user
-          // optimistically restored from local cache above stuck "logged in".
+        } else if (mounted && !timedOut) {
+          // Supabase answered and there is no session (expired / revoked refresh token): don't leave the
+          // optimistically restored cache pretending to be signed in.
           userRef.current = null;
           setUser(null);
         }
+        // timedOut: keep whatever the cache restored; onAuthStateChange completes the picture.
       } catch {
         // OAuth check fallback
       } finally {
@@ -503,34 +511,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (session?.user && mounted) {
-        // Securely query database profile for role with 3s timeout failsafe
         const userEmail = (session.user.email ?? '').toLowerCase().trim();
         const isMasterAdminEmail = userEmail === 'inememmanuel@gmail.com';
 
-        let profile: any = null;
-        try {
-          const profileFetch = supabase
-            .from('profiles')
-            .select('role, full_name, admin_role, campus_code, avatar_url, banner_url')
-            .eq('id', session.user.id)
-            .maybeSingle();
-          const timeout = new Promise<any>((_, reject) =>
-            setTimeout(() => reject(new Error('Profile query timeout on resume')), 3000)
-          );
-          const result = await Promise.race([profileFetch, timeout]);
-          if (!result?.error && result?.data) {
-            profile = result.data;
-          } else if (result?.error) {
-            const { data: fallbackData } = await supabase
-              .from('profiles')
-              .select('role, full_name, campus_code, avatar_url, banner_url')
-              .eq('id', session.user.id)
-              .maybeSingle();
-            if (fallbackData) profile = fallbackData;
-          }
-        } catch (fetchErr) {
-          console.warn('[AuthContext] Profile query timed out or failed on resume, using cached session metadata:', fetchErr);
-        }
+        // Own row via get_my_profile() with a bounded wait + retry (see fetchOwnProfile). A miss keeps the
+        // cached projection instead of replacing it with defaults.
+        const profile = await fetchOwnProfile(session.user.id, 5000);
         if (!mounted) return;
 
         const storedUser = await getSessionUser();
@@ -576,7 +562,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isSuperAdmin,
           isCampusAdmin,
           onboardingComplete: isOnboarded,
-          onboardingStep: sameAccount && !isOnboarded ? current?.onboardingStep : undefined,
+          onboardingStep: isOnboarded ? undefined : ((sameAccount ? current?.onboardingStep : undefined) ?? profile?.onboarding_step ?? undefined),
           mfaVerified:
             sameAccount && current?.role === activeRole ? current.mfaVerified : !roleRequiresMfa(activeRole),
         };
@@ -596,7 +582,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await setTokens(session.access_token, session.refresh_token ?? session.access_token);
           return;
         }
-        await persist(nextUser);
+        if (profile || !storedUser) await persist(nextUser);
         await setTokens(session.access_token, session.refresh_token ?? session.access_token);
         userRef.current = nextUser;
         setUser(nextUser);
@@ -668,41 +654,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       supabase.auth.signOut().catch(() => {});
     };
 
-    const applyLiveRoleChange = (newRole: UserRole) => {
+    // Last verification status seen on this channel. Used to refresh campus content the moment a reviewer
+    // approves (or rejects) the member, instead of leaving empty cached feeds until the next app restart.
+    let lastVerification: string | undefined;
+
+    // Applies a change to the member's own profile row made elsewhere (a Super Admin changing their role or
+    // admin tier, a campus transfer, a verification decision). Before this only `role` was followed, so a
+    // Campus Admin promoted to Super Admin (or demoted) kept the old tier - and the old menu - until they
+    // signed out and back in.
+    const applyLiveProfileChange = (row: any) => {
       const current = userRef.current;
-      // Ignore a stale event for an account that is no longer the live
-      // session (e.g. delivered just as the user signed out or an
-      // impersonation swap moved the session to someone else), and ignore a
-      // no-op re-delivery of a role that was already applied.
-      if (!current || current.id !== watchedUserId || newRole === current.actualRole) return;
-      // A real, database-verified role change always wins over a Root
-      // Admin's local "View As" preview (see switchRole above) - collapsing
-      // role to match rather than risk a preview going stale against a role
-      // that just changed for real.
-      const isSuperAdmin = (current.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') || (newRole === 'admin' && current.adminRole === 'super_admin') || (current.actualRole === 'admin' && current.isSuperAdmin);
+      // Ignore a stale event for an account that is no longer the live session.
+      if (!current || current.id !== watchedUserId || !row) return;
+
+      const isRoot = current.email?.toLowerCase().trim() === 'inememmanuel@gmail.com';
+      const newRole = (row.role ?? current.actualRole) as UserRole;
+      const newTier: AdminRoleType | null =
+        newRole === 'admin' ? ((row.admin_role ?? current.adminRole ?? 'campus_admin') as AdminRoleType) : null;
+      const isSuperAdmin = isRoot || (newRole === 'admin' && newTier === 'super_admin');
       const isCampusAdmin = newRole === 'admin' && !isSuperAdmin;
-      const nextUser: SessionUser = {
-        ...current,
-        actualRole: newRole,
-        role: newRole,
-        adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
-        isSuperAdmin,
-        isCampusAdmin,
-        mfaVerified: newRole === current.role ? current.mfaVerified : !roleRequiresMfa(newRole),
-      };
-      persist(nextUser).catch(() => {});
-      userRef.current = nextUser;
-      setUser(nextUser);
-      try {
-        queryClient.removeQueries({
-          predicate: (query) => {
-            const root = String(query.queryKey[0] ?? '');
-            return !['profile', 'view-scope', 'active-campus-code'].includes(root);
-          },
-        });
-        queryClient.invalidateQueries({ queryKey: ['profile'] });
-      } catch {
-        // Non-blocking
+      const newCampus = isSuperAdmin ? 'GLOBAL' : ((row.campus_code ?? current.campusCode) as string | null);
+
+      const roleChanged = newRole !== current.actualRole;
+      const tierChanged = (isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null) !== (current.adminRole ?? null);
+      const campusChanged = (newCampus ?? null) !== (current.campusCode ?? null);
+      const verification = typeof row.verification_status === 'string' ? (row.verification_status as string) : undefined;
+      // The first sighting only sets the baseline (see the initial checkNow below) - it is not a change.
+      const verificationChanged = verification !== undefined && lastVerification !== undefined && verification !== lastVerification;
+      lastVerification = verification ?? lastVerification;
+
+      if (roleChanged || tierChanged || campusChanged) {
+        const nextUser: SessionUser = {
+          ...current,
+          actualRole: newRole,
+          // A real, database-verified change always wins over a Super Admin's local "View As" preview.
+          role: roleChanged ? newRole : current.role,
+          adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
+          isSuperAdmin,
+          isCampusAdmin,
+          campusCode: newCampus,
+          department: row.department ?? current.department,
+          mfaVerified: roleChanged && newRole !== current.role ? !roleRequiresMfa(newRole) : current.mfaVerified,
+        };
+        persist(nextUser).catch(() => {});
+        userRef.current = nextUser;
+        setUser(nextUser);
+        try {
+          queryClient.removeQueries({
+            predicate: (query) => {
+              const root = String(query.queryKey[0] ?? '');
+              return !['profile', 'view-scope', 'active-campus-code'].includes(root);
+            },
+          });
+          queryClient.invalidateQueries({ queryKey: ['profile'] });
+        } catch {
+          // Non-blocking
+        }
+      } else if (verificationChanged) {
+        try {
+          // Campus feeds, resources and events are all gated on verification: refetch what is on screen.
+          queryClient.invalidateQueries();
+        } catch {
+          // Non-blocking
+        }
       }
     };
 
@@ -719,9 +733,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               forceSignOutForRevokedAccess('suspended');
               return;
             }
-            if (row?.role) {
-              applyLiveRoleChange(row.role as UserRole);
-            }
+            applyLiveProfileChange(row);
           },
         )
         .on(
@@ -735,7 +747,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // enforces suspension server-side even if this channel never connects.
     }
 
+    // Polling safety net. Realtime only delivers rows to roles holding TABLE-level SELECT on `profiles`;
+    // since profile columns are privilege-controlled (email, student id ... are private), the channel can
+    // stay silent and the suspension kick / live tier / verification refresh would never fire. A light
+    // check once a minute and whenever the app returns to the foreground covers that, and also covers
+    // networks that block websockets.
+    let polling = false;
+    const checkNow = async () => {
+      if (polling) return;
+      polling = true;
+      try {
+        const row = await getOwnProfileRow(watchedUserId);
+        if (!row) return;
+        if (row.is_suspended === true) {
+          forceSignOutForRevokedAccess('suspended');
+          return;
+        }
+        applyLiveProfileChange(row);
+      } catch {
+        // best effort
+      } finally {
+        polling = false;
+      }
+    };
+    void checkNow(); // baseline for change detection
+    const pollTimer = setInterval(checkNow, 60_000);
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void checkNow();
+    });
+
     return () => {
+      clearInterval(pollTimer);
+      appStateSub.remove();
       if (channel) supabase.removeChannel(channel).catch(() => {});
     };
   }, [user?.id]);
@@ -749,27 +792,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const session = await authApi.login({ email, password, captchaToken });
         await setTokens(session.accessToken, session.refreshToken);
 
-        const userEmail = (email || '').toLowerCase().trim();
+        // `email` may be an @handle; the real address is the one on the session.
+        const userEmail = (session.user.email || email || '').toLowerCase().trim();
         const isMasterAdminEmail = userEmail === 'inememmanuel@gmail.com';
 
-        let prof: any = null;
-        try {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('department, is_suspended, deactivated_at, onboarding_complete, onboarding_step, admin_role, campus_code, avatar_url, banner_url')
-            .eq('id', session.user.id)
-            .maybeSingle();
-          if (!error && data) {
-            prof = data;
-          } else if (error) {
-            const { data: fallbackProf } = await supabase
-              .from('profiles')
-              .select('department, is_suspended, deactivated_at, onboarding_complete, onboarding_step, campus_code, avatar_url, banner_url')
-              .eq('id', session.user.id)
-              .maybeSingle();
-            if (fallbackProf) prof = fallbackProf;
-          }
-        } catch {}
+        // Own row (private columns included) with a bounded wait + retry. If it still cannot be read the
+        // role from authApi.login() is used, but a login must never invent "onboarding not complete".
+        const prof: any = await fetchOwnProfile(session.user.id);
 
         if (prof?.is_suspended && !isMasterAdminEmail) {
           isExplicitLogout.current = true;
@@ -786,13 +815,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } catch {}
         }
 
-        const isOnboarded =
-          prof?.onboarding_complete === true ||
-          session.user.role === 'admin' ||
-          session.user.role === 'staff' ||
-          isMasterAdminEmail;
+        const resolvedRole = (prof?.role || session.user.role) as UserRole;
+        const cachedStored = await getSessionUser();
+        const cachedForAccount = cachedStored?.id === session.user.id ? cachedStored : null;
+        const isOnboarded = prof
+          ? prof.onboarding_complete === true || resolvedRole === 'admin' || resolvedRole === 'staff' || isMasterAdminEmail
+          : (cachedForAccount?.onboardingComplete ?? (resolvedRole === 'admin' || resolvedRole === 'staff' || isMasterAdminEmail));
 
-        const userRole = isMasterAdminEmail ? 'admin' : session.user.role;
+        const userRole = isMasterAdminEmail ? 'admin' : resolvedRole;
         const adminRole = isMasterAdminEmail ? 'super_admin' : (prof?.admin_role as AdminRoleType | null | undefined);
         const campusCode = isMasterAdminEmail ? 'GLOBAL' : (prof?.campus_code || null);
         const isSuperAdmin = isMasterAdminEmail || (userRole === 'admin' && adminRole === 'super_admin');
@@ -804,18 +834,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           actualRole: userRole,
           adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
           campusCode,
-          department: prof?.department || null,
+          department: prof?.department || cachedForAccount?.department || null,
           avatarUrl: prof?.avatar_url || undefined,
           coverUrl: prof?.banner_url || undefined,
           isSuperAdmin,
           isCampusAdmin,
           onboardingComplete: isOnboarded,
-          onboardingStep: isOnboarded ? undefined : (prof?.onboarding_step || firstOnboardingStep(userRole)),
+          onboardingStep: isOnboarded ? undefined : (prof?.onboarding_step || cachedForAccount?.onboardingStep || firstOnboardingStep(userRole)),
           mfaVerified: !roleRequiresMfa(userRole),
         };
         await persist(nextUser);
         setUser(nextUser);
-        if (session.user.role === 'student') {
+        if (userRole === 'student') {
           resetToDefaultCampusScope();
         }
         loadBlockedUserIds().catch(() => {});
@@ -888,36 +918,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       },
       async completeOnboarding() {
-        const currentUserId = userRef.current?.id;
         const current = userRef.current;
         if (!current) return;
-        const next = { ...current, onboardingComplete: true, onboardingStep: undefined };
+
+        // The SERVER decides. This used to flip the local flag first and then fire an UPDATE whose failure was
+        // only logged: when it failed (a trigger refusal, a dropped connection) the app let the member in, and
+        // the next sign-in - or a second device - found onboarding_complete = false and sent them through
+        // onboarding again. Now nothing is marked complete until the database says it is.
+        let result: Awaited<ReturnType<typeof completeOnboardingOnServer>>;
+        try {
+          result = await completeOnboardingOnServer();
+        } catch (err: any) {
+          if (err?.message === 'ACADEMIC_PROFILE_INCOMPLETE') throw err;
+          // Database not migrated yet (no complete_my_onboarding function): legacy direct write, still checked.
+          if (!/Could not find the function|PGRST202|does not exist/i.test(String(err?.message ?? ''))) throw err;
+          const payload: Record<string, any> = { onboarding_complete: true, onboarding_step: null };
+          const { data: wrote, error } = await supabase.from('profiles').update(payload).eq('id', current.id).select('onboarding_complete');
+          if (error || !wrote?.length || wrote[0]?.onboarding_complete !== true) {
+            throw new Error('We could not finish setting up your account. Check your connection and try again.');
+          }
+          result = { onboardingComplete: true, campusCode: current.campusCode ?? null, department: current.department ?? null };
+        }
+        if (!result.onboardingComplete) {
+          throw new Error('ACADEMIC_PROFILE_INCOMPLETE');
+        }
+
+        const next: SessionUser = {
+          ...current,
+          onboardingComplete: true,
+          onboardingStep: undefined,
+          campusCode: result.campusCode ?? current.campusCode,
+          department: result.department ?? current.department,
+        };
         await persist(next);
         userRef.current = next;
         setUser(next);
-
-        // Ensure database row is fully synchronized with onboarding_complete, campus_code, and department
-        if (currentUserId) {
-          const updatePayload: Record<string, any> = {
-            onboarding_complete: true,
-            onboarding_step: null,
-          };
-          if (current.campusCode && current.campusCode !== 'GLOBAL') {
-            updatePayload.campus_code = current.campusCode;
-          }
-          if (current.department && current.department.trim()) {
-            updatePayload.department = current.department.trim();
-          }
-          try {
-            const { error } = await supabase
-              .from('profiles')
-              .update(updatePayload)
-              .eq('id', currentUserId);
-            if (error) console.warn('[Auth] Failed to persist onboarding_complete:', error.message);
-          } catch (err) {
-            console.warn('[Auth] completeOnboarding network error:', err);
-          }
-        }
         registerForPushNotificationsAsync().catch(() => {});
       },
       async verifyMfa(code) {

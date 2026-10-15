@@ -48,24 +48,20 @@ test('isUnverifiedPersonalUser does not flag verified accounts', () => {
   );
 });
 
-test('isUnverifiedPersonalUser does not flag institutional email domains', () => {
+test('isUnverifiedPersonalUser follows the server verification status, not the e-mail domain', () => {
+  // An institutional address that the server has NOT verified is still gated: the database wall is
+  // keyed on profiles.verification_status, so the prompt must show.
   assert.equal(
-    isUnverifiedPersonalUser({
-      email: 'student@unilag.edu.ng',
-      isVerified: false,
-      verificationStatus: 'none',
-      userType: 'student',
-    }),
-    false
+    isUnverifiedPersonalUser({ email: 'student@unilag.edu.ng', isVerified: false, verificationStatus: 'none', userType: 'student' }),
+    true
   );
-
   assert.equal(
-    isUnverifiedPersonalUser({
-      email: 'student@ui.edu.ng',
-      isVerified: false,
-      verificationStatus: 'none',
-      userType: 'student',
-    }),
+    isUnverifiedPersonalUser({ email: 'student@abu.edu.ng', isVerified: false, verificationStatus: 'none', userType: 'student' }),
+    true
+  );
+  // Once the server verified them (auto-verify on confirmed institutional e-mail, or a reviewer), the gate opens.
+  assert.equal(
+    isUnverifiedPersonalUser({ email: 'student@unilag.edu.ng', isVerified: true, verificationStatus: 'verified', userType: 'student' }),
     false
   );
 });

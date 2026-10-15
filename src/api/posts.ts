@@ -14,6 +14,7 @@ import { SEED_FORUM_POSTS } from '../data/seedForumPosts';
 import { getSeedCommentsForPost } from '../data/seedForumComments';
 import { isBotPost, isBotVisibilityEnabled } from '../utils/botVisibility';
 import { isSuperAdminIdentity, resolveCampusReadScope } from '../utils/campusAccess';
+import { getOwnProfileRow } from './profile';
 
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
@@ -811,11 +812,7 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  authorRole = authorRole || 'student';
 
   let authorAvatarUrl: string | null = authData?.user?.user_metadata?.avatar_url || null;
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('campus_code, avatar_url, role, verification_status, email, is_suspended')
-    .eq('id', authorId)
-    .maybeSingle();
+  const profile = await getOwnProfileRow(authorId);
 
   if (profile?.is_suspended) {
     throw new Error('Your account is currently suspended from posting content.');
@@ -829,8 +826,7 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
     profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     (profile as any)?.admin_role === 'super_admin';
-  const isEdu = !!(profile?.email && profile.email.toLowerCase().endsWith('.edu.ng') && profile.verification_status !== 'rejected');
-  const isVerified = isPrivilegedUser || profile?.verification_status === 'verified' || isEdu;
+  const isVerified = isPrivilegedUser || profile?.verification_status === 'verified';
   if (!isVerified) {
     throw new Error('Only verified student accounts can publish forum posts and threads. Please verify your student status.');
   }

@@ -451,7 +451,9 @@ export default function UserDirectoryScreen() {
 
   const targetCampus = currentUser?.isCampusAdmin && currentUser?.campusCode ? currentUser.campusCode : newCampus;
   const username = newEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
-  const matricNo = newMatric.trim() || `${targetCampus}/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
+  // Never invent a student number: the old fallback stored a random "CAMPUS/2026/1234" as if it were the
+  // person's real matric number, and it then showed up on their profile and in exports.
+  const matricNo = newMatric.trim();
   if (isProvisioning) return;
   setIsProvisioning(true);
   const email = newEmail.trim();
@@ -500,7 +502,7 @@ export default function UserDirectoryScreen() {
     role: newRole.toLowerCase(),
     campus_code: targetCampus,
     department: newDepartment.trim() || 'General Studies',
-    student_id_number: matricNo,
+    student_id_number: matricNo || null,
     verification_status: 'verified',
     is_suspended: false,
   };
@@ -536,7 +538,7 @@ export default function UserDirectoryScreen() {
 
   recordAuditLogEntry({
   action: 'verification_approved',
-  summary: `Created new ${newRole} account for ${newUser.fullName} (${newUser.matricNo}) on ${targetCampus}`,
+  summary: `Created new ${newRole} account for ${newUser.fullName}${newUser.matricNo ? ` (${newUser.matricNo})` : ''} on ${targetCampus}`,
   targetType: 'user',
   targetId: newUser.id,
   institutionCode: targetCampus,

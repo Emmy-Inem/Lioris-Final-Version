@@ -38,6 +38,17 @@ export default function VerifyEmailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  // True once the code was accepted: the auth listener is still loading the profile, and the [user] effect
+  // below routes into the app the moment it arrives. Routing to '/' straight away flashed the logged-out
+  // landing page (no user yet) and looked like the code had failed.
+  const [signingIn, setSigningIn] = useState(false);
+
+  useEffect(() => {
+    if (!signingIn) return undefined;
+    // Safety net on a very slow connection: hand over to the root resolver, which waits on the session.
+    const timer = setTimeout(() => router.replace('/'), 12000);
+    return () => clearTimeout(timer);
+  }, [signingIn]);
 
   useEffect(() => {
     if (params.campus_code) {
@@ -83,7 +94,7 @@ export default function VerifyEmailScreen() {
           });
           if (!error && !cancelled) {
             haptics.success();
-            router.replace('/');
+            setSigningIn(true);
             return;
           }
         } catch {
@@ -117,8 +128,8 @@ export default function VerifyEmailScreen() {
     try {
       await authApi.verifyEmail(cleanCode, email);
       haptics.success();
-      // The auth listener signs the user in; the resolver then routes into the app.
-      router.replace('/');
+      // The auth listener signs the user in; the [user] effect above then routes into the app.
+      setSigningIn(true);
     } catch (err: any) {
       haptics.error();
       setErrorMessage(getFriendlyErrorMessage(err, 'That code is wrong or has expired. Check the latest email, or request a new code.'));
@@ -228,7 +239,13 @@ export default function VerifyEmailScreen() {
           ) : null}
 
           <View style={{ gap: spacing.sm, marginTop: spacing.xs }}>
-            <AppButton label="Verify and continue" onPress={handleVerify} loading={submitting} fullWidth />
+            <AppButton
+              label={signingIn ? 'Signing you in...' : 'Verify and continue'}
+              onPress={handleVerify}
+              loading={submitting || signingIn}
+              disabled={signingIn}
+              fullWidth
+            />
           </View>
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: spacing.lg }}>

@@ -52,13 +52,15 @@ export function isOfficialInstitutionalEmail(email?: string | null): boolean {
 }
 
 /**
- * Checks if a user is an unverified personal account.
- * 
- * Returns false (meaning user has FULL verified access) if:
- * 1. The account is a Super Admin or Platform Administrator.
- * 2. The account is staff.
- * 3. The account has isVerified = true or verificationStatus = 'verified'.
- * 4. The account uses an official accredited university email (.edu.ng).
+ * True when the member must still verify before campus content opens up.
+ *
+ * Mirrors the DATABASE rule (public.auth_campus_access / is_profile_verified): admins and staff are
+ * always through; everyone else is verified only when `profiles.verification_status = 'verified'`.
+ * The e-mail address is deliberately NOT consulted. This used to treat ANY `*.edu.ng` address as
+ * verified, but the server only auto-verifies the domains of launched campuses (when the inbox is
+ * confirmed), so a member with, say, an `@abu.edu.ng` address saw no verification prompt while every
+ * campus query quietly returned nothing. Showing the prompt is the honest behaviour: the server
+ * verifies institutional addresses itself, so those members never see it.
  */
 export function isUnverifiedPersonalUser(
   profile: MinimalUserProfile | null | undefined,
@@ -84,18 +86,7 @@ export function isUnverifiedPersonalUser(
     return false;
   }
 
-  // Already verified via approved document or domain
-  if (profile.isVerified || profile.verificationStatus === 'verified') {
-    return false;
-  }
-
-  // Check if the email belongs to an official university domain (unless explicitly rejected)
-  if (profile.verificationStatus !== 'rejected' && profile.email && isOfficialInstitutionalEmail(profile.email)) {
-    return false;
-  }
-
-  // Personal email (@gmail, @yahoo, etc.) and unverified
-  return true;
+  return !(profile.isVerified || profile.verificationStatus === 'verified');
 }
 
 /**

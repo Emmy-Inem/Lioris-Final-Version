@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { supabase } from './supabase';
+import type { Session, User } from '@supabase/supabase-js';
 import { AuthSession, UserRole } from './types';
 import { getInstitutionForEmail } from './institutions';
 import { recordAuditLogEntry } from './auditLog';
@@ -130,40 +131,6 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
   return true;
 }
 
-/**
- * Resolves a username handle to its registered email address.
- * Allows users to log in using either their email or their @handle.
- */
-export async function getEmailForUsername(username: string): Promise<string | null> {
-  const clean = username.trim().replace(/^@/, '').toLowerCase();
-  if (!clean || clean.includes('@')) return null;
-
-  try {
-    const { data, error } = await supabase.rpc('get_email_for_username', { p_username: clean });
-    if (!error && typeof data === 'string' && data.length > 0) {
-      return data;
-    }
-  } catch {
-    // RPC may not be deployed yet; fall through
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('email')
-      .ilike('username', clean)
-      .maybeSingle();
-
-    if (!error && data?.email) {
-      return data.email;
-    }
-  } catch {
-    // Fall through
-  }
-
-  return null;
-}
-
 // Rate limiting for login, password reset, email resend, and OTP verification
 // is handled by ../utils/authRateLimit with persistent storage and approaching limit alerts.
 
@@ -205,43 +172,148 @@ export async function resendConfirmationEmail(email: string): Promise<{ success:
 // accounts for local development should be created via a Supabase seed
 // script against your own project, never via client code that self-elevates
 // on login.
-export async function login(payload: LoginPayload): Promise<AuthSession> {
-  const cleanInput = payload.email.trim();
-  let cleanEmail = cleanInput.toLowerCase();
 
-  // If user entered a username instead of email (e.g. 'ineme' or '@ineme'), resolve to their registered email
-  if (!cleanEmail.includes('@')) {
-    const resolved = await getEmailForUsername(cleanEmail);
-    if (resolved) {
-      cleanEmail = resolved.toLowerCase();
-    } else {
-      const handle = cleanInput.replace(/^@/, '');
-      throw new Error(`No account found with username @${handle}. Please check the username or sign in with your email.`);
+/** Reads the JSON body of a failed edge-function call whatever its status (readEdgeFunctionError maps 401 to "session expired"). */
+async function readFunctionBody(error: any): Promise<{ status?: number; body: any }> {
+  const ctx = error?.context;
+  if (ctx && typeof ctx.json === 'function') {
+    const status = typeof ctx.status === 'number' ? ctx.status : undefined;
+    try {
+      return { status, body: await ctx.json() };
+    } catch {
+      return { status, body: null };
     }
   }
+  return { status: undefined, body: null };
+}
+
+/**
+ * Username sign-in. The e-mail address behind a handle is resolved SERVER SIDE by the
+ * `login-with-username` edge function, which signs the user in and hands back only the session, so an
+ * address is never sent to the browser (the old public get_email_for_username() RPC returned it to
+ * anyone holding the publishable key).
+ */
+async function signInWithUsername(
+  handle: string,
+  password: string,
+  captchaToken?: string,
+): Promise<{ session: Session; user: User }> {
+  const { data, error } = await supabase.functions.invoke('login-with-username', {
+    body: { username: handle, password, captchaToken },
+  });
+
+  if (error) {
+    const { status, body } = await readFunctionBody(error);
+    const code = typeof body?.error === 'string' ? body.error : '';
+    const message = typeof body?.message === 'string' ? body.message : '';
+    if (code === 'email_not_confirmed' && typeof body?.email === 'string') {
+      throw new EmailConfirmationRequiredError(body.email);
+    }
+    if (code === 'captcha_failed') {
+      const err: any = new Error(message || 'Security verification failed or expired. Please complete the security check again.');
+      err.code = 'captcha_failed';
+      throw err;
+    }
+    if (code === 'invalid_credentials') {
+      const err: any = new Error(message || 'Incorrect username or password.');
+      err.code = 'invalid_credentials';
+      throw err;
+    }
+    if (code === 'rate_limited' || status === 429) {
+      throw new Error(message || 'Too many sign-in attempts. Please wait a few minutes and try again.');
+    }
+    // Not deployed (404), unreachable, or misconfigured: say so and offer the working path.
+    const unreachable = String(error?.name ?? '') === 'FunctionsFetchError' || status === 404 || (status ?? 0) >= 500;
+    throw new Error(
+      unreachable
+        ? 'Username sign-in is temporarily unavailable. Please sign in with your email address instead.'
+        : message || 'We could not sign you in. Please try again.',
+    );
+  }
+
+  const tokens = (data as any)?.session;
+  if (!tokens?.access_token || !tokens?.refresh_token) {
+    throw new Error('We could not sign you in. Please try again.');
+  }
+  const { data: set, error: setError } = await supabase.auth.setSession({
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+  });
+  if (setError || !set?.session || !set?.user) {
+    throw new Error('We could not start your session. Please try again.');
+  }
+  return { session: set.session, user: set.user };
+}
+
+export async function login(payload: LoginPayload): Promise<AuthSession> {
+  const cleanInput = payload.email.trim();
+  const isHandle = !cleanInput.includes('@');
+  const identifier = isHandle ? cleanInput.replace(/^@/, '').toLowerCase() : cleanInput.toLowerCase();
 
   // Client-side rate limiting throttle with persistent storage and lockout
-  checkLoginRateLimit(cleanEmail);
+  checkLoginRateLimit(identifier);
 
-  let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-    email: cleanEmail,
-    password: payload.password,
-    options: payload.captchaToken ? { captchaToken: payload.captchaToken } : undefined,
-  });
+  let signInData: { session: Session | null; user: User | null } = { session: null, user: null };
+  let signInError: any = null;
+
+  if (isHandle) {
+    try {
+      signInData = await signInWithUsername(identifier, payload.password, payload.captchaToken);
+    } catch (err: any) {
+      // Only a wrong handle/password counts toward the lockout. A network failure, an undeployed
+      // function or a rate-limit answer must not lock people out of their own account.
+      if (err?.code === 'invalid_credentials') {
+        const rateStatus = recordLoginFailure(identifier);
+        if (rateStatus.isLocked && rateStatus.remainingLockoutSeconds) {
+          throw new Error(`Too many failed login attempts. Account temporarily locked for security. Please try again in ${rateStatus.remainingLockoutSeconds}s.`);
+        }
+        throw new Error(
+          rateStatus.isApproachingLimit && rateStatus.warningMessage
+            ? `${err.message} (${rateStatus.warningMessage})`
+            : err.message,
+        );
+      }
+      throw err;
+    }
+  } else {
+    const result = await supabase.auth.signInWithPassword({
+      email: identifier,
+      password: payload.password,
+      options: payload.captchaToken ? { captchaToken: payload.captchaToken } : undefined,
+    });
+    signInData = { session: result.data?.session ?? null, user: result.data?.user ?? null };
+    signInError = result.error;
+  }
 
   // The password was right but the inbox has not been proven yet - not a failed login.
   if (isEmailNotConfirmedError(signInError)) {
-    throw new EmailConfirmationRequiredError(cleanEmail);
+    throw new EmailConfirmationRequiredError(identifier);
   }
 
   if (signInError || !signInData?.session || !signInData?.user) {
-    const rateStatus = recordLoginFailure(cleanEmail);
     if (signInError?.code === 'captcha_failed' || signInError?.message?.toLowerCase().includes('captcha')) {
       const err: any = new Error('Security verification failed or expired. Please complete the security check again.');
       err.code = 'captcha_failed';
       throw err;
     }
 
+    const message = String(signInError?.message ?? '');
+    const status: number | undefined = typeof signInError?.status === 'number' ? signInError.status : undefined;
+    const isRateLimited = status === 429 || /rate limit|too many/i.test(message);
+    // supabase-js reports transport problems as AuthRetryableFetchError (no status, or a 5xx). Those say
+    // nothing about the password and must neither be shown as "Incorrect password" nor count as a failure.
+    const isTransport =
+      String(signInError?.name ?? '') === 'AuthRetryableFetchError' ||
+      /failed to fetch|network request failed|networkerror|load failed|timeout/i.test(message) ||
+      (status !== undefined && status >= 500);
+    if (isRateLimited) {
+      throw new Error('Too many sign-in attempts. Please wait a few minutes and try again.');
+    }
+    if (isTransport || !signInError) {
+      throw new Error('We could not reach Lioris. Check your internet connection and try again.');
+    }
+
+    const rateStatus = recordLoginFailure(identifier);
     if (rateStatus.isLocked && rateStatus.remainingLockoutSeconds) {
       throw new Error(`Too many failed login attempts. Account temporarily locked for security. Please try again in ${rateStatus.remainingLockoutSeconds}s.`);
     }
@@ -250,16 +322,11 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
     if (rateStatus.isApproachingLimit && rateStatus.warningMessage) {
       throw new Error(`${baseMessage} (${rateStatus.warningMessage})`);
     }
-
-    const friendly = getFriendlyErrorMessage(
-      signInError,
-      baseMessage,
-    );
-    throw new Error(friendly);
+    throw new Error(getFriendlyErrorMessage(signInError, baseMessage));
   }
 
   // Clear failures upon successful authentication
-  clearLoginAttempts(cleanEmail);
+  clearLoginAttempts(identifier);
 
   // Fetch verified user profile from Supabase profiles table with targeted column projection
   const { data: profile } = await supabase
@@ -289,7 +356,8 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   // source - defaulting to the lowest-privilege role when the profile
   // lookup is missing keeps a spoofed metadata.role from granting access.
   const userRole = (profile?.role || 'student') as UserRole;
-  const fullName = profile?.full_name || signInData.user.user_metadata?.full_name || cleanEmail.split('@')[0];
+  const accountEmail = signInData.user.email || (isHandle ? '' : identifier);
+  const fullName = profile?.full_name || signInData.user.user_metadata?.full_name || (accountEmail || identifier).split('@')[0];
 
   return {
     accessToken: signInData.session.access_token,
@@ -297,7 +365,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
     user: {
       id: signInData.user.id,
       fullName,
-      email: signInData.user.email || cleanEmail,
+      email: accountEmail,
       role: userRole,
     },
   };
@@ -342,6 +410,9 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
         age_eligibility_confirmed: payload.confirmedAgeEligible === true,
       },
       captchaToken: payload.captchaToken,
+      // Without this the confirmation e-mail's link falls back to the project's Site URL (often a
+      // different deployment). The 6-digit code works either way; the link now lands on verify-email.
+      emailRedirectTo: getAuthRedirectUrl('verify-email'),
     },
   });
 
