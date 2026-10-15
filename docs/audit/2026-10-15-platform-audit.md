@@ -240,3 +240,44 @@ both keys). The diagnostic reports both facts for production.
 * `tools/sql-harness/audit-remediation.mjs` (`npm run audit` / `npm run audit:before` in
   `tools/sql-harness`): 55 behavioural checks as anon / student / staff / Campus Admin / Super Admin.
 * `src/utils/fileNames.test.ts`, updated `src/utils/verificationGate.test.ts`.
+
+## Round 2 - student-role sweep (auth, onboarding, saved state, sync)
+
+Three independent read-only reviews of the student journey, each finding verified in code, then fixed.
+
+**Fixed**
+* **Saved items** lied on failure (heart filled, toast "Saved", row never written, vanished on next sync): writes now
+  roll back and report. The Saved tab / dashboard strip refresh after any bookmark. Library books no longer break
+  title enrichment. Legacy un-namespaced local blobs are adopted once and deleted instead of leaking to the next account.
+* **Marketplace**: search and Condition filters now apply to real listings (they only filtered local fixtures);
+  "Wishlist" shows the person's server-side saved listings; the heart works after reload / new device.
+* **Likes** throw and roll back, duplicate inserts are success, cached feeds are patched (no flip-back when a row
+  scrolls away); double taps are guarded.
+* **Forum spaces**: the database decides what is joined (leave sticks, works across devices; defaults are seeded for
+  real once); join/leave report failures instead of "Joined!" lies.
+* **Account switching**: React-Query cache, blocked/muted sets, messaging/posts/events/marketplace session caches,
+  scheduled event reminders and the app-lock switch are cleared on sign-out, forced sign-out and account change.
+* **Auth races**: an epoch guard stops a slow profile fetch resurrecting a signed-out account (after password reset,
+  suspension, quick logout); a suspended account cannot be revived by the listener; login no longer persists
+  "onboarding incomplete" because a read timed out; revoked sessions also clear stored identity.
+* **Email links on phones**: confirm / reset links now create a session from the URL fragment (iOS/Android);
+  web recovery links are remembered even if the provider mounts late; abandoning recovery no longer hijacks every
+  later sign-in.
+* **Onboarding**: routes redirect to sign-in when there is no session; "wrong email? Sign out"; stored step validated;
+  resuming no longer re-uploads the avatar; suspended students see the appeal instructions.
+* **Chat**: recipients can open attachments again (regression from the storage tightening, covered by a test);
+  failed messages show "Not sent - tap to retry"; archived chats reappear on new messages; stale call invitations no
+  longer ring when a chat is opened; starting a chat that the server refuses now says so.
+* **Students** can see and answer connection requests; "People you may know" is limited to the student's own
+  campus (students/alumni only); authors of global posts keep their name/avatar for other campuses.
+* Notification preferences no longer reset to "all on" when offline and no longer fail silently; event/post cards follow
+  refetched RSVP / like state; reply bar sits above the iOS keyboard; event Back works from a cold start.
+
+**Still open (deliberate or needs a product decision)**
+* Native sign-in/sign-up cannot show the CAPTCHA widget (see "Needs a decision" #4); the app now says so honestly.
+* Username uniqueness race (trigger swallows duplicates) and weaker server-side username rules - needs a small migration.
+* Role-permission toggles are enforced by the database but the student UI does not hide the controls or explain the refusal.
+* Event "Edit schedule" (agenda) saves nothing (no column); chat history loads fully and polls (performance);
+  "My Campus" feed pagination can end early; admin kill-switches do not gate every student route.
+* Reminders: the `event_reminders` table is never read server-side; reminders on web do nothing.
+* iOS saves downloads through "Save to Files" (a Files-app folder needs a native config change in the next store build).

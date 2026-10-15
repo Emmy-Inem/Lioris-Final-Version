@@ -411,6 +411,90 @@ EXCEPTION WHEN insufficient_privilege THEN
 END
 $do$;
 
+-- ============================================================================
+-- "People you may know" stays on the caller's campus (plus GLOBAL members) and only suggests students and
+-- alumni. It used to pick random profiles from EVERY campus, including staff and admins, so a student was
+-- shown (and could send requests to) strangers from other universities.
+-- ============================================================================
+DO $sugg$
+BEGIN
+  IF to_regclass('public.connections') IS NOT NULL AND to_regclass('public.user_mutes') IS NOT NULL
+     AND to_regprocedure('public.users_have_block(uuid,uuid)') IS NOT NULL THEN
+    EXECUTE $f$
+      CREATE OR REPLACE FUNCTION public.get_suggested_connections(p_limit INT DEFAULT 10)
+      RETURNS TABLE (id UUID, full_name TEXT, role TEXT, department TEXT, level TEXT, avatar_url TEXT)
+      LANGUAGE sql SECURITY DEFINER STABLE
+      SET search_path = public
+      AS $body$
+        SELECT p.id, p.full_name, p.role::text, p.department, p.level, p.avatar_url
+        FROM profiles p
+        WHERE auth.uid() IS NOT NULL
+          AND p.id <> auth.uid()
+          AND p.role::text IN ('student', 'alumni')
+          AND NOT COALESCE(p.is_bot, false)
+          AND NOT COALESCE(p.is_suspended, false)
+          AND (
+            p.campus_code = 'GLOBAL'
+            OR p.campus_code = public.campus_of(auth.uid())
+          )
+          AND NOT public.users_have_block(auth.uid(), p.id)
+          AND NOT EXISTS (
+              SELECT 1 FROM user_mutes um
+              WHERE um.muter_id = auth.uid() AND um.muted_id = p.id
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM connections c
+              WHERE c.status IN ('pending', 'accepted')
+                AND (
+                    (c.requester_id = auth.uid() AND c.recipient_id = p.id)
+                    OR (c.requester_id = p.id AND c.recipient_id = auth.uid())
+                )
+          )
+        ORDER BY random()
+        LIMIT GREATEST(COALESCE(p_limit, 10), 0)
+      $body$
+    $f$;
+    REVOKE ALL ON FUNCTION public.get_suggested_connections(INT) FROM PUBLIC, anon;
+    GRANT EXECUTE ON FUNCTION public.get_suggested_connections(INT) TO authenticated, service_role;
+  END IF;
+END
+$sugg$;
+
+-- ============================================================================
+-- Authors of GLOBAL content keep their name and avatar for students on other campuses.
+-- Since profiles became campus-scoped, a UNILAG student reading a global post written at UI saw
+-- "Campus Student" with no picture or verified badge (the author row was invisible to them). Only members who
+-- have actually published to the global audience (or commented on such a post) become readable, only through the
+-- columns already granted to students (no e-mail, student id, push token...), and not to campus admins/staff,
+-- whose reach stays campus-bound.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.is_global_content_author(p_uid uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT EXISTS (
+           SELECT 1 FROM public.posts p
+           WHERE p.author_id = p_uid
+             AND p.status = 'published'
+             AND (p.visibility_scope = 'global' OR p.campus_code = 'GLOBAL')
+         )
+      OR EXISTS (
+           SELECT 1 FROM public.post_comments c
+           JOIN public.posts p ON p.id = c.post_id
+           WHERE c.author_id = p_uid
+             AND p.status = 'published'
+             AND (p.visibility_scope = 'global' OR p.campus_code = 'GLOBAL')
+         );
+$$;
+REVOKE ALL ON FUNCTION public.is_global_content_author(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_global_content_author(uuid) TO authenticated, service_role;
+
+DROP POLICY IF EXISTS "Members read authors of global content" ON public.profiles;
+CREATE POLICY "Members read authors of global content" ON public.profiles
+  FOR SELECT TO authenticated
+  USING ((SELECT NOT public.is_scoped_privileged()) AND public.is_global_content_author(id));
+
 NOTIFY pgrst, 'reload schema';
 
 COMMIT;

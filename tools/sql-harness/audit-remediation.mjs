@@ -651,6 +651,26 @@ await check('storage: a chat attachment in the private resources bucket can be o
   assert(!(await can(U.unvU)), 'a non-member read a chat attachment');
   assert(!(await can(U.glob)), 'a non-member (global) read a chat attachment');
 });
+await check('people you may know: a student only gets students/alumni of their own campus (or GLOBAL), never staff, admins or other campuses', async () => {
+  await as(U.verU, async (c) => {
+    const r = await c.q(`SELECT p.id, p.role::text role, p.campus_code FROM public.get_suggested_connections(500) s JOIN public.profiles p ON p.id = s.id`);
+    for (const row of r.rows) {
+      assert(['student', 'alumni'].includes(row.role), `suggested a ${row.role}`);
+      assert(['UNILAG', 'GLOBAL'].includes(row.campus_code), `suggested someone from ${row.campus_code}`);
+    }
+  });
+});
+await check('cross-campus authors of global posts are readable (name/avatar) by students, nobody else on that campus is, and campus admins stay campus-bound', async () => {
+  await as(U.verU, async (c) => {
+    const r = await c.q(`SELECT id FROM public.profiles WHERE id IN ('${U.verI}', '${U.campAdminI}', '${U.staffI}')`);
+    const ids = r.rows.map((x) => x.id);
+    assert(ids.includes(U.verI), 'author of a global post is invisible to a student on another campus');
+    assert(!ids.includes(U.campAdminI) && !ids.includes(U.staffI), 'a UI member who never published globally became readable');
+  });
+  await as(CAU, async (c) => {
+    eq((await c.q(`SELECT count(*)::int n FROM public.profiles WHERE id = '${U.verI}'`)).rows[0].n, 0, 'UNILAG campus admin read a UI author');
+  });
+});
 await check('storage: résumés are not readable by an admin of another campus', async () => {
   await as(CAU, async (c) => { eq(await names(c, 'resumes'), [], 'UNILAG admin read a UI résumé'); });
   await as({ sub: id(9), email: 'campadmin.i@school.test' }, async (c) => { eq(await names(c, 'resumes'), [`${U.verI}/cv.pdf`]); });
