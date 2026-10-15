@@ -163,7 +163,10 @@ export default function BuildProfileScreen() {
     haptics.medium();
     setSubmitting(true);
     try {
-      if ((photoBase64 || photoUri) && user?.id) {
+      // An https photo is the avatar already stored on the profile (loaded when resuming); only a freshly picked
+      // image is uploaded, otherwise every pass through this step re-uploaded it as a new orphan file.
+      const photoIsNew = Boolean(photoBase64) || Boolean(photoUri && !/^https?:\/\//i.test(photoUri));
+      if (photoIsNew && user?.id) {
         try {
           const uploadPayload = photoBase64 || photoUri!;
           const ext = photoUri?.toLowerCase().includes('.png') || photoUri?.startsWith('data:image/png')

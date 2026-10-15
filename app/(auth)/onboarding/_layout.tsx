@@ -1,7 +1,12 @@
 import React from'react';
-import { Stack } from'expo-router';
+import { Redirect, Stack } from'expo-router';
+import { useAuth } from'@/auth/AuthContext';
 
 export default function OnboardingLayout() {
+ const { user, isLoading } = useAuth();
+ // No session (expired / revoked refresh token, or the page was opened signed out): these forms cannot save
+ // anything, so send the person to sign in instead of leaving them on a dead form.
+ if (!isLoading && !user) return <Redirect href="/(auth)/login" />;
  return (
  // PRD Section 8 - deliberate"moving forward"motion for the linear
  // onboarding chain, explicit and consistent across iOS/Android

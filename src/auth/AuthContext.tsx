@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from'react';
-import { Alert, AppState, Platform } from 'react-native';
+import { Alert, AppState, Linking, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import * as authApi from'@/api/auth';
@@ -20,6 +20,7 @@ import { supabase, OPENED_FROM_RECOVERY_LINK } from '@/api/supabase';
 import { queryClient } from '@/api/queryClient';
 import { cancelAllEventReminders } from '@/utils/eventReminders';
 import { BIOMETRICS_ENABLED_KEY, removeStoredPref } from '@/utils/biometrics';
+import { consumeAuthLink } from './emailLinks';
 import { clearMessagingSessionCache } from '@/api/messaging';
 import { clearPostsSessionCache } from '@/api/posts';
 import { clearEventsSessionCache } from '@/api/events';
@@ -468,6 +469,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
+    // 2b. E-mail links on a phone (confirm sign-up / reset password) carry the session in the URL fragment.
+    //     supabase-js only reads it on the web, so do it here for iOS and Android.
+    let linkSubscription: { remove: () => void } | null = null;
+    if (Platform.OS !== 'web') {
+      const onUrl = async (url: string | null) => {
+        const result = await consumeAuthLink(url);
+        if (!mounted || result.kind === 'none') return;
+        if (result.kind === 'recovery') {
+          setIsPasswordRecovery(true);
+          router.replace('/(auth)/reset-password' as any);
+        } else if (result.kind === 'error') {
+          Alert.alert('Link problem', result.message);
+        }
+        // signed_in: the SIGNED_IN event below builds the account and the router sends them on.
+      };
+      Linking.getInitialURL().then(onUrl).catch(() => {});
+      linkSubscription = Linking.addEventListener('url', (event) => {
+        void onUrl(event.url);
+      });
+    }
+
     // 3. Supabase Auth State Change Listener
     // supabase-js runs its listener while it holds its internal auth lock, and it
     // emits SIGNED_IN every time a minimized tab/PWA returns to the foreground.
@@ -660,6 +682,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      linkSubscription?.remove();
       authListener?.subscription?.unsubscribe();
     };
   }, []);

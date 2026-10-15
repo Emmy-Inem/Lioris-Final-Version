@@ -1,5 +1,6 @@
 import React from'react';
-import { ScrollView, View } from'react-native';
+import { Pressable, ScrollView, View } from'react-native';
+import { router } from'expo-router';
 import { ScreenContainer } from'./ScreenContainer';
 import { AppText } from'./AppText';
 import { AuthHeroBackground } from'./AuthHeroBackground';
@@ -21,7 +22,7 @@ interface OnboardingShellProps {
 // step screens that use this shell needed zero changes.
 export function OnboardingShell({ currentPath, title, subtitle, children, footer }: OnboardingShellProps) {
  const { spacing, radius } = useTheme();
- const { user } = useAuth();
+ const { user, logout } = useAuth();
  const { step, total } = user ? onboardingProgress(user.role, currentPath) : { step: 1, total: 1 };
 
  return (
@@ -63,6 +64,21 @@ export function OnboardingShell({ currentPath, title, subtitle, children, footer
  {children}
 
  <View style={{ marginTop: spacing.xl }}>{footer}</View>
+ {user ? (
+ <Pressable
+ accessibilityRole="button"
+ accessibilityLabel="Sign out and use a different account"
+ onPress={async () => {
+ await logout().catch(() => {});
+ router.replace('/(auth)/login');
+ }}
+ style={{ alignSelf: 'center', paddingVertical: spacing.md, marginTop: spacing.md }}
+ >
+ <AppText tone="secondary" variant="caption">
+ Signed up with the wrong email? Sign out
+ </AppText>
+ </Pressable>
+ ) : null}
  </WaveCard>
  </ScrollView>
  </ScreenContainer>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Redirect } from 'expo-router';
 import { useAuth } from '@/auth/AuthContext';
-import { firstOnboardingStep } from '@/auth/onboardingSteps';
+import { resolveOnboardingStep } from '@/auth/onboardingSteps';
 import { roleRequiresMfa } from '@/auth/mfaPolicy';
 import { AppLoadingScreen } from '@/components/AppLoadingScreen';
 import { LandingScreen } from '@/components/LandingScreen';
@@ -41,7 +41,7 @@ export default function Index() {
  if (!user.onboardingComplete) {
  // Resume exactly where they left off (PRD Section 5's onboarding
  // flowcharts) rather than dropping them back at step one every reload.
- const resumePath = user.onboardingStep ?? firstOnboardingStep(user.role);
+ const resumePath = resolveOnboardingStep(user.role, user.onboardingStep);
  return <Redirect href={resumePath as any} />;
  }
 

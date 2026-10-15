@@ -204,6 +204,8 @@ export function getFriendlyErrorMessage(error: unknown, fallback?: string): stri
 
   // 11. Account Suspension
   if (msg.includes('suspended') || msg.includes('revoked')) {
+    // The sign-in message carries the appeal address; replacing it left suspended students with no way forward.
+    if (rawMsg && /appeal/i.test(rawMsg)) return rawMsg;
     return 'Your campus account has been suspended by administration. Access has been revoked.';
   }
 

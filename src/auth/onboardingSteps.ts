@@ -1,4 +1,4 @@
-import { UserRole } from '@/api/types';
+import type { UserRole } from '@/api/types';
 
 /**
  * Streamlined onboarding flow for new users:
@@ -26,6 +26,15 @@ export const ONBOARDING_STEPS: Record<Extract<UserRole, 'student' | 'alumni'>, s
 
 export function firstOnboardingStep(role?: UserRole): string {
   return '/(auth)/onboarding/build-profile';
+}
+
+/**
+ * A step stored on the profile (or in an old cached session) is only trusted if it is still a real step for
+ * the role; a retired path would redirect to a route that no longer exists.
+ */
+export function resolveOnboardingStep(role: UserRole | undefined, step?: string | null): string {
+  if (role && (role === 'student' || role === 'alumni') && step && ONBOARDING_STEPS[role].includes(step)) return step;
+  return firstOnboardingStep(role);
 }
 
 export function nextOnboardingStep(role: UserRole, currentPath: string): string | null {

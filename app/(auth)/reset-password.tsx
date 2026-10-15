@@ -289,7 +289,18 @@ export default function ResetPasswordScreen() {
               </View>
             </View>
           )}
-          <Pressable onPress={() => router.replace('/(auth)/login')} style={{ alignSelf: 'center', padding: spacing.sm, marginTop: spacing.md }}>
+          <Pressable
+            onPress={async () => {
+              // Abandoning a verified recovery: drop the temporary recovery session, otherwise every later
+              // sign-in is bounced back to this screen.
+              if (isPasswordRecovery || hasRecoverySession) {
+                await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                clearPasswordRecovery();
+              }
+              router.replace('/(auth)/login');
+            }}
+            style={{ alignSelf: 'center', padding: spacing.sm, marginTop: spacing.md }}
+          >
             <AppText variant="bodySmall" tone="secondary">← Back to Sign In</AppText>
           </Pressable>
         </WaveCard>

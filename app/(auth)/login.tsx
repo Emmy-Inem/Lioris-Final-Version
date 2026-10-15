@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -97,7 +97,11 @@ export default function LoginScreen() {
  }
  haptics.error();
  if (err?.code === 'captcha_failed' || err?.message?.toLowerCase().includes('captcha')) {
- setErrorMessage('Security verification required. Please complete the security check below and try again.');
+ setErrorMessage(
+ Platform.OS === 'web'
+ ? 'Security verification required. Please complete the security check below and try again.'
+ : 'Sign-in is protected by a security check this version of the app cannot show yet. Please sign in at the Lioris website, or update the app and try again.',
+ );
  return;
  }
  const friendlyMsg = getFriendlyErrorMessage(
