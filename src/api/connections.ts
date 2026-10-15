@@ -329,6 +329,12 @@ export async function listSuggestedConnections(): Promise<SuggestedConnection[]>
 // User Safety & Content Filtering - Persists user blocking to Supabase & active session
 const blockedUserIdsState = new Set<string>();
 
+/** Forget the previous account's blocks and mutes (sign-out / account switch). */
+export function clearBlockedAndMuted(): void {
+ blockedUserIdsState.clear();
+ mutedUserIdsState.clear();
+}
+
 export function getBlockedUserIds(): string[] {
  return Array.from(blockedUserIdsState);
 }

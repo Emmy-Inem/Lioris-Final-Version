@@ -1,5 +1,5 @@
 import React, { useState } from'react';
-import { View } from'react-native';
+import { Alert, View } from'react-native';
 import { SolidCard } from'./SolidCard';
 import { AppText } from'./AppText';
 import { AppButton } from'./AppButton';
@@ -22,6 +22,8 @@ export function ConnectionRequestCard({ request, onHandled }: ConnectionRequestC
  try {
  await respondToConnectionRequest(request.id, action);
  onHandled();
+ } catch (err) {
+ Alert.alert('Connection request', err instanceof Error && err.message ? err.message : 'Could not update this request. Please try again.');
  } finally {
  setSubmitting(null);
  }

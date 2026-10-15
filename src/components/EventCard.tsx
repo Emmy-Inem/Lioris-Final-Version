@@ -1,4 +1,4 @@
-import React, { useState } from'react';
+import React, { useEffect, useState } from'react';
 import { Alert, Platform, Pressable, View } from'react-native';
 import { Image } from'expo-image';
 import { router, useSegments } from'expo-router';
@@ -37,6 +37,14 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  const roleGroup = segments[0] ?? '(student)';
  const [rsvpd, setRsvpd] = useState(!!event.isRsvpd);
  const [rsvpCount, setRsvpCount] = useState(event.rsvpCount);
+ // The card is kept mounted while lists refetch: follow the server's answer (RSVP made on the detail
+ // screen, a waitlist promotion, another device) instead of keeping the first value forever.
+ useEffect(() => {
+ if (submitting) return;
+ setRsvpd(!!event.isRsvpd);
+ setRsvpCount(event.rsvpCount);
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [event.isRsvpd, event.rsvpCount]);
   const { reminderOn, notificationId: reminderNotificationId, toggleReminder } = useEventReminder(event.id);
   const [submitting, setSubmitting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -123,7 +131,11 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  } catch (err: any) {
  setRsvpd(!next);
  setRsvpCount((prev) => prev + (next ? -1 : 1));
- Alert.alert('Could not update your RSVP', err?.message || 'Please try again.');
+ const unverified = typeof err?.message === 'string' && /no longer exists|not found/i.test(err.message);
+ Alert.alert(
+ 'Could not update your RSVP',
+ unverified ? 'Verify your campus account (Profile > Verification) to register for campus events.' : err?.message || 'Please try again.',
+ );
  } finally {
  setSubmitting(false);
  }

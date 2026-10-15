@@ -147,14 +147,18 @@ export function ResourceReaderModal({
   async function handleToggleBookmark() {
     haptics.medium();
     const cleanTitle = resource?.courseTitle || resource?.title || resource?.courseCode;
-    const added = await toggleBookmark(resource!.id, {
-      title: cleanTitle,
-      subtitle: resource?.courseCode || 'Course Material',
-    });
-    if (added) {
-      toast.success(`Bookmarked "${resource!.title}" for quick revision.`);
-    } else {
-      toast.info(`Removed "${resource!.title}" from bookmarks.`);
+    try {
+      const added = await toggleBookmark(resource!.id, {
+        title: cleanTitle,
+        subtitle: resource?.courseCode || 'Course Material',
+      });
+      if (added) {
+        toast.success(`Bookmarked "${resource!.title}" for quick revision.`);
+      } else {
+        toast.info(`Removed "${resource!.title}" from bookmarks.`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update your bookmark.');
     }
   }
 

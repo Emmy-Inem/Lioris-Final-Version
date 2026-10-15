@@ -23,6 +23,12 @@ import { getOwnProfileRow } from './profile';
 // only while the admin's "Mock Data Visibility" toggle is on.
 let locallyCreatedPosts: Post[] = [];
 
+/** Sign-out / account switch: nothing created in the previous session may appear for the next account. */
+export function clearPostsSessionCache(): void {
+  locallyCreatedPosts = [];
+  for (const key of Object.keys(locallyCreatedComments)) delete locallyCreatedComments[key];
+}
+
 /**
  * PostgREST fails the *entire* query when an embedded relationship is
  * missing (PGRST200), not just the embed - so a single absent table used
@@ -906,25 +912,31 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
  return created;
 }
 
+/**
+ * Marks a post helpful / not helpful. THROWS when the database refuses, so the card can roll back its
+ * optimistic heart (it used to log and carry on, leaving the UI and the database disagreeing). A duplicate
+ * insert (23505: already liked from another tab/device) is the state we wanted, so it counts as success.
+ */
 export async function togglePostLike(postId: string, liked: boolean): Promise<void> {
  locallyCreatedPosts = locallyCreatedPosts.map((p) =>
  p.id === postId ? { ...p, isLikedByMe: liked, likesCount: Math.max(0, p.likesCount + (liked ? 1 : -1)) } : p,
  );
 
- try {
- const { data: authData } = await supabase.auth.getUser();
- const userId = authData?.user?.id;
- if (userId) {
+ const { data: sessionData } = await supabase.auth.getSession();
+ const userId = sessionData?.session?.user?.id;
+ if (!userId) return;
  if (liked) {
  const { error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: userId });
- if (error) console.warn('[Posts] Like persistence error:', error.message);
+ if (error && (error as { code?: string }).code !== '23505') {
+ console.warn('[Posts] Like persistence error:', error.message);
+ throw new Error('Could not mark this post as helpful. Check your connection and try again.');
+ }
  } else {
  const { error } = await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', userId);
- if (error) console.warn('[Posts] Unlike error:', error.message);
+ if (error) {
+ console.warn('[Posts] Unlike error:', error.message);
+ throw new Error('Could not remove your mark. Check your connection and try again.');
  }
- }
- } catch (err) {
- console.warn('[Posts] Like error:', err);
  }
 }
 

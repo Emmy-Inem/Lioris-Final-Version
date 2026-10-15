@@ -19,6 +19,12 @@ function toPreviewText(content: string | undefined | null): string {
 let localConversations: Conversation[] = [];
 const localMessages: Record<string, Message[]> = {};
 
+/** Sign-out / account switch: the previous account's conversations and messages must not be merged into the next list. */
+export function clearMessagingSessionCache(): void {
+  localConversations = [];
+  for (const key of Object.keys(localMessages)) delete localMessages[key];
+}
+
 export interface UserToMessage {
   id: string;
   fullName: string;

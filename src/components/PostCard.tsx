@@ -1,4 +1,4 @@
-import React, { useState } from'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from'expo-image';
@@ -107,6 +107,12 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  const showScopeBadge = forceScopeBadge || (isFeatureEnabled('global_workspace') && isFeatureEnabled('forum_global_scope'));
 
  const [liked, setLiked] = useState(!!post.isLikedByMe);
+ const likeBusy = useRef(false);
+ useEffect(() => {
+ if (likeBusy.current) return;
+ setLiked(!!post.isLikedByMe);
+ setLikesCount(post.likesCount);
+ }, [post.isLikedByMe, post.likesCount]);
  const [likesCount, setLikesCount] = useState(post.likesCount);
  const [bookmarked, setBookmarked] = useState(!!post.isBookmarkedByMe);
  const [savingBookmark, setSavingBookmark] = useState(false);
@@ -207,17 +213,33 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  const canModerate = isPlatformModerator || canModerateCommunity;
 
  async function handleToggleLike() {
+ if (likeBusy.current) return; // a fast double tap must not send the same write twice
+ likeBusy.current = true;
  haptics.light();
  const next = !liked;
+ const nextCount = Math.max(0, likesCount + (next ? 1 : -1));
  setLiked(next);
- setLikesCount((prev) => prev + (next ? 1 : -1));
+ setLikesCount(nextCount);
  try {
  await togglePostLike(post.id, next);
+ // Keep the cached feed/detail in step: otherwise a row that scrolls off-screen and back remounts from
+ // stale props and shows the old heart and count.
+ const patch = { isLikedByMe: next, likesCount: nextCount };
+ queryClient.setQueriesData({ queryKey: ['feed'] }, (old: any) => {
+ if (!old) return old;
+ const fix = (p: any) => (p?.id === post.id ? { ...p, ...patch } : p);
+ if (Array.isArray(old)) return old.map(fix);
+ if (old.pages) return { ...old, pages: old.pages.map((page: any) => (Array.isArray(page) ? page.map(fix) : page)) };
+ return old;
+ });
+ queryClient.setQueryData(['post', post.id], (old: any) => (old && old.id === post.id ? { ...old, ...patch } : old));
  } catch (err: any) {
  setLiked(!next);
  setLikesCount((prev) => prev + (next ? -1 : 1));
  haptics.error();
  Alert.alert('Could not update', getFriendlyErrorMessage(err, 'Could not mark this thread as helpful. Please try again.'));
+ } finally {
+ likeBusy.current = false;
  }
  }
 

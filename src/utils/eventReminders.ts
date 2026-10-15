@@ -222,3 +222,21 @@ export function useEventReminder(eventId: string) {
 
   return { reminderOn, notificationId, setReminder, clearReminder, toggleReminder };
 }
+
+/**
+ * Signing out (or being signed out) must also stop THIS device from firing the previous account's
+ * "event starts soon" alerts, which live in the OS scheduler and outlast the JS session.
+ */
+export async function cancelAllEventReminders(): Promise<void> {
+  memoryCache = {};
+  isHydrated = false;
+  hydratedForUserId = null;
+  notify();
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Notifications = require('expo-notifications');
+    if (typeof localStorage === 'undefined') await Notifications.cancelAllScheduledNotificationsAsync();
+  } catch {
+    // web / test runner / notifications unavailable: nothing is scheduled by the OS
+  }
+}

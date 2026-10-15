@@ -13,6 +13,11 @@ import { getOwnProfileRow } from './profile';
 
 let locallyCreatedEvents: CampusEvent[] = [];
 
+/** Sign-out / account switch: nothing created in the previous session may appear for the next account. */
+export function clearEventsSessionCache(): void {
+  locallyCreatedEvents = [];
+}
+
 // Maps the DB's event_status_type enum ('upcoming' | 'ongoing' | 'completed' |
 // 'cancelled' | 'pending_approval') onto the app-facing approvalStatus. Every
 // real status value must land somewhere sane - only 'pending_approval' is

@@ -31,7 +31,7 @@ export default function JoinDiscussionSpacesScreen() {
     enabled: !!user,
   });
   const joinedQuery = useQuery({
-    queryKey: ['forum-memberships', user?.id],
+    queryKey: ['my-joined-community-ids', user?.id],
     queryFn: () => listMyJoinedCommunityIds(user?.id),
     enabled: !!user?.id,
   });

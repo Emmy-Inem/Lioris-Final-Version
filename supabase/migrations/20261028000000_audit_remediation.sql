@@ -1023,6 +1023,17 @@ AS $$
               AND public.has_role_permission('can_download_resources'))
         )
     )
+    -- Chat photos and documents are uploaded to this bucket under the SENDER's folder; the other people in
+    -- the conversation must be able to open them (they could before this policy tightened).
+    OR EXISTS (
+      SELECT 1
+      FROM public.chat_messages cm
+      JOIN public.chat_channel_members mem ON mem.channel_id = cm.channel_id
+      WHERE mem.user_id = auth.uid()
+        AND cm.media_url IS NOT NULL
+        AND (cm.media_url = p_name
+             OR right(split_part(cm.media_url, '?', 1), length(p_name) + 1) = '/' || p_name)
+    )
   );
 $$;
 REVOKE ALL ON FUNCTION public.can_read_resource_object(text) FROM PUBLIC, anon;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useSegments } from 'expo-router';
@@ -49,6 +49,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
   const roleGroup = segments[0];
   const queryClient = useQueryClient();
   const [saved, setSaved] = useState(() => isWishlisted(item.id));
+  const wishlistBusy = useRef(false);
   const [messaging, setMessaging] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'transfer' | 'cash'>('cash');
@@ -96,11 +97,17 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
 
  async function handleToggleWishlist() {
  haptics.light();
+ if (wishlistBusy.current) return;
+ wishlistBusy.current = true;
+ try {
  const next = await toggleWishlist(item.id, { title: displayTitle, subtitle: displayPrice, imageUrl: displayImageUrl });
  setSaved(next);
- void queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY() });
- void queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY('marketplace') });
  void queryClient.invalidateQueries({ queryKey: ['marketplace'] });
+ } catch (err) {
+ Alert.alert('Wishlist', err instanceof Error ? err.message : 'Could not update your wishlist.');
+ } finally {
+ wishlistBusy.current = false;
+ }
  }
 
  function handleReport() {

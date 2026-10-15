@@ -16,9 +16,24 @@ import { firstOnboardingStep } from'./onboardingSteps';
 import { roleRequiresMfa } from'./mfaPolicy';
 import { registerForPushNotificationsAsync } from'@/notifications/push';
 
-import { supabase } from '@/api/supabase';
+import { supabase, OPENED_FROM_RECOVERY_LINK } from '@/api/supabase';
 import { queryClient } from '@/api/queryClient';
-import { loadBlockedUserIds } from '@/api/connections';
+import { cancelAllEventReminders } from '@/utils/eventReminders';
+import { BIOMETRICS_ENABLED_KEY, removeStoredPref } from '@/utils/biometrics';
+import { clearMessagingSessionCache } from '@/api/messaging';
+import { clearPostsSessionCache } from '@/api/posts';
+import { clearEventsSessionCache } from '@/api/events';
+import { clearMarketplaceSessionCache } from '@/api/marketplace';
+
+/** Everything held in memory for the account that is going away. */
+function clearAccountSessionCaches(): void {
+  clearMessagingSessionCache();
+  clearPostsSessionCache();
+  clearEventsSessionCache();
+  clearMarketplaceSessionCache();
+  clearBlockedAndMuted();
+}
+import { loadBlockedUserIds, loadMutedUserIds, clearBlockedAndMuted } from '@/api/connections';
 import { getOwnProfileRow, completeOnboardingOnServer } from '@/api/profile';
 import { clearLocalNotificationsCache } from '@/api/notifications';
 import { resetToDefaultCampusScope, persistCampus } from '@/hooks/useViewScope';
@@ -308,11 +323,15 @@ function defaultSessionUser(userEmail: string, role: UserRole, fullName: string,
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(OPENED_FROM_RECOVERY_LINK);
   const [impersonation, setImpersonation] = useState<ImpersonationState>(DEFAULT_IMPERSONATION);
   const userRef = React.useRef<SessionUser | null>(null);
   userRef.current = user;
   const isExplicitLogout = React.useRef(false);
+  // Bumped whenever the person signs out (logout, revoked or expired session). A profile fetch that was
+  // already in flight compares its epoch before it writes state, so it can never bring a signed-out
+  // account back to life (the "ghost session" after a password reset / suspension / quick logout).
+  const authEpoch = React.useRef(0);
   // True while beginImpersonation/endImpersonation swap the live Supabase session. The auth
   // listener must ignore the SIGNED_IN those swaps emit - it would otherwise write the previous
   // account's role onto the account that was just switched to.
@@ -322,6 +341,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     async function initAuth() {
+      const epoch = authEpoch.current;
       // 1. Check local session tokens
       const token = await getAccessToken();
       if (token) {
@@ -373,6 +393,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const isMasterAdminEmail = userEmail === 'inememmanuel@gmail.com';
 
           const profile = await fetchOwnProfile(session.user.id);
+          if (epoch !== authEpoch.current) return; // signed out while the profile was loading
 
           const storedUser = await getSessionUser();
           const fallbackRole = (storedUser?.actualRole || userRef.current?.actualRole || 'student') as UserRole;
@@ -434,6 +455,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // optimistically restored cache pretending to be signed in.
           userRef.current = null;
           setUser(null);
+          await clearTokens().catch(() => {});
+          await setSessionUser(null as any).catch(() => {});
         }
         // timedOut: keep whatever the cache restored; onAuthStateChange completes the picture.
       } catch {
@@ -467,6 +490,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (isSwappingSession.current) return;
+      const epoch = authEpoch.current;
+      // A sign-in we did not initiate through login() (e-mail code, recovery, another tab) is a new session.
+      if (event === 'SIGNED_IN') isExplicitLogout.current = false;
 
       // Crucial: on screen unlock or background token refresh, DO NOT overwrite active role or profile!
       if (event === 'TOKEN_REFRESHED' && session) {
@@ -496,14 +522,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Active Sessions" from another device) must not leave the app looking signed in.
         // isSwappingSession is already checked above, so an impersonation begin/end swap
         // never reaches here.
+        authEpoch.current += 1;
         userRef.current = null;
         setUser(null);
+        // The identity must not outlive the session: the next cold start would flash the old student's
+        // dashboard and the name/e-mail/avatar would stay on the device.
+        await clearTokens().catch(() => {});
+        await setSessionUser(null as any).catch(() => {});
+        clearAccountSessionCaches();
         // A device/session that signs a second account in without a full
         // reload (notably on web) must never see the previous user's
         // just-created notifications merged back into their list.
         clearLocalNotificationsCache();
         clearSavedItemsMemoryCache();
         clearPortalVisitsMemoryCache();
+        void cancelAllEventReminders();
+        // An expired or revoked session used to leave the previous student's cached feed, saved items and
+        // notifications in memory for the next sign-in on this tab/device.
+        try {
+          queryClient.clear();
+        } catch {
+          // Non-blocking
+        }
         if (!isExplicitLogout.current) {
           router.replace('/(auth)/login');
         }
@@ -517,9 +557,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Own row via get_my_profile() with a bounded wait + retry (see fetchOwnProfile). A miss keeps the
         // cached projection instead of replacing it with defaults.
         const profile = await fetchOwnProfile(session.user.id, 5000);
-        if (!mounted) return;
+        if (!mounted || epoch !== authEpoch.current) return;
+
+        // The same suspension check login() makes: a suspended account must not be revived by the listener.
+        if (profile?.is_suspended === true && !isMasterAdminEmail) {
+          authEpoch.current += 1;
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+          return;
+        }
 
         const storedUser = await getSessionUser();
+        if (epoch !== authEpoch.current) return;
         const fallbackRole = (userRef.current?.actualRole || storedUser?.actualRole || 'student') as UserRole;
         const role = isMasterAdminEmail ? 'admin' : ((profile?.role || fallbackRole) as UserRole);
         const adminRole = isMasterAdminEmail ? 'super_admin' : ((profile?.admin_role || storedUser?.adminRole) as AdminRoleType | null | undefined);
@@ -582,11 +630,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await setTokens(session.access_token, session.refresh_token ?? session.access_token);
           return;
         }
+        if (epoch !== authEpoch.current) return;
+        if (current && current.id !== session.user.id) {
+          // Another account signed in (other tab, or after a forced sign-out): nothing of the last one may show.
+          try {
+            queryClient.clear();
+          } catch {
+            // Non-blocking
+          }
+          clearAccountSessionCaches();
+        }
         if (profile || !storedUser) await persist(nextUser);
+        if (epoch !== authEpoch.current) return;
         await setTokens(session.access_token, session.refresh_token ?? session.access_token);
         userRef.current = nextUser;
         setUser(nextUser);
         loadBlockedUserIds().catch(() => {});
+        loadMutedUserIds().catch(() => {});
       }
     };
 
@@ -798,7 +858,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Own row (private columns included) with a bounded wait + retry. If it still cannot be read the
         // role from authApi.login() is used, but a login must never invent "onboarding not complete".
-        const prof: any = await fetchOwnProfile(session.user.id);
+        let prof: any = await fetchOwnProfile(session.user.id);
+        // One more bounded attempt: persisting "onboarding not complete" because a read timed out would send a
+        // finished student back through onboarding until the next app restart.
+        if (!prof) prof = await fetchOwnProfile(session.user.id, 8000);
 
         if (prof?.is_suspended && !isMasterAdminEmail) {
           isExplicitLogout.current = true;
@@ -843,12 +906,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           onboardingStep: isOnboarded ? undefined : (prof?.onboarding_step || cachedForAccount?.onboardingStep || firstOnboardingStep(userRole)),
           mfaVerified: !roleRequiresMfa(userRole),
         };
-        await persist(nextUser);
+        // Only remember what we actually read; a guess stays in memory and is corrected by the next poll.
+        if (prof || cachedForAccount) await persist(nextUser);
+        try {
+          queryClient.clear();
+        } catch {
+          // Non-blocking
+        }
+        clearAccountSessionCaches();
+        setIsPasswordRecovery(false);
         setUser(nextUser);
         if (userRole === 'student') {
           resetToDefaultCampusScope();
         }
         loadBlockedUserIds().catch(() => {});
+        loadMutedUserIds().catch(() => {});
         registerForPushNotificationsAsync().catch(() => {});
       },
       async register(payload) {
@@ -879,6 +951,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       async logout() {
         isExplicitLogout.current = true;
+        authEpoch.current += 1;
+        setIsPasswordRecovery(false);
+        clearAccountSessionCaches();
+        // The app-lock switch belongs to the person who set it up; the next account on this device starts unlocked.
+        void removeStoredPref(BIOMETRICS_ENABLED_KEY);
         await authApi.logout();
         await clearTokens();
         await setSessionUser(null as any);
@@ -892,6 +969,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearLocalNotificationsCache();
         clearSavedItemsMemoryCache();
         clearPortalVisitsMemoryCache();
+        void cancelAllEventReminders();
         try {
           queryClient.clear();
         } catch {

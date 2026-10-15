@@ -62,8 +62,9 @@ export function AppLockOverlay() {
   const needsCaptcha = Platform.OS === 'web';
 
   // Check initial preference & biometric availability
+  const userId = user?.id ?? null;
   const checkSecurityShield = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setIsLocked(false);
       setIsShieldEnabled(false);
       setHasCheckedPref(true);
@@ -88,7 +89,9 @@ export function AppLockOverlay() {
     } finally {
       setHasCheckedPref(true);
     }
-  }, [user]);
+    // Keyed on the account id: profile edits and onboarding steps replace the `user` object and used to
+    // lock the app again in the middle of use.
+  }, [userId]);
 
   useEffect(() => {
     checkSecurityShield();

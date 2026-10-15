@@ -106,12 +106,16 @@ export const ResourceCard = React.memo(function ResourceCard({
       externalToggleBookmark();
       return;
     }
-    const added = await toggleResourceBookmark(resource.id);
-    setInternalBookmarked(added);
-    if (added) {
-      toast.success(`Bookmarked "${resource.title}"`);
-    } else {
-      toast.info(`Removed "${resource.title}" from bookmarks`);
+    try {
+      const added = await toggleResourceBookmark(resource.id);
+      setInternalBookmarked(added);
+      if (added) {
+        toast.success(`Bookmarked "${resource.title}"`);
+      } else {
+        toast.info(`Removed "${resource.title}" from bookmarks`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update your bookmark.');
     }
   }
 

@@ -1244,15 +1244,19 @@ export default function ResourcesScreen() {
                     onPreview={setReadingResource}
                     isBookmarked={bookmarkedIds.includes(res.id)}
                     onToggleBookmark={async () => {
-                      const cleanTitle = res.courseTitle || res.title || res.courseCode;
-                      const added = await toggleBookmark(res.id, {
-                        title: cleanTitle,
-                        subtitle: res.courseCode || 'Course Material',
-                      });
-                      if (added) {
-                        toast.success(`Bookmarked "${res.title}"`);
-                      } else {
-                        toast.info(`Removed "${res.title}" from bookmarks`);
+                      try {
+                        const cleanTitle = res.courseTitle || res.title || res.courseCode;
+                        const added = await toggleBookmark(res.id, {
+                          title: cleanTitle,
+                          subtitle: res.courseCode || 'Course Material',
+                        });
+                        if (added) {
+                          toast.success(`Bookmarked "${res.title}"`);
+                        } else {
+                          toast.info(`Removed "${res.title}" from bookmarks`);
+                        }
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : 'Could not update your bookmark.');
                       }
                     }}
                     onReport={setReportingResource}
@@ -1293,15 +1297,19 @@ export default function ResourcesScreen() {
                   onPreview={setReadingResource}
                   isBookmarked={bookmarkedIds.includes(res.id)}
                   onToggleBookmark={async () => {
-                    const cleanTitle = res.courseTitle || res.title || res.courseCode;
-                    const added = await toggleBookmark(res.id, {
-                      title: cleanTitle,
-                      subtitle: res.courseCode || 'Course Material',
-                    });
-                    if (added) {
-                      toast.success(`Bookmarked "${res.title}"`);
-                    } else {
-                      toast.info(`Removed "${res.title}" from bookmarks`);
+                    try {
+                      const cleanTitle = res.courseTitle || res.title || res.courseCode;
+                      const added = await toggleBookmark(res.id, {
+                        title: cleanTitle,
+                        subtitle: res.courseCode || 'Course Material',
+                      });
+                      if (added) {
+                        toast.success(`Bookmarked "${res.title}"`);
+                      } else {
+                        toast.info(`Removed "${res.title}" from bookmarks`);
+                      }
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : 'Could not update your bookmark.');
                     }
                   }}
                   onReport={setReportingResource}

@@ -119,11 +119,17 @@ export function AcademicLibraryModal({
 
   async function toggleSaveBook(book: AcademicBook) {
     const wasSaved = savedBookIds.has(book.id);
-    const added = await toggleSavedItem('resource', book.id, !wasSaved, {
-      title: book.title,
-      subtitle: book.authors.join(', ') || undefined,
-      imageUrl: book.coverUrl,
-    });
+    let added: boolean;
+    try {
+      added = await toggleSavedItem('resource', book.id, !wasSaved, {
+        title: book.title,
+        subtitle: book.authors.join(', ') || undefined,
+        imageUrl: book.coverUrl,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update your study list.');
+      return;
+    }
     setSavedBookIds((prev) => {
       const next = new Set(prev);
       if (added) next.add(book.id);

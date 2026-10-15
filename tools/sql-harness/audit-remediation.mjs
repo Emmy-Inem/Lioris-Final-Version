@@ -559,6 +559,10 @@ for (const [uid, b, n] of [[U.verI, 'verifications', 'doc.jpg'], [U.verU, 'verif
   await db.exec(`INSERT INTO storage.buckets (id, name, public) VALUES ('${b}','${b}',false) ON CONFLICT (id) DO NOTHING`);
   await db.exec(`INSERT INTO storage.objects (bucket_id, name, owner) VALUES ('${b}','${uid}/${n}','${uid}')`);
 }
+await db.exec(`INSERT INTO storage.objects (bucket_id, name, owner) VALUES ('resources','${U.verU}/chat_doc.pdf','${U.verU}')`);
+await ins('chat_channels', { id: id(900) });
+await db.exec(`INSERT INTO public.chat_channel_members (channel_id, user_id) VALUES ('${id(900)}','${U.verU}'), ('${id(900)}','${U.verI}')`);
+await ins('chat_messages', { channel_id: id(900), sender_id: U.verU, content: 'notes', media_url: `${U.verU}/chat_doc.pdf` });
 const CAU = { sub: U.campAdminU, email: 'campadmin.u@school.test' };
 const names = async (c, bucket) => (await c.q(`SELECT name FROM storage.objects WHERE bucket_id='${bucket}' ORDER BY name`)).rows.map((x) => x.name);
 
@@ -639,6 +643,13 @@ await check('storage: verification documents are readable only by the owner, the
     const del = await c.t(`DELETE FROM storage.objects WHERE bucket_id='verifications' AND name='${U.verI}/doc.jpg'`);
     assert(!del.ok || del.n === 0, 'campus admin deleted another campus\'s ID document');
   });
+});
+await check('storage: a chat attachment in the private resources bucket can be opened by the other member of the conversation, and nobody else', async () => {
+  const can = (who) => as(who, async (c) => (await names(c, 'resources')).includes(`${U.verU}/chat_doc.pdf`));
+  assert(await can(U.verU), 'sender cannot read own attachment');
+  assert(await can(U.verI), 'the other chat member cannot open the attachment');
+  assert(!(await can(U.unvU)), 'a non-member read a chat attachment');
+  assert(!(await can(U.glob)), 'a non-member (global) read a chat attachment');
 });
 await check('storage: résumés are not readable by an admin of another campus', async () => {
   await as(CAU, async (c) => { eq(await names(c, 'resumes'), [], 'UNILAG admin read a UI résumé'); });

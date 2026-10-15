@@ -14,13 +14,18 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   emailDigest: true,
 };
 
-/** No row yet means every category defaults on - mirrors the column defaults server-side. */
+/**
+ * No row yet means every category defaults on - mirrors the column defaults server-side. A READ FAILURE
+ * throws: returning the defaults here made an offline Settings screen show muted categories as ON and
+ * overwrite the person's cached choices.
+ */
 export async function getMyNotificationPreferences(): Promise<NotificationPreferences> {
   const { data, error } = await supabase
     .from('notification_preferences')
     .select('push_enabled, announcements_enabled, events_enabled, digest_enabled')
     .maybeSingle();
-  if (error || !data) return DEFAULT_NOTIFICATION_PREFERENCES;
+  if (error) throw new Error('Could not load your notification preferences.');
+  if (!data) return DEFAULT_NOTIFICATION_PREFERENCES;
   return {
     push: data.push_enabled ?? true,
     announcements: data.announcements_enabled ?? true,

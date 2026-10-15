@@ -12,7 +12,7 @@ export interface MarketplaceQuery {
 
 import { isUserBlocked, isUserMuted } from './connections';
 import { getInstitutionForEmail } from './institutions';
-import { isItemSavedSync, toggleSavedItem } from './bookmarks';
+import { hydrateSavedItems, isItemSavedSync, listSavedItems, toggleSavedItem } from './bookmarks';
 import { getOwnProfileRow } from './profile';
 
 // Listings this session has *successfully* written to Supabase, kept here
@@ -21,6 +21,11 @@ import { getOwnProfileRow } from './profile';
 // getLocalPool() below, and only while the admin's "Mock Data Visibility"
 // toggle is on.
 let locallyCreatedListings: MarketplaceListing[] = [];
+
+/** Sign-out / account switch: nothing created in the previous session may appear for the next account. */
+export function clearMarketplaceSessionCache(): void {
+  locallyCreatedListings = [];
+}
 
 function getLocalPool(): MarketplaceListing[] {
  return [...locallyCreatedListings];
@@ -121,15 +126,26 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
   })
  .map(mapListingRow);
 
+ // Search text and condition were only applied to the in-memory pool, so typing in the search box or
+ // choosing a condition returned the whole catalogue. Category is already filtered by the query itself.
+ const refined = filterListings(dbListings, { q: query.q, condition: query.condition });
+
  // Merge unique - the local pool only ever contributes this session's own
  // just-created listings (always) plus seed fixtures (only when the admin
  // mock-data toggle is on).
  const local = filterListings(getLocalPool(), { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
- const merged = [...dbListings];
+ const merged = [...refined];
  for (const item of local) {
  if (!merged.some((m) => m.id === item.id) && !isUserBlocked(item.sellerId) && !isUserMuted(item.sellerId)) {
  merged.push(item);
  }
+ }
+ if (query.category === 'Wishlist') {
+ // The wishlist is the person's saved listings (from the server, so it survives a reload, a new device
+ // and a reinstall). The database branch above used to return EVERY listing on this tab.
+ const saved = await listSavedItems('marketplace');
+ const ids = new Set(saved.map((s) => s.itemId));
+ return merged.filter((m) => ids.has(m.id));
  }
  return merged;
  } catch (err) {
@@ -259,6 +275,7 @@ export async function toggleWishlist(
   id: string,
   meta?: { title?: string; subtitle?: string; imageUrl?: string | null }
 ): Promise<boolean> {
+  await hydrateSavedItems(); // the local mirror must be loaded before we decide save vs unsave
   const current = isItemSavedSync('marketplace', id);
   const next = !current;
   return toggleSavedItem('marketplace', id, next, meta ? {

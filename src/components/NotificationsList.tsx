@@ -1,3 +1,4 @@
+import { ConnectionRequestCard } from './ConnectionRequestCard';
 import React, { useState } from 'react';
 import { FlatList, Platform, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
@@ -74,7 +75,9 @@ export function NotificationsScreen() {
       await markNotificationRead(notification.id);
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
-    if (connectionsEnabled && notification.type === 'system' && notification.title?.toLowerCase().includes('connection')) {
+    const aboutConnections =
+      notification.title?.toLowerCase().includes('connection') || (notification.deepLinkPath ?? '').includes('connection-requests');
+    if (connectionsEnabled && aboutConnections) {
       setTab('Connections');
       return;
     }
@@ -362,6 +365,24 @@ export function NotificationsScreen() {
           </View>
         </View>
       </SolidCard>
+
+      {incomingRequests && incomingRequests.length > 0 ? (
+        <View style={{ marginBottom: 16, gap: 10 }}>
+          <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>
+            Connection requests ({incomingRequests.length})
+          </AppText>
+          {incomingRequests.map((request) => (
+            <ConnectionRequestCard
+              key={request.id}
+              request={request}
+              onHandled={() => {
+                queryClient.invalidateQueries({ queryKey: ['connections'] });
+                queryClient.invalidateQueries({ queryKey: ['notifications'] });
+              }}
+            />
+          ))}
+        </View>
+      ) : null}
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>

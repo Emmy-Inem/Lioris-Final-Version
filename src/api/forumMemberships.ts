@@ -16,172 +16,204 @@ function joinedCommunitiesKey(userId?: string | null): string {
   return userId ? `${JOINED_COMMUNITIES_KEY}:${userId}` : JOINED_COMMUNITIES_KEY;
 }
 
-function readLocalJoinedIds(userId?: string | null): string[] {
-  try {
-    if (isWeb && typeof localStorage !== 'undefined') {
-      const raw = localStorage.getItem(joinedCommunitiesKey(userId));
-      if (raw) return JSON.parse(raw);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-      // One-time migration from the pre-namespacing global key, so an
-      // existing user's joins on this device are not lost.
-      if (userId) {
-        const legacy = localStorage.getItem(JOINED_COMMUNITIES_KEY);
-        if (legacy) {
-          const parsed = JSON.parse(legacy);
-          if (Array.isArray(parsed)) {
-            localStorage.setItem(joinedCommunitiesKey(userId), legacy);
-            return parsed;
-          }
-        }
-      }
-    }
+async function readLocalJoinedIds(userId?: string | null): Promise<string[] | null> {
+  try {
+    const key = joinedCommunitiesKey(userId);
+    const raw = isWeb
+      ? typeof localStorage !== 'undefined'
+        ? localStorage.getItem(key)
+        : null
+      : await SecureStore.getItemAsync(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : null;
   } catch {
-    // fallback
+    return null;
   }
-  return DEFAULT_JOINED_COMMUNITY_IDS;
 }
 
-function writeLocalJoinedIds(ids: string[], userId?: string | null): void {
+async function writeLocalJoinedIds(ids: string[], userId?: string | null): Promise<void> {
   try {
     const raw = JSON.stringify(ids);
     const key = joinedCommunitiesKey(userId);
     if (isWeb && typeof localStorage !== 'undefined') {
       localStorage.setItem(key, raw);
-    } else {
-      SecureStore.setItemAsync(key, raw).catch(() => {});
+    } else if (!isWeb) {
+      await SecureStore.setItemAsync(key, raw);
     }
   } catch {
-    // ignore
+    // the cache is a convenience; the database is the source of truth
+  }
+}
+
+interface CommunityRef {
+  id: string;
+  slug: string | null;
+  category: string | null;
+}
+
+/** Every name a community can be known by in the UI: its uuid, its slug without "c/", its lowercased category. */
+function aliasesOf(ref: CommunityRef): string[] {
+  const out = [ref.id];
+  if (ref.slug) out.push(ref.slug.replace(/^c\//, ''));
+  if (ref.category) out.push(ref.category.toLowerCase());
+  return out;
+}
+
+/** Resolves a uuid / slug ("tech" or "c/tech") / category label to ONE community row, or null. */
+async function resolveCommunity(identifier: string): Promise<CommunityRef | null> {
+  const base = supabase.from('forum_communities').select('id, slug, category');
+  if (UUID_RE.test(identifier)) {
+    const { data, error } = await base.eq('id', identifier).limit(1);
+    if (error) throw error;
+    return (data?.[0] as CommunityRef | undefined) ?? null;
+  }
+  const bare = identifier.replace(/^c\//, '');
+  const bySlug = await supabase
+    .from('forum_communities')
+    .select('id, slug, category')
+    .in('slug', [`c/${bare}`, bare])
+    .limit(1);
+  if (bySlug.error) throw bySlug.error;
+  if (bySlug.data?.[0]) return bySlug.data[0] as CommunityRef;
+  const byCategory = await supabase
+    .from('forum_communities')
+    .select('id, slug, category')
+    .ilike('category', bare)
+    .limit(1);
+  if (byCategory.error) throw byCategory.error;
+  return (byCategory.data?.[0] as CommunityRef | undefined) ?? null;
+}
+
+const SEEDED_KEY = 'lioris_default_spaces_seeded';
+
+async function defaultsSeeded(userId: string): Promise<boolean> {
+  try {
+    const key = `${SEEDED_KEY}:${userId}`;
+    const raw = isWeb ? (typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null) : await SecureStore.getItemAsync(key);
+    return raw === '1';
+  } catch {
+    return false;
+  }
+}
+
+async function markDefaultsSeeded(userId: string): Promise<void> {
+  try {
+    const key = `${SEEDED_KEY}:${userId}`;
+    if (isWeb) {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(key, '1');
+    } else {
+      await SecureStore.setItemAsync(key, '1');
+    }
+  } catch {
+    // best effort
   }
 }
 
 /**
- * Returns array of community IDs (or slugs/identifiers) the current user has joined.
+ * Returns the community ids / slugs / categories the current user has joined.
+ *
+ * The DATABASE decides. Everyone used to be shown four built-in spaces as "joined" with nothing behind
+ * them, so Leave could never stick and cross-device state disagreed. A student with no memberships yet gets
+ * those four spaces joined for real, once; after that, leaving one removes it everywhere. The cached copy is
+ * only used when the server cannot be reached.
  */
 export async function listMyJoinedCommunityIds(userId?: string): Promise<string[]> {
   if (!userId) {
-    const { data: authData } = await supabase.auth.getUser();
-    userId = authData?.user?.id;
+    const { data: authData } = await supabase.auth.getSession();
+    userId = authData?.session?.user?.id;
   }
 
-  const local = readLocalJoinedIds(userId);
-
-  if (!userId) {
-    return local;
-  }
+  const cached = await readLocalJoinedIds(userId);
+  if (!userId) return cached ?? DEFAULT_JOINED_COMMUNITY_IDS;
 
   try {
     const { data, error } = await supabase
       .from('forum_community_members')
       .select('community_id, community:forum_communities(id, slug, category)')
       .eq('user_id', userId);
-
     if (error) throw error;
 
-    if (data && data.length > 0) {
-      const ids = new Set<string>(local);
-      for (const row of data as any[]) {
-        if (row.community_id) ids.add(row.community_id);
-        if (row.community?.id) ids.add(row.community.id);
-        if (row.community?.category) ids.add(row.community.category.toLowerCase());
-        if (row.community?.slug) ids.add(row.community.slug.replace('c/', ''));
-      }
-      const combined = Array.from(ids);
-      writeLocalJoinedIds(combined, userId);
-      return combined;
-    }
-  } catch (err) {
-    // table or network error - use local fallback
-  }
+    let rows = (data ?? []) as any[];
 
-  return local;
+    if (rows.length === 0 && !(await defaultsSeeded(userId))) {
+      await markDefaultsSeeded(userId);
+      for (const id of DEFAULT_JOINED_COMMUNITY_IDS) {
+        try {
+          await joinCommunity(id, userId);
+        } catch {
+          // a default space that does not exist on this campus is simply skipped
+        }
+      }
+      const again = await supabase
+        .from('forum_community_members')
+        .select('community_id, community:forum_communities(id, slug, category)')
+        .eq('user_id', userId);
+      if (!again.error) rows = (again.data ?? []) as any[];
+    }
+
+    const ids = new Set<string>();
+    for (const row of rows) {
+      if (row.community_id) ids.add(row.community_id);
+      const c = Array.isArray(row.community) ? row.community[0] : row.community;
+      if (c) for (const alias of aliasesOf(c as CommunityRef)) ids.add(alias);
+    }
+    const result = Array.from(ids);
+    await writeLocalJoinedIds(result, userId);
+    return result;
+  } catch {
+    // table or network error: the last known server answer, else the built-in defaults
+    return cached ?? DEFAULT_JOINED_COMMUNITY_IDS;
+  }
 }
 
-/**
- * Join a discussion space / community.
- */
+/** Join a discussion space / community. Throws when the join could not be saved. */
 export async function joinCommunity(communityIdentifier: string, userId?: string): Promise<void> {
   if (!userId) {
-    const { data: authData } = await supabase.auth.getUser();
-    userId = authData?.user?.id;
+    const { data: authData } = await supabase.auth.getSession();
+    userId = authData?.session?.user?.id;
+  }
+  if (!userId) throw new Error('Sign in to join spaces.');
+
+  const community = await resolveCommunity(communityIdentifier);
+  if (!community) throw new Error('That space is not available right now.');
+
+  const { error } = await supabase.from('forum_community_members').insert({ community_id: community.id, user_id: userId });
+  // 23505: already a member (another tab / device) - that is the state we wanted.
+  if (error && (error as { code?: string }).code !== '23505') {
+    throw new Error('Could not join this space. Check your connection and try again.');
   }
 
-  const current = new Set(readLocalJoinedIds(userId));
-  current.add(communityIdentifier);
-  current.add(communityIdentifier.toLowerCase());
-  const updated = Array.from(current);
-  writeLocalJoinedIds(updated, userId);
-
-  if (!userId) return;
-
-  try {
-    // If identifier is not a uuid, look up the uuid in forum_communities
-    let communityUuid = communityIdentifier;
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(communityIdentifier);
-    if (!isUuid) {
-      const { data: comm } = await supabase
-        .from('forum_communities')
-        .select('id')
-        .or(`slug.eq.c/${communityIdentifier},category.ilike.${communityIdentifier}`)
-        .maybeSingle();
-      if (comm?.id) {
-        communityUuid = comm.id;
-      }
-    }
-
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(communityUuid)) {
-      await supabase
-        .from('forum_community_members')
-        .insert({
-          community_id: communityUuid,
-          user_id: userId,
-        });
-    }
-  } catch (err) {
-    // Non-blocking: local storage holds the state
-  }
+  const current = new Set((await readLocalJoinedIds(userId)) ?? []);
+  for (const alias of aliasesOf(community)) current.add(alias);
+  await writeLocalJoinedIds(Array.from(current), userId);
 }
 
-/**
- * Leave a discussion space / community.
- */
+/** Leave a discussion space / community. Throws when the change could not be saved. */
 export async function leaveCommunity(communityIdentifier: string, userId?: string): Promise<void> {
   if (!userId) {
-    const { data: authData } = await supabase.auth.getUser();
-    userId = authData?.user?.id;
+    const { data: authData } = await supabase.auth.getSession();
+    userId = authData?.session?.user?.id;
+  }
+  if (!userId) throw new Error('Sign in to manage your spaces.');
+
+  const community = await resolveCommunity(communityIdentifier);
+  if (community) {
+    const { error } = await supabase
+      .from('forum_community_members')
+      .delete()
+      .eq('community_id', community.id)
+      .eq('user_id', userId);
+    if (error) throw new Error('Could not leave this space. Check your connection and try again.');
   }
 
-  const current = readLocalJoinedIds(userId).filter(
-    (id) => id.toLowerCase() !== communityIdentifier.toLowerCase()
-  );
-  writeLocalJoinedIds(current, userId);
-
-  if (!userId) return;
-
-  try {
-    let communityUuid = communityIdentifier;
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(communityIdentifier);
-    if (!isUuid) {
-      const { data: comm } = await supabase
-        .from('forum_communities')
-        .select('id')
-        .or(`slug.eq.c/${communityIdentifier},category.ilike.${communityIdentifier}`)
-        .maybeSingle();
-      if (comm?.id) {
-        communityUuid = comm.id;
-      }
-    }
-
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(communityUuid)) {
-      await supabase
-        .from('forum_community_members')
-        .delete()
-        .eq('community_id', communityUuid)
-        .eq('user_id', userId);
-    }
-  } catch (err) {
-    // Non-blocking
-  }
+  // Remove EVERY alias, otherwise the slug or category still marks it joined.
+  const gone = new Set<string>([communityIdentifier, communityIdentifier.replace(/^c\//, '')].map((s) => s.toLowerCase()));
+  if (community) for (const alias of aliasesOf(community)) gone.add(alias.toLowerCase());
+  const remaining = ((await readLocalJoinedIds(userId)) ?? []).filter((id) => !gone.has(id.toLowerCase()));
+  await writeLocalJoinedIds(remaining, userId);
 }
 
 /** Authentic member counts - initialized to zero, populated strictly from real database counts */

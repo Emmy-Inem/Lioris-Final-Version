@@ -403,7 +403,7 @@ export function SettingsScreen() {
             setEmailDigestAlerts(remote.emailDigest);
             setStoredPref('lioris_setting_notifications', JSON.stringify(remote));
           } catch {
-            // Offline or a transient error - the local cache applied above still stands.
+            // Offline or a transient error - the local cache applied above still stands (and is NOT overwritten).
           }
           setDevicesLoading(true);
           listMyDevices()
@@ -431,7 +431,8 @@ export function SettingsScreen() {
         }
       } catch {}
     })();
-  }, []);
+    // Re-run when the signed-in account appears or changes (the effect used to run once, before `user` was set).
+  }, [user?.id]);
 
   // Load current Two-Factor Authentication enrollment status
   const refreshMfaStatus = React.useCallback(async () => {
@@ -673,7 +674,9 @@ export function SettingsScreen() {
     if (user?.id) {
       // Best-effort: the local cache above already reflects the change, and
       // this screen's own state is what the switches render from.
-      updateMyNotificationPreferences(updated).catch(() => {});
+      updateMyNotificationPreferences(updated).catch(() => {
+        toast.error('Could not save your notification settings. Check your connection and try again.');
+      });
     }
   }
 

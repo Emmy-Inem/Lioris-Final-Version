@@ -12,6 +12,7 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
+import { queryClient } from './queryClient';
 
 export type SavedKind = 'post' | 'resource' | 'event' | 'job' | 'marketplace';
 
@@ -103,6 +104,18 @@ async function writeLocalRaw(key: string, raw: string): Promise<void> {
   }
 }
 
+async function removeLocalRaw(key: string): Promise<void> {
+  try {
+    if (isWeb) {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
+      return;
+    }
+    await SecureStore.deleteItemAsync(key);
+  } catch {
+    // best effort
+  }
+}
+
 /**
  * Loads the local mirror for the CURRENT account once, re-hydrating if the
  * signed-in account changes (so a device handed to someone else, or an
@@ -112,11 +125,26 @@ async function writeLocalRaw(key: string, raw: string): Promise<void> {
  * saved_items list, then (only if that is empty too) the legacy
  * resources-only list from before saved_items existed at all.
  */
+let hydrating: Promise<SavedItem[]> | null = null;
+let hydratingForUserId: string | null | undefined;
+
 export async function hydrateSavedItems(): Promise<SavedItem[]> {
   const uid = await currentUserId();
   if (hydrated && hydratedForUserId === uid) return [...localItems];
-  hydrated = true;
-  hydratedForUserId = uid;
+  // Concurrent callers (dashboard + bookmark hook at launch) share ONE read, so none of them sees an
+  // empty list and an early toggle can no longer overwrite the stored list with a single item.
+  if (hydrating && hydratingForUserId === uid) return hydrating;
+  hydratingForUserId = uid;
+  const run = hydrateFromStorage(uid);
+  hydrating = run;
+  try {
+    return await run;
+  } finally {
+    if (hydrating === run) hydrating = null;
+  }
+}
+
+async function hydrateFromStorage(uid: string | null): Promise<SavedItem[]> {
 
   const key = scopedLocalKey(uid);
   try {
@@ -149,10 +177,17 @@ export async function hydrateSavedItems(): Promise<SavedItem[]> {
           : [];
       }
       if (localItems.length > 0) await writeLocalRaw(key, JSON.stringify(localItems));
+      // Adopted once by the account that was signed in; never hand the same blob to the next account.
+      if (uid) {
+        await removeLocalRaw(LOCAL_KEY_BASE);
+        await removeLocalRaw('lioris_bookmarked_resources_v1');
+      }
     }
   } catch {
     localItems = [];
   }
+  hydrated = true;
+  hydratedForUserId = uid;
   notify();
   return [...localItems];
 }
@@ -197,10 +232,11 @@ export function getSavedItemsSync(kind?: SavedKind): SavedItem[] {
 // ---------------------------------------------------------------------------
 async function currentUserId(): Promise<string | null> {
   try {
-    const { data } = await supabase.auth.getUser();
-    if (data?.user?.id) return data.user.id;
+    // getSession() reads the stored session; getUser() was a network call made three times per tap.
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.user?.id) return data.session.user.id;
   } catch {
-    // offline - fall through to the stored session
+    // fall through to the stored session
   }
   try {
     const stored = await getSessionUser();
@@ -240,8 +276,10 @@ export async function listSavedItems(kind?: SavedKind): Promise<SavedItem[]> {
     const resourceItems = items.filter((x) => x.kind === 'resource');
     if (resourceItems.length > 0) {
       try {
-        const resourceIds = resourceItems.map((x) => x.itemId);
-        const { data: resRows } = await supabase
+        // Library books are saved as kind 'resource' with ids like 'curated-cs-1'; a non-uuid in the IN list
+        // makes Postgres reject the whole query, so only real resource rows are looked up.
+        const resourceIds = resourceItems.map((x) => x.itemId).filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+        const { data: resRows } = resourceIds.length === 0 ? { data: null } : await supabase
           .from('resources')
           .select('id, title, course_title, course_code')
           .in('id', resourceIds);
@@ -300,8 +338,9 @@ export async function isItemSaved(kind: SavedKind, itemId: string): Promise<bool
 
 /**
  * Saves or unsaves an item and returns the state it ended in. The local mirror
- * is updated first so the icon flips immediately; a failed write is logged and
- * the local state is kept (the row is reconciled on the next listSavedItems).
+ * is updated first so the icon flips immediately. If the write to the database fails the mirror is put
+ * back and the error is THROWN, so callers can roll back their optimistic UI and tell the person (it used
+ * to be swallowed: the heart stayed filled, the toast said "Saved", and the next sync made it vanish).
  */
 export async function toggleSavedItem(
   kind: SavedKind,
@@ -310,6 +349,7 @@ export async function toggleSavedItem(
   meta?: SavedItemMeta,
 ): Promise<boolean> {
   await hydrateSavedItems();
+  const before = [...localItems];
   await setLocal(saved ? localUpsert(kind, itemId, meta) : localItems.filter((x) => !(x.kind === kind && x.itemId === itemId)));
 
   const uid = await currentUserId();
@@ -341,8 +381,17 @@ export async function toggleSavedItem(
       if (error) throw error;
     }
   } catch (err) {
-    console.warn('[Bookmarks] toggleSavedItem persistence failed (kept locally):', err);
+    console.warn('[Bookmarks] toggleSavedItem persistence failed, reverting:', err);
+    await setLocal(before);
+    void queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY() });
+    throw new Error(
+      saved
+        ? 'Could not save that right now. Check your connection and try again.'
+        : 'Could not remove that right now. Check your connection and try again.',
+    );
   }
+  // Every list that shows saved items (Saved tab, dashboard strip, marketplace wishlist) refetches.
+  void queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY() });
   return saved;
 }
 
