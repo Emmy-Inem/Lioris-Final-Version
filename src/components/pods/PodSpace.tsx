@@ -46,6 +46,7 @@ import { PodMember, PodPost, PodPostKind, PodSession, StudyGroup } from '@/api/t
 import { formatWhen, parseLocalDateTime, relativeTime } from '@/utils/dateTime';
 import { parseRpcError } from '@/utils/rpcErrors';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { saveAttachment } from '@/utils/saveAttachment';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { haptics } from '@/utils/haptics';
 import { useSignedUrl } from '@/api/signedUrls';
@@ -394,14 +395,14 @@ function PostCard({
         ) : null}
         {post.filePath ? (
           <Pressable
-            onPress={() => { if (attachment.url) void openExternalUrl(attachment.url); }}
+            onPress={() => { if (attachment.url) void saveAttachment(attachment.url, post.filePath as string); }}
             disabled={!attachment.url}
             accessibilityRole="link"
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.divider, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 8, alignSelf: 'flex-start' }}
           >
             <Ionicons name="document-attach-outline" size={15} color={colors.brandPrimary} />
             <AppText variant="caption" tone="brand" weight="semiBold" numberOfLines={1}>
-              {attachment.loading ? 'Opening attachment…' : attachment.error ? 'Attachment unavailable' : 'Open attachment'}
+              {attachment.loading ? 'Preparing file…' : attachment.error ? 'Attachment unavailable' : 'Download attachment'}
             </AppText>
           </Pressable>
         ) : null}

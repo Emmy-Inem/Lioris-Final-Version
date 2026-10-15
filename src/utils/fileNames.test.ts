@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 // Node's type stripping needs the explicit .ts extension; tsc does not allow it without allowImportingTsExtensions.
 // @ts-ignore TS5097
-import { safeFileName, mimeTypeForFileName, resourceFileTypeFromMime } from './fileNames.ts';
+import { safeFileName, mimeTypeForFileName, resourceFileTypeFromMime, attachmentFileName } from './fileNames.ts';
 
 test('safeFileName keeps a readable title and the real extension', () => {
   assert.equal(safeFileName('Intro to CSC 301 (notes)', 'pdf'), 'Intro_to_CSC_301_notes.pdf');
@@ -35,4 +35,11 @@ test('resourceFileTypeFromMime labels files honestly (it used to say PDF for eve
   // falls back to the file extension when the mime type is missing
   assert.equal(resourceFileTypeFromMime(null, 'https://x.supabase.co/storage/v1/object/public/resources/u/notes.docx'), 'DOC');
   assert.equal(resourceFileTypeFromMime(undefined, undefined), 'PDF');
+});
+
+test('attachmentFileName keeps the stored file name and drops folders and signing tokens', () => {
+  assert.equal(attachmentFileName('uid-1/resources_Week3_notes_1730.pdf?token=abc'), 'resources_Week3_notes_1730.pdf');
+  assert.equal(attachmentFileName('https://x.supabase.co/storage/v1/object/sign/resources/u/My%20Notes.docx?token=1'), 'My Notes.docx');
+  assert.equal(attachmentFileName('../../.hidden'), 'hidden');
+  assert.equal(attachmentFileName('', 'file'), 'file');
 });

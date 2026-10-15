@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
-import { openExternalUrl } from '@/utils/openExternalUrl';
+import { saveAttachment } from '@/utils/saveAttachment';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -80,7 +80,7 @@ function ChatAttachment({ mediaUrl, isMe }: { mediaUrl: string; isMe: boolean })
   return (
     <Pressable
       disabled={loading || !url}
-      onPress={() => { if (url) void openExternalUrl(url); }}
+      onPress={() => { if (url) void saveAttachment(url, mediaUrl); }}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -94,7 +94,7 @@ function ChatAttachment({ mediaUrl, isMe }: { mediaUrl: string; isMe: boolean })
     >
       <Ionicons name="document-text" size={16} color={isMe ? '#FFFFFF' : colors.brandPrimary} />
       <AppText variant="caption" tone={isMe ? 'inverse' : 'brand'} style={{ textDecorationLine: 'underline' }}>
-        {loading ? 'Opening…' : url ? 'Open attachment' : 'Attachment unavailable'}
+        {loading ? 'Preparing file…' : url ? 'Download attachment' : 'Attachment unavailable'}
       </AppText>
     </Pressable>
   );

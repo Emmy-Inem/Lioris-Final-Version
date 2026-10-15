@@ -47,3 +47,16 @@ export function resourceFileTypeFromMime(mime?: string | null, url?: string | nu
   if (m === 'text/plain' || u.endsWith('.txt')) return 'TXT';
   return 'PDF';
 }
+
+/** `uid/resources_Week3_notes_1730.pdf?token=...` -> `resources_Week3_notes_1730.pdf` */
+export function attachmentFileName(ref: string, fallback = 'attachment'): string {
+  const clean = ref.split('#')[0].split('?')[0];
+  let last = clean.split('/').pop() ?? '';
+  try {
+    last = decodeURIComponent(last);
+  } catch {
+    // keep the raw segment
+  }
+  last = last.replace(/[^A-Za-z0-9._ -]+/g, '_').replace(/^\.+/, '').slice(0, 100);
+  return last || fallback;
+}
