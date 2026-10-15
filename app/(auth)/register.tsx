@@ -23,6 +23,7 @@ import { Image } from 'expo-image';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { INDEPENDENT_AGE, MIN_AGE, TERMS_VERSION } from '@/constants/legal';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
+import { captchaRequired } from '@/utils/captcha';
 import { persistCampus } from '@/hooks/useViewScope';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 
@@ -129,7 +130,9 @@ export default function RegisterScreen() {
  return;
  }
 
-  if (Platform.OS === 'web' && !captchaToken) {
+  // On phones a token is sent when the widget produced one; the server decides whether it is required (a widget
+  // that cannot load must not make sign-up impossible when the project's CAPTCHA is off).
+  if (Platform.OS === 'web' && captchaRequired() && !captchaToken) {
     setErrorMessage('Please complete the security check above before continuing.');
     return;
   }

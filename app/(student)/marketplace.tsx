@@ -17,6 +17,7 @@ import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModa
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
+import { usePermissions } from '@/context/RolePermissionsContext';
 import { useAuth } from '@/auth/AuthContext';
 import { listMarketplaceListings, createListing } from '@/api/marketplace';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
@@ -42,6 +43,9 @@ export default function MarketplaceScreen() {
  const { isDesktop, isWideDesktop } = useResponsive();
  const marketCols = isWideDesktop ? 4 : isDesktop ? 3 : 2;
  const toast = useToast();
+ // Role Permissions: hide "Sell" when listing is switched off for this role.
+ const { hasPermission } = usePermissions();
+ const canSell = hasPermission('can_list_marketplace');
  const queryClient = useQueryClient();
  const { user } = useAuth();
  const [query, setQuery] = useState('');
@@ -156,6 +160,7 @@ export default function MarketplaceScreen() {
                 </AppText>
               </Pressable>
 
+              {canSell ? (
               <Pressable
                 onPress={handlePressSell}
                 style={{
@@ -173,6 +178,7 @@ export default function MarketplaceScreen() {
                   List an Item
                 </AppText>
               </Pressable>
+              ) : null}
             </View>
           </View>
 
@@ -309,6 +315,7 @@ export default function MarketplaceScreen() {
                 My Listings
               </AppText>
             </Pressable>
+            {canSell ? (
             <Pressable
               onPress={handlePressSell}
               accessibilityRole="button"
@@ -328,6 +335,7 @@ export default function MarketplaceScreen() {
                 List Item
               </AppText>
             </Pressable>
+            ) : null}
           </View>
         </View>
         <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>

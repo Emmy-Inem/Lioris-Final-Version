@@ -8,6 +8,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { PublishThreadModal } from '@/components/PublishThreadModal';
+import { PermissionGate } from '@/components/PermissionGate';
 import { listNotifications, markNotificationRead, markAllNotificationsRead } from '@/api/notifications';
 import { createPost } from '@/api/posts';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
@@ -443,6 +444,7 @@ export function DesktopTopBar() {
  <AppText variant="caption" tone="secondary">
  Navigation: <AppText weight="bold" variant="caption">↑ ↓ Enter</AppText> • Dismiss: <AppText weight="bold" variant="caption">Esc</AppText>
  </AppText>
+<PermissionGate permission="can_post_forum">
                 <Pressable
                   onPress={() => {
                     setCommandPaletteOpen(false);
@@ -457,6 +459,7 @@ export function DesktopTopBar() {
                     + Create Post
                   </AppText>
                 </Pressable>
+                </PermissionGate>
               </View>
             </Pressable>
           </Pressable>

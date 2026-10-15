@@ -14,6 +14,7 @@ import { isUserBlocked, isUserMuted } from './connections';
 import { getInstitutionForEmail } from './institutions';
 import { hydrateSavedItems, isItemSavedSync, listSavedItems, toggleSavedItem } from './bookmarks';
 import { getOwnProfileRow } from './profile';
+import { isPermissionRefusal, refusalMessage } from '../utils/permissionErrors';
 
 // Listings this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch. This is never
@@ -378,6 +379,7 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
 
  if (error) {
  console.warn('[Marketplace] Create listing Supabase error:', error.message);
+ if (isPermissionRefusal(error)) throw new Error(refusalMessage('Listing items for sale'));
  throw new Error('Could not publish your listing. Please try again.');
  }
 

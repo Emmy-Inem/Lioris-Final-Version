@@ -173,7 +173,15 @@ FROM (VALUES
   ('G applied', '20261030 optional 2FA switch: current setting (none = off)',
      pg_temp.q($q$ SELECT value::text FROM public.platform_settings WHERE key = 'admin_mfa_required' $q$)),
   ('G applied', 'admins who already enrolled a verified 2FA factor (safe to switch the 2FA requirement on once all admins are here)',
-     pg_temp.q($q$ SELECT count(DISTINCT f.user_id)::text || ' of ' || (SELECT count(*) FROM public.profiles WHERE role::text='admin')::text FROM auth.mfa_factors f JOIN public.profiles p ON p.id=f.user_id WHERE f.status::text='verified' AND p.role::text='admin' $q$))
+     pg_temp.q($q$ SELECT count(DISTINCT f.user_id)::text || ' of ' || (SELECT count(*) FROM public.profiles WHERE role::text='admin')::text FROM auth.mfa_factors f JOIN public.profiles p ON p.id=f.user_id WHERE f.status::text='verified' AND p.role::text='admin' $q$)),
+  ('G applied', 'username rules: is_reserved_username() exists (sign-up collision fix)',
+     pg_temp.q($q$ SELECT (to_regprocedure('public.is_reserved_username(text)') IS NOT NULL)::text $q$)),
+  ('G applied', 'events.agenda column exists (Edit schedule saves)',
+     pg_temp.q($q$ SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='events' AND column_name='agenda')::text $q$)),
+  ('G applied', 'get_my_conversation_summaries() exists (chat list loads summaries, not history)',
+     pg_temp.q($q$ SELECT (to_regprocedure('public.get_my_conversation_summaries(integer)') IS NOT NULL)::text $q$)),
+  ('G applied', 'authors of global content readable (policy present)',
+     pg_temp.q($q$ SELECT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='profiles' AND policyname='Members read authors of global content')::text $q$))
 ) AS t(section, item, value)
 ORDER BY section, item;
 

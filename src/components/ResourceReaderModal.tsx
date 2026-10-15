@@ -26,6 +26,7 @@ import {
 } from '@/api/resources';
 import { useResourceBookmarks } from '@/utils/resourceBookmarks';
 import { useToast } from '@/context/ToastContext';
+import { PermissionGate } from './PermissionGate';
 import { haptics } from '@/utils/haptics';
 import { useResourceFileSize } from '@/utils/fileSize';
 import { useResourceDownload } from '@/hooks/useResourceDownload';
@@ -251,6 +252,7 @@ export function ResourceReaderModal({
               />
             </Pressable>
 
+            <PermissionGate permission="can_download_resources">
             <View style={{ flexShrink: 0 }}>
               <AppButton
                 label={downloaded ? 'Downloaded' : fileSizeLabel ? `Download · ${fileSizeLabel}` : 'Download'}
@@ -260,6 +262,7 @@ export function ResourceReaderModal({
                 onPress={handleDownload}
               />
             </View>
+            </PermissionGate>
           </View>
 
           {/* Row 2: full-width segmented tabs - each half is tappable edge to edge */}
@@ -388,6 +391,7 @@ export function ResourceReaderModal({
                           A preview is not available for this file. You can still download it.
                         </AppText>
                       ) : null}
+                      <PermissionGate permission="can_download_resources">
                       <AppButton
                         label={downloaded ? 'Download again' : fileSizeLabel ? `Download · ${fileSizeLabel}` : 'Download'}
                         onPress={handleDownload}
@@ -395,6 +399,7 @@ export function ResourceReaderModal({
                         variant="primary"
                         fullWidth
                       />
+                      </PermissionGate>
                     </View>
                   ) : (
                     <AppText tone="secondary" variant="bodySmall" style={{ lineHeight: 20 }}>
@@ -520,6 +525,7 @@ export function ResourceReaderModal({
                   onPress={handleToggleBookmark}
                 />
               </View>
+              <PermissionGate permission="can_download_resources">
               <View style={{ flex: 1 }}>
                 <AppButton
                   label={downloaded ? 'Downloaded ✓' : fileSizeLabel ? `Download File · ${fileSizeLabel}` : 'Download File'}
@@ -528,6 +534,7 @@ export function ResourceReaderModal({
                   onPress={handleDownload}
                 />
               </View>
+              </PermissionGate>
             </View>
           </ScrollView>
         )}

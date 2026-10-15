@@ -101,6 +101,7 @@ export default function StudentDashboard() {
         viewerInstitutionCode: effectiveCampus === 'ALL' ? undefined : (effectiveCampus || undefined),
         viewScope: effectiveCampus === 'ALL' ? 'global' : (effectiveCampus ? 'campus' : 'global'),
         showBots,
+        pageSize: 30,
       }),
   });
 

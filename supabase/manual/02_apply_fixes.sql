@@ -487,6 +487,43 @@ CREATE TRIGGER tr_prevent_profile_role_escalation
 --       * the consent record keeps the age answer. The app sends `age_eligibility_confirmed`; every
 --         previous trigger read `age_confirmed_18`, so every sign-up since the age gate changed was
 --         stored as "age NOT confirmed".
+-- Handles nobody may claim (they would read as the platform itself).
+CREATE OR REPLACE FUNCTION public.is_reserved_username(p_username text)
+RETURNS boolean
+LANGUAGE sql IMMUTABLE
+AS $$
+  SELECT lower(COALESCE(p_username, '')) = ANY (ARRAY[
+    'admin','administrator','root','system','support','help','security','moderator','mod','staff',
+    'official','lioris','liorisapp','team','null','undefined','anonymous','everyone','here','campus'
+  ]);
+$$;
+
+-- Availability check used by the sign-up form: same rules as the sign-up trigger, fails CLOSED on any error
+-- (it used to report "available" when it could not tell), and ignores the caller's own row so someone who
+-- registered, did not confirm and registers again is not blocked by their own earlier attempt.
+CREATE OR REPLACE FUNCTION public.check_username_available(p_username text)
+RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER STABLE
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_clean text := lower(trim(COALESCE(p_username, '')));
+BEGIN
+  IF v_clean !~ '^[a-z0-9._]{3,24}$' OR public.is_reserved_username(v_clean) THEN
+    RETURN false;
+  END IF;
+  RETURN NOT EXISTS (
+    SELECT 1 FROM public.profiles pr
+    WHERE lower(trim(pr.username)) = v_clean
+      AND pr.id IS DISTINCT FROM auth.uid()
+  );
+EXCEPTION WHEN OTHERS THEN
+  RETURN false;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.check_username_available(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.check_username_available(text) TO anon, authenticated, service_role;
+
 CREATE OR REPLACE FUNCTION public.handle_new_user_profile()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -501,6 +538,7 @@ DECLARE
     v_age_raw text;
     v_age boolean;
     v_username text;
+    v_try int;
 BEGIN
     BEGIN
         v_campus := public.campus_for_email(NEW.email);
@@ -528,15 +566,34 @@ BEGIN
     )
     ON CONFLICT (id) DO NOTHING;
 
-    -- Username: best effort (a taken handle must never make sign-up itself fail).
+    -- Username. A taken, reserved or malformed handle must never make sign-up itself fail, and must never leave
+    -- the member with NO handle either (two people can pass the availability check at the same moment, and
+    -- the unique index then rejects the second). The second person gets the handle plus a short number and is
+    -- told on the next screen; they can change it in Settings.
     v_username := lower(trim(COALESCE(NEW.raw_user_meta_data->>'username', '')));
-    IF v_username <> '' AND length(v_username) >= 3 THEN
-        BEGIN
-            UPDATE public.profiles SET username = v_username WHERE id = NEW.id;
-        EXCEPTION WHEN OTHERS THEN
-            NULL;
-        END;
+    IF v_username !~ '^[a-z0-9._]{3,24}$' OR public.is_reserved_username(v_username) THEN
+        v_username := left(regexp_replace(lower(split_part(NEW.email, '@', 1)), '[^a-z0-9._]', '', 'g'), 18);
+        IF length(v_username) < 3 OR public.is_reserved_username(v_username) THEN
+            v_username := 'student';
+        END IF;
     END IF;
+    v_try := 0;
+    LOOP
+        BEGIN
+            UPDATE public.profiles
+               SET username = CASE WHEN v_try = 0 THEN v_username
+                                   ELSE left(v_username, 19) || (1000 + floor(random() * 9000))::int END
+             WHERE id = NEW.id;
+            EXIT;
+        EXCEPTION WHEN unique_violation THEN
+            v_try := v_try + 1;
+            IF v_try > 8 THEN
+                EXIT; -- vanishingly unlikely; the member keeps no handle and is asked to pick one
+            END IF;
+        WHEN OTHERS THEN
+            EXIT;
+        END;
+    END LOOP;
 
     BEGIN
         v_terms_version := NULLIF(btrim(NEW.raw_user_meta_data->>'terms_version'), '');
@@ -1807,6 +1864,69 @@ DROP POLICY IF EXISTS "Members read authors of global content" ON public.profile
 CREATE POLICY "Members read authors of global content" ON public.profiles
   FOR SELECT TO authenticated
   USING ((SELECT NOT public.is_scoped_privileged()) AND public.is_global_content_author(id));
+
+-- ============================================================================
+-- Event schedule ("Edit schedule" on the event page). The editor existed but the API dropped the field and there
+-- was no column, so it reported success and saved nothing.
+-- ============================================================================
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS agenda jsonb;
+DO $agenda$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_events_agenda_shape' AND conrelid = 'public.events'::regclass) THEN
+    ALTER TABLE public.events
+      ADD CONSTRAINT chk_events_agenda_shape
+      CHECK (agenda IS NULL OR (jsonb_typeof(agenda) = 'array' AND jsonb_array_length(agenda) <= 40));
+  END IF;
+END
+$agenda$;
+
+-- ============================================================================
+-- Conversation list: one summary row per channel (last message + unread count) instead of downloading every
+-- message of every channel. SECURITY INVOKER, so chat RLS still decides what the caller may see.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.get_my_conversation_summaries(p_limit integer DEFAULT 100)
+RETURNS TABLE (
+  id uuid,
+  name text,
+  is_direct_message boolean,
+  created_by uuid,
+  created_at timestamptz,
+  updated_at timestamptz,
+  last_message_content text,
+  last_message_at timestamptz,
+  last_message_sender uuid,
+  unread_count integer
+)
+LANGUAGE sql STABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT c.id, c.name, c.is_direct_message, c.created_by, c.created_at, c.updated_at,
+         lm.content, lm.created_at, lm.sender_id,
+         COALESCE(u.n, 0)::integer
+  FROM public.chat_channels c
+  JOIN public.chat_channel_members me ON me.channel_id = c.id AND me.user_id = auth.uid()
+  LEFT JOIN LATERAL (
+    SELECT m.content, m.created_at, m.sender_id
+    FROM public.chat_messages m
+    WHERE m.channel_id = c.id
+    ORDER BY m.created_at DESC
+    LIMIT 1
+  ) lm ON true
+  LEFT JOIN LATERAL (
+    SELECT count(*) AS n
+    FROM public.chat_messages m
+    WHERE m.channel_id = c.id
+      AND m.sender_id IS DISTINCT FROM auth.uid()
+      AND NOT COALESCE(m.is_read, false)
+  ) u ON true
+  WHERE auth.uid() IS NOT NULL
+  ORDER BY COALESCE(lm.created_at, c.updated_at, c.created_at) DESC
+  LIMIT GREATEST(LEAST(COALESCE(p_limit, 100), 200), 1);
+$$;
+REVOKE ALL ON FUNCTION public.get_my_conversation_summaries(integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_my_conversation_summaries(integer) TO authenticated, service_role;
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_channel_created ON public.chat_messages (channel_id, created_at DESC);
 
 NOTIFY pgrst, 'reload schema';
 

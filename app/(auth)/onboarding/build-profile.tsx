@@ -67,7 +67,7 @@ export default function BuildProfileScreen() {
 
         const { data } = await supabase
           .from('profiles')
-          .select('campus_code, department, faculty, level, bio, avatar_url')
+          .select('campus_code, department, faculty, level, bio, avatar_url, username')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -97,6 +97,15 @@ export default function BuildProfileScreen() {
           }
           if (data?.bio) setBio(data.bio);
           if (data?.avatar_url) setPhotoUri(data.avatar_url);
+
+          // Two people can pick the same free handle at the same moment; the database gives the second one the
+          // handle plus a number. Say so once instead of silently showing a name they did not choose.
+          const wanted = String(authData?.user?.user_metadata?.username ?? '').trim().toLowerCase();
+          const assigned = String(data?.username ?? '').trim().toLowerCase();
+          if (wanted && assigned && wanted !== assigned) {
+            toast.info(`@${wanted} was taken a moment before you signed up, so you are @${assigned}. You can change it in Settings.`);
+            supabase.auth.updateUser({ data: { username: assigned } }).catch(() => {});
+          }
         }
       } catch {
         // Non-blocking

@@ -15,7 +15,7 @@ import { CallModal } from './CallModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRealtimeChannel } from '@/realtime/useRealtimeChannel';
-import { listMessages, sendMessage, listConversations, markConversationAsRead, deleteMessageForMe } from '@/api/messaging';
+import { listMessages, MESSAGE_PAGE_SIZE, sendMessage, listConversations, markConversationAsRead, deleteMessageForMe } from '@/api/messaging';
 import { submitReport } from '@/api/moderation';
 import { uploadMediaFile } from '@/api/storage';
 import { useSignedUrl } from '@/api/signedUrls';
@@ -28,6 +28,7 @@ import {
 import { isUserBlocked } from '@/api/connections';
 import { Message } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
+import { usePermissions } from '@/context/RolePermissionsContext';
 import { haptics } from '@/utils/haptics';
 
 interface OutgoingMessage extends Message {
@@ -104,20 +105,28 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
+  // Role Permissions: with messaging switched off for this role the composer is replaced by a notice.
+  const { hasPermission } = usePermissions();
+  const canSend = hasPermission('can_send_messages');
   const queryClient = useQueryClient();
   const flatListRef = useRef<FlatList>(null);
-  useRealtimeChannel();
+
+  // Realtime pushes new messages; polling is only a safety net, and a fast one only while realtime is down.
+  const { status: realtimeStatus } = useRealtimeChannel();
+  const realtimeLive = realtimeStatus === 'open';
+  const [messageLimit, setMessageLimit] = useState(MESSAGE_PAGE_SIZE);
+  const skipNextAutoScroll = useRef(false);
 
   const { data } = useQuery({
-    queryKey: ['messages', conversationId],
-    queryFn: () => listMessages(conversationId),
-    refetchInterval: 1500,
+    queryKey: ['messages', conversationId, messageLimit],
+    queryFn: () => listMessages(conversationId, messageLimit),
+    refetchInterval: realtimeLive ? 30_000 : 3000,
   });
 
   const { data: conversations } = useQuery({
     queryKey: ['conversations'],
     queryFn: listConversations,
-    refetchInterval: 3000,
+    refetchInterval: realtimeLive ? 60_000 : 6000,
   });
 
   const currentConversation = conversations?.find((c) => c.id === conversationId);
@@ -441,7 +450,29 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+        onContentSizeChange={() => {
+          // Loading older messages must not yank the view to the bottom.
+          if (skipNextAutoScroll.current) {
+            skipNextAutoScroll.current = false;
+            return;
+          }
+          flatListRef.current?.scrollToEnd({ animated: false });
+        }}
+        ListHeaderComponent={
+          data?.nextCursor ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Load earlier messages"
+              onPress={() => {
+                skipNextAutoScroll.current = true;
+                setMessageLimit((n) => n + MESSAGE_PAGE_SIZE);
+              }}
+              style={{ alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}
+            >
+              <AppText tone="brand" variant="caption" weight="semiBold">Load earlier messages</AppText>
+            </Pressable>
+          ) : null
+        }
         renderItem={({ item }) => {
           const isMe = item.senderId === 'me' || (!!user?.id && item.senderId === user.id);
 
@@ -616,6 +647,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
       ) : null}
 
       {/* Bottom Message Input Bar */}
+      {canSend ? (
       <View
         style={{
           flexDirection: 'row',
@@ -679,6 +711,11 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           <Ionicons name="send" size={17} color={draft.trim() ? '#FFFFFF' : colors.textSecondary} />
         </Pressable>
       </View>
+      ) : (
+        <View style={{ padding: spacing.md, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border, alignItems: 'center' }}>
+          <AppText tone="secondary" variant="caption">Messaging has been turned off for your account by campus administration.</AppText>
+        </View>
+      )}
 
       {/* Quick Attachment Sheet */}
       <ActionSheetModal

@@ -43,6 +43,7 @@ import { AppTextField } from './AppTextField';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PostVisibilityScope } from '@/api/types';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { usePermissions } from '@/context/RolePermissionsContext';
 
 // Virtual, always-present tile meaning "no category filter" - not a real row
 // in forum_communities, so it's never subject to approval.
@@ -76,6 +77,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
   const isAdmin = user?.role === 'admin' || user?.actualRole === 'admin';
   const { isFeatureEnabled } = useFeatureFlags();
+  // Role Permissions: with posting switched off for this role the composer, FAB and shortcuts are not shown.
+  const { hasPermission } = usePermissions();
+  const canPost = hasPermission('can_post_forum');
   const { isDesktop, isWideDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -479,7 +483,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   // be hardcoded on every community.
   const { data: allCommunityPosts } = useQuery({
     queryKey: ['feed', scope, 'community-stats', viewScope, viewerInstitutionCode, showAllCampuses],
-    queryFn: () => listFeedPosts({ scope, viewScope, viewerInstitutionCode, includeAllCampuses: showAllCampuses }),
+    queryFn: () => listFeedPosts({ scope, viewScope, viewerInstitutionCode, includeAllCampuses: showAllCampuses, pageSize: 200 }),
   });
 
   const { data: liveCommunityStats } = useQuery({
@@ -1037,6 +1041,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
       <GuestTeaserBanner />
 
       {/* Interactive Quick Thread Composer Bar */}
+      {canPost ? (
       <Pressable
         onPress={handleOpenComposer}
         accessibilityRole="button"
@@ -1066,6 +1071,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </View>
         </GlassCard>
       </Pressable>
+      ) : null}
     </View>
   );
 
@@ -1410,6 +1416,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             )}
 
             {/* Quick Desktop Composer Box */}
+            {canPost ? (
             <GlassCard radius={18} padded={false} contentStyle={{ padding: spacing.md }} style={{ marginBottom: spacing.md }}>
               {isAdmin && (
                 <View
@@ -1482,6 +1489,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 </Pressable>
               </View>
             </GlassCard>
+            ) : null}
 
 
 
@@ -2063,7 +2071,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     </Modal>
 
     {/* Floating Action Button (FAB) - Only shown on mobile viewports so it does not block Community Rules on desktop */}
-    {!isDesktop && (
+    {!isDesktop && canPost && (
       <Pressable
         onPress={handleOpenComposer}
         accessibilityRole="button"

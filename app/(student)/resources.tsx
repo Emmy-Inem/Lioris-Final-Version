@@ -26,6 +26,7 @@ import { listPortalLinks, PortalLink } from '@/api/portalLinks';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { getInstitutionByCode, listCampuses } from '@/api/institutions';
 import { useToast } from '@/context/ToastContext';
+import { usePermissions } from '@/context/RolePermissionsContext';
 import { resolveActivePortalTarget } from '@/utils/campusPortalScope';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -93,6 +94,9 @@ export default function ResourcesScreen() {
   const { user } = useAuth();
   const { isDesktop } = useResponsive();
   const toast = useToast();
+  // Role Permissions: hide "Upload" when this role may not upload resources.
+  const { hasPermission } = usePermissions();
+  const canUpload = hasPermission('can_upload_resources');
   const queryClient = useQueryClient();
   const { resourceId } = useLocalSearchParams<{ resourceId?: string }>();
   const [selectedPortalFilter, setSelectedPortalFilter] = useState<string>(user?.actualRole === 'admin' && user?.isSuperAdmin ? 'ALL' : 'CURRENT');
@@ -410,6 +414,7 @@ export default function ResourcesScreen() {
             </AppText>
           </Pressable>
 
+          {canUpload ? (
           <Pressable
             onPress={handlePressUpload}
             accessibilityRole="button"
@@ -433,6 +438,7 @@ export default function ResourcesScreen() {
               Upload
             </AppText>
           </Pressable>
+          ) : null}
         </View>
       </View>
 
@@ -897,6 +903,7 @@ export default function ResourcesScreen() {
                 </Pressable>
               )}
 
+              {canUpload ? (
               <Pressable
                 onPress={handlePressUpload}
                 accessibilityRole="button"
@@ -916,6 +923,7 @@ export default function ResourcesScreen() {
                   Upload Resource
                 </AppText>
               </Pressable>
+              ) : null}
             </View>
           </View>
 
@@ -1340,8 +1348,8 @@ export default function ResourcesScreen() {
                     ? 'Tap the bookmark icon on any course note to keep it handy for quick reading.'
                     : 'Try searching for another course code or upload study materials for your peers.'
                 }
-                actionLabel={isMineView || filters.resourceType === 'Bookmarked' ? undefined : 'Upload Study Material'}
-                onAction={isMineView || filters.resourceType === 'Bookmarked' ? undefined : handlePressUpload}
+                actionLabel={isMineView || filters.resourceType === 'Bookmarked' || !canUpload ? undefined : 'Upload Study Material'}
+                onAction={isMineView || filters.resourceType === 'Bookmarked' || !canUpload ? undefined : handlePressUpload}
               />
             )
           }

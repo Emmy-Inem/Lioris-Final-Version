@@ -1,3 +1,4 @@
+import { isPermissionRefusal, refusalMessage } from '../utils/permissionErrors';
 import { supabase } from './supabase';
 import { Conversation, Message } from './types';
 import { generateUUID } from '../utils/uuid';
@@ -34,6 +35,98 @@ export interface UserToMessage {
   campusCode: string | null;
 }
 
+/** One channel the person belongs to, with only what the list needs (no message history). */
+interface ChannelListRow {
+  id: string;
+  name: string | null;
+  is_direct_message: boolean | null;
+  campus_code?: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  chat_channel_members?: any[];
+  latest: { content?: string | null; created_at: string } | null;
+  unread: number;
+}
+
+const CHANNEL_MEMBER_SELECT = `
+  id,
+  name,
+  is_direct_message,
+  campus_code,
+  created_by,
+  created_at,
+  updated_at,
+  chat_channel_members (
+    user_id,
+    joined_at,
+    profiles (
+      id,
+      full_name,
+      avatar_url,
+      department,
+      role,
+      campus_code
+    )
+  )`;
+
+/**
+ * Loads the conversation list. The list used to embed EVERY message of EVERY channel just to find the newest one
+ * and count unread, so opening Messages downloaded the whole chat history (and PostgREST silently cut it at 1000
+ * rows). It now asks the database for one summary row per channel (last message + unread count), then loads the
+ * members of just those channels. If the summary function is not deployed yet, it falls back to the old query.
+ */
+async function loadChannelRows(currentUserId?: string): Promise<ChannelListRow[]> {
+  try {
+    const { data: summaries, error } = await supabase.rpc('get_my_conversation_summaries', { p_limit: 100 });
+    if (!error && Array.isArray(summaries)) {
+      const ids = summaries.map((s: any) => s.id);
+      const byId = new Map<string, any>();
+      if (ids.length > 0) {
+        const { data: channels, error: channelError } = await supabase
+          .from('chat_channels')
+          .select(CHANNEL_MEMBER_SELECT)
+          .in('id', ids);
+        if (channelError) throw channelError;
+        for (const ch of channels ?? []) byId.set((ch as any).id, ch);
+      }
+      return summaries.map((s: any) => {
+        const ch = byId.get(s.id) ?? {};
+        return {
+          id: s.id,
+          name: ch.name ?? s.name ?? null,
+          is_direct_message: ch.is_direct_message ?? s.is_direct_message ?? true,
+          campus_code: ch.campus_code ?? null,
+          created_by: ch.created_by ?? s.created_by ?? null,
+          created_at: ch.created_at ?? s.created_at,
+          updated_at: ch.updated_at ?? s.updated_at,
+          chat_channel_members: ch.chat_channel_members ?? [],
+          latest: s.last_message_at ? { content: s.last_message_content, created_at: s.last_message_at } : null,
+          unread: Number(s.unread_count ?? 0),
+        } as ChannelListRow;
+      });
+    }
+  } catch (summaryErr) {
+    console.warn('[Messaging] Conversation summaries unavailable, using the full query:', summaryErr);
+  }
+
+  const { data, error } = await supabase
+    .from('chat_channels')
+    .select(`${CHANNEL_MEMBER_SELECT}, chat_messages (id, sender_id, content, is_read, created_at)`)
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row: any) => {
+    const msgs = (row.chat_messages ?? []).slice().sort(
+      (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+    return {
+      ...row,
+      latest: msgs[0] ?? null,
+      unread: currentUserId ? msgs.filter((m: any) => m.sender_id !== currentUserId && !m.is_read).length : 0,
+    } as ChannelListRow;
+  });
+}
+
 export async function listConversations(): Promise<Conversation[]> {
   try {
     const { data: authData } = await supabase.auth.getUser();
@@ -47,39 +140,7 @@ export async function listConversations(): Promise<Conversation[]> {
       }
     }
 
-    const { data, error } = await supabase
-      .from('chat_channels')
-      .select(`
-        id,
-        name,
-        is_direct_message,
-        campus_code,
-        created_by,
-        created_at,
-        updated_at,
-        chat_channel_members (
-          user_id,
-          joined_at,
-          profiles (
-            id,
-            full_name,
-            avatar_url,
-            department,
-            role,
-            campus_code
-          )
-        ),
-        chat_messages (
-          id,
-          sender_id,
-          content,
-          is_read,
-          created_at
-        )
-      `)
-      .order('updated_at', { ascending: false });
-
-    if (error) throw error;
+    const data = await loadChannelRows(currentUserId);
 
     // Exclude channels the current user has archived for themselves.
     // Archiving does NOT delete the shared channel (that would destroy it
@@ -96,10 +157,7 @@ export async function listConversations(): Promise<Conversation[]> {
         // permanent and a friend's later replies never surfaced (not even in the unread badge).
         const newestByChannel = new Map<string, number>();
         for (const row of data ?? []) {
-          for (const m of (row as any).chat_messages ?? []) {
-            const ts = new Date(m.created_at).getTime();
-            if (ts > (newestByChannel.get((row as any).id) ?? 0)) newestByChannel.set((row as any).id, ts);
-          }
+          if (row.latest?.created_at) newestByChannel.set(row.id, new Date(row.latest.created_at).getTime());
         }
         archivedChannelIds = new Set(
           (archivedRows ?? [])
@@ -117,10 +175,7 @@ export async function listConversations(): Promise<Conversation[]> {
     const nonArchivedData = (data ?? []).filter((row: any) => !archivedChannelIds.has(row.id));
 
     const dbConvs: Conversation[] = nonArchivedData.map((row: any) => {
-      const msgs = (row.chat_messages ?? []).slice().sort(
-        (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      const latestMsg = msgs[0];
+      const latestMsg = row.latest;
 
       let participantId = row.created_by || 'peer-user';
       let participantName = row.name || 'Campus Member';
@@ -153,9 +208,7 @@ export async function listConversations(): Promise<Conversation[]> {
         }
       }
 
-      const unreadCount = currentUserId
-        ? msgs.filter((m: any) => m.sender_id !== currentUserId && !m.is_read).length
-        : 0;
+      const unreadCount = currentUserId ? Number(row.unread ?? 0) : 0;
 
       const lastMessageAt = latestMsg?.created_at || row.updated_at || row.created_at;
       const lastMessagePreview = toPreviewText(latestMsg?.content);
@@ -348,18 +401,25 @@ export async function getOrCreateConversationWithUser(
   return created;
 }
 
+/** Newest messages first from the database, so a long chat never drops its latest messages at the row cap. */
+export const MESSAGE_PAGE_SIZE = 150;
+
 export async function listMessages(
   conversationId: string,
-  cursor?: string,
+  limit: number = MESSAGE_PAGE_SIZE,
 ): Promise<{ items: Message[]; nextCursor?: string }> {
   try {
-    const { data, error } = await supabase
+    const { data: newestFirst, error } = await supabase
       .from('chat_messages')
       .select('*')
       .eq('channel_id', conversationId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false })
+      .limit(limit + 1);
 
     if (error) throw error;
+
+    const hasMore = (newestFirst?.length ?? 0) > limit;
+    const data = (newestFirst ?? []).slice(0, limit).reverse();
 
     if (data && data.length > 0) {
       const { data: authData } = await supabase.auth.getUser();
@@ -415,7 +475,7 @@ export async function listMessages(
         }
       }
       localMessages[conversationId] = combined;
-      return { items: [...combined] };
+      return { items: [...combined], nextCursor: hasMore ? 'older' : undefined };
     }
   } catch (err) {
     console.warn('[Messaging] listMessages failed, showing local pool only:', err);
@@ -553,6 +613,7 @@ export async function sendMessage(
 
     if (msgError) {
       console.warn('[Messaging] Supabase persistence error:', msgError.message);
+      if (isPermissionRefusal(msgError)) throw new Error(refusalMessage('Messaging'));
       throw new Error('Message could not be sent. Check your connection and try again.');
     }
 

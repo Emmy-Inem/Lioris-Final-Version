@@ -479,6 +479,43 @@ CREATE TRIGGER tr_prevent_profile_role_escalation
 --       * the consent record keeps the age answer. The app sends `age_eligibility_confirmed`; every
 --         previous trigger read `age_confirmed_18`, so every sign-up since the age gate changed was
 --         stored as "age NOT confirmed".
+-- Handles nobody may claim (they would read as the platform itself).
+CREATE OR REPLACE FUNCTION public.is_reserved_username(p_username text)
+RETURNS boolean
+LANGUAGE sql IMMUTABLE
+AS $$
+  SELECT lower(COALESCE(p_username, '')) = ANY (ARRAY[
+    'admin','administrator','root','system','support','help','security','moderator','mod','staff',
+    'official','lioris','liorisapp','team','null','undefined','anonymous','everyone','here','campus'
+  ]);
+$$;
+
+-- Availability check used by the sign-up form: same rules as the sign-up trigger, fails CLOSED on any error
+-- (it used to report "available" when it could not tell), and ignores the caller's own row so someone who
+-- registered, did not confirm and registers again is not blocked by their own earlier attempt.
+CREATE OR REPLACE FUNCTION public.check_username_available(p_username text)
+RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER STABLE
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_clean text := lower(trim(COALESCE(p_username, '')));
+BEGIN
+  IF v_clean !~ '^[a-z0-9._]{3,24}$' OR public.is_reserved_username(v_clean) THEN
+    RETURN false;
+  END IF;
+  RETURN NOT EXISTS (
+    SELECT 1 FROM public.profiles pr
+    WHERE lower(trim(pr.username)) = v_clean
+      AND pr.id IS DISTINCT FROM auth.uid()
+  );
+EXCEPTION WHEN OTHERS THEN
+  RETURN false;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.check_username_available(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.check_username_available(text) TO anon, authenticated, service_role;
+
 CREATE OR REPLACE FUNCTION public.handle_new_user_profile()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -493,6 +530,7 @@ DECLARE
     v_age_raw text;
     v_age boolean;
     v_username text;
+    v_try int;
 BEGIN
     BEGIN
         v_campus := public.campus_for_email(NEW.email);
@@ -520,15 +558,34 @@ BEGIN
     )
     ON CONFLICT (id) DO NOTHING;
 
-    -- Username: best effort (a taken handle must never make sign-up itself fail).
+    -- Username. A taken, reserved or malformed handle must never make sign-up itself fail, and must never leave
+    -- the member with NO handle either (two people can pass the availability check at the same moment, and
+    -- the unique index then rejects the second). The second person gets the handle plus a short number and is
+    -- told on the next screen; they can change it in Settings.
     v_username := lower(trim(COALESCE(NEW.raw_user_meta_data->>'username', '')));
-    IF v_username <> '' AND length(v_username) >= 3 THEN
-        BEGIN
-            UPDATE public.profiles SET username = v_username WHERE id = NEW.id;
-        EXCEPTION WHEN OTHERS THEN
-            NULL;
-        END;
+    IF v_username !~ '^[a-z0-9._]{3,24}$' OR public.is_reserved_username(v_username) THEN
+        v_username := left(regexp_replace(lower(split_part(NEW.email, '@', 1)), '[^a-z0-9._]', '', 'g'), 18);
+        IF length(v_username) < 3 OR public.is_reserved_username(v_username) THEN
+            v_username := 'student';
+        END IF;
     END IF;
+    v_try := 0;
+    LOOP
+        BEGIN
+            UPDATE public.profiles
+               SET username = CASE WHEN v_try = 0 THEN v_username
+                                   ELSE left(v_username, 19) || (1000 + floor(random() * 9000))::int END
+             WHERE id = NEW.id;
+            EXIT;
+        EXCEPTION WHEN unique_violation THEN
+            v_try := v_try + 1;
+            IF v_try > 8 THEN
+                EXIT; -- vanishingly unlikely; the member keeps no handle and is asked to pick one
+            END IF;
+        WHEN OTHERS THEN
+            EXIT;
+        END;
+    END LOOP;
 
     BEGIN
         v_terms_version := NULLIF(btrim(NEW.raw_user_meta_data->>'terms_version'), '');

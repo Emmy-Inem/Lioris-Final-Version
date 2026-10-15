@@ -15,6 +15,7 @@ import { getSeedCommentsForPost } from '../data/seedForumComments';
 import { isBotPost, isBotVisibilityEnabled } from '../utils/botVisibility';
 import { isSuperAdminIdentity, resolveCampusReadScope } from '../utils/campusAccess';
 import { getOwnProfileRow } from './profile';
+import { isPermissionRefusal, refusalMessage } from '../utils/permissionErrors';
 
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
@@ -349,6 +350,8 @@ function filterPosts(pool: Post[], query: FeedQuery): Post[] {
   return results;
 }
 
+const DEFAULT_FEED_PAGE_SIZE = 100;
+
 export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
   let viewerInstitutionCode: string | undefined;
   let includeAllCampuses = false;
@@ -383,12 +386,16 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
       if (query.category) {
         dbQuery = dbQuery.ilike('category', `%${escapePostgrestLike(query.category)}%`);
       }
-      if (query.pageSize != null) {
-        const pageSize = query.pageSize;
-        const page = Math.max(0, query.page ?? 0);
-        const offset = page * pageSize;
-        dbQuery = dbQuery.range(offset, offset + pageSize - 1);
+      // Only the viewer's own like row is needed to know "did I like it?" (the counter is a column). Embedding every
+      // liker of every post made a page of 1000 posts carry tens of thousands of rows.
+      if (viewerId && select.includes('post_likes')) {
+        dbQuery = dbQuery.eq('post_likes.user_id', viewerId);
       }
+      // No caller gets an unbounded feed: without a page size the query used to return up to 1000 posts.
+      const pageSize = query.pageSize ?? DEFAULT_FEED_PAGE_SIZE;
+      const page = Math.max(0, query.page ?? 0);
+      const offset = page * pageSize;
+      dbQuery = dbQuery.range(offset, offset + pageSize - 1);
       return dbQuery;
     });
 
@@ -874,6 +881,7 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
 
  if (error) {
  console.warn('[Posts] Supabase create post error:', error.message);
+ if (isPermissionRefusal(error)) throw new Error(refusalMessage('Posting'));
  throw new Error(
  status === 'draft' ? 'Could not save your draft. Please try again.' : 'Could not publish your post. Please try again.',
  );
@@ -1132,6 +1140,7 @@ export async function createPostComment(
 
  if (error) {
  console.warn('[Posts] Supabase comment insert error:', error.message);
+ if (isPermissionRefusal(error)) throw new Error(refusalMessage('Commenting'));
  throw new Error('Could not post your comment. Please try again.');
  }
 

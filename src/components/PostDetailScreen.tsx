@@ -22,6 +22,7 @@ import { ActionSheetModal } from'./ActionSheetModal';
 import { EditPostModal } from'./EditPostModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
+import { usePermissions } from '@/context/RolePermissionsContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost, updatePostComment, deletePostComment, extractMentionHandles, resolvePostMentions, buildPostShareUrl, PostComment } from '@/api/posts';
 import { toggleSavedItem, SAVED_ITEMS_KEY, isItemSavedSync, subscribeSavedItems } from '@/api/bookmarks';
@@ -75,6 +76,9 @@ export function PostDetailScreen() {
   };
   const { isDesktop, contentMaxWidth } = useResponsive();
   const { user } = useAuth();
+  // Role Permissions: no reply bar while commenting is switched off for this role.
+  const { hasPermission } = usePermissions();
+  const canComment = hasPermission('can_comment_forum');
   // The reply bar is pinned to the bottom of the screen: on iOS it must rise with the keyboard (Android resizes
   // the window itself) and clear the home indicator when the keyboard is closed.
   const safeInsets = useSafeAreaInsets();
@@ -967,7 +971,7 @@ export function PostDetailScreen() {
  </ScrollView>
 
       {/* Sticky Bottom Reply Composer Bar (Hidden for unverified personal guests) */}
-      {!isRestrictedGuest && (
+      {!isRestrictedGuest && canComment && (
         <View
           style={{
             position: 'absolute',

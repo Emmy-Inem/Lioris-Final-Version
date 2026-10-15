@@ -15,6 +15,8 @@ import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
 import { persistCampus } from '@/hooks/useViewScope';
 import { getFriendlyErrorMessage } from '@/utils/errors';
+import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
+import { captchaRequired } from '@/utils/captcha';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -38,6 +40,8 @@ export default function VerifyEmailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = React.useRef<TurnstileWidgetRef>(null);
   // True once the code was accepted: the auth listener is still loading the profile, and the [user] effect
   // below routes into the app the moment it arrives. Routing to '/' straight away flashed the logged-out
   // landing page (no user yet) and looked like the code had failed.
@@ -144,12 +148,19 @@ export default function VerifyEmailScreen() {
       setErrorMessage('Enter the email address you signed up with.');
       return;
     }
+    if (Platform.OS === 'web' && captchaRequired() && !captchaToken) {
+      setErrorMessage('Please complete the security check below, then tap "Send a new code".');
+      return;
+    }
     haptics.light();
     setResending(true);
     setErrorMessage(null);
     setNotice(null);
     try {
-      await authApi.resendConfirmationEmail(email);
+      await authApi.resendConfirmationEmail(email, captchaToken || undefined);
+      // A Turnstile token is single use.
+      setCaptchaToken(null);
+      turnstileRef.current?.reset();
       setNotice(`A new code is on its way to ${email}. Check your spam folder if it does not arrive.`);
       setCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err: any) {
@@ -248,6 +259,9 @@ export default function VerifyEmailScreen() {
             />
           </View>
 
+          {captchaRequired() ? (
+            <TurnstileWidget ref={turnstileRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
+          ) : null}
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: spacing.lg }}>
             <Pressable onPress={handleResendCode} hitSlop={8} disabled={resending || cooldown > 0}>
               <AppText tone={cooldown > 0 ? 'secondary' : 'brand'} variant="bodySmall" weight="semiBold">

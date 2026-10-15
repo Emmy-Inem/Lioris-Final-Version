@@ -118,7 +118,7 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
     const { data, error } = await supabase
       .from('profiles')
       .select('id')
-      .ilike('username', clean)
+      .eq('username', clean) // handles are stored lower-case; eq avoids ilike treating _ and % as wildcards
       .limit(1);
 
     if (!error) {
@@ -136,7 +136,7 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
 
 // Sends a fresh 6-digit confirmation code. Delivery is real email (Supabase custom SMTP);
 // there is deliberately no server-side "just activate it" fallback any more.
-export async function resendConfirmationEmail(email: string): Promise<{ success: boolean }> {
+export async function resendConfirmationEmail(email: string, captchaToken?: string): Promise<{ success: boolean }> {
   const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail) throw new Error('Please enter your registered email address.');
 
@@ -148,11 +148,15 @@ export async function resendConfirmationEmail(email: string): Promise<{ success:
     email: cleanEmail,
     options: {
       emailRedirectTo: getAuthRedirectUrl('verify-email'),
+      // With CAPTCHA protection on, the project rejects a resend that carries no token.
+      ...(captchaToken ? { captchaToken } : {}),
     },
   });
   if (error) {
     throw new Error(
-      /rate|seconds|too many/i.test(error.message)
+      /captcha/i.test(error.message)
+        ? 'Please complete the security check and try again.'
+        : /rate|seconds|too many/i.test(error.message)
         ? 'Please wait a minute before requesting another code.'
         : 'We could not send the code right now. Please check the address and try again.',
     );

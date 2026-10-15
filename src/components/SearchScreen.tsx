@@ -93,6 +93,7 @@ export function SearchScreen() {
         q: debouncedTrimmed,
         viewScope: forumScope,
         viewerInstitutionCode: campusCode && campusCode !== 'GLOBAL' ? campusCode : undefined,
+        pageSize: 50,
       }),
     enabled: tab === 'posts' && active,
   });

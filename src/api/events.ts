@@ -236,6 +236,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
           coverImageUrl: resolvedBanners[i] ?? undefined,
           venueType: row.venue_type || 'physical',
           virtualLink: row.virtual_link ?? null,
+          agenda: Array.isArray(row.agenda) ? row.agenda : undefined,
           isSpotlight: !!row.is_spotlight,
           sponsored: !!row.sponsored,
           ticketPrice: row.ticket_price != null ? Number(row.ticket_price) : undefined,
@@ -306,6 +307,7 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
         coverImageUrl: coverImageUrl ?? undefined,
         venueType: data.venue_type || 'physical',
         virtualLink: data.virtual_link ?? null,
+        agenda: Array.isArray(data.agenda) ? data.agenda : undefined,
         isSpotlight: !!data.is_spotlight,
         sponsored: !!data.sponsored,
         ticketPrice: data.ticket_price != null ? Number(data.ticket_price) : undefined,
@@ -600,6 +602,15 @@ export async function updateEvent(id: string, updates: Partial<CampusEvent>): Pr
  if (updates.isSpotlight !== undefined) dbPayload.is_spotlight = updates.isSpotlight;
  if (updates.venueType !== undefined) dbPayload.venue_type = updates.venueType;
  if (updates.virtualLink !== undefined) dbPayload.virtual_link = updates.virtualLink;
+ // The schedule used to be dropped here (nothing was written, yet the editor reported success).
+ if (updates.agenda !== undefined) {
+ dbPayload.agenda = (updates.agenda ?? []).slice(0, 40).map((item) => ({
+ time: String(item.time ?? '').slice(0, 40),
+ title: String(item.title ?? '').slice(0, 160),
+ speaker: item.speaker ? String(item.speaker).slice(0, 120) : undefined,
+ description: item.description ? String(item.description).slice(0, 500) : undefined,
+ }));
+ }
  if (updates.targetCohort !== undefined) dbPayload.target_cohort = updates.targetCohort;
  if (updates.campusCode) dbPayload.campus_code = updates.campusCode.toUpperCase();
  if (updates.visibilityScope) dbPayload.visibility_scope = updates.visibilityScope;

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import { AppState } from 'react-native';
 import { useAuth } from '@/auth/AuthContext';
 import {
   listRolePermissions,
@@ -49,9 +50,19 @@ export function RolePermissionsProvider({ children }: { children: React.ReactNod
     }
   }, []);
 
+  // Load when the account appears or changes (it used to load once, before sign-in, and never again), and keep
+  // it current: an admin flipping a toggle must reach people who already have the app open.
   useEffect(() => {
     fetchPermissions();
-  }, [fetchPermissions]);
+    const timer = setInterval(fetchPermissions, 5 * 60 * 1000);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') fetchPermissions();
+    });
+    return () => {
+      clearInterval(timer);
+      sub.remove();
+    };
+  }, [fetchPermissions, user?.id]);
 
   // Lookup map: role -> permissionKey -> boolean
   const permissionsMap = useMemo(() => {

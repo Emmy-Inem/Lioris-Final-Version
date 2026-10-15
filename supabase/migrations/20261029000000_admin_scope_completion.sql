@@ -495,6 +495,69 @@ CREATE POLICY "Members read authors of global content" ON public.profiles
   FOR SELECT TO authenticated
   USING ((SELECT NOT public.is_scoped_privileged()) AND public.is_global_content_author(id));
 
+-- ============================================================================
+-- Event schedule ("Edit schedule" on the event page). The editor existed but the API dropped the field and there
+-- was no column, so it reported success and saved nothing.
+-- ============================================================================
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS agenda jsonb;
+DO $agenda$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_events_agenda_shape' AND conrelid = 'public.events'::regclass) THEN
+    ALTER TABLE public.events
+      ADD CONSTRAINT chk_events_agenda_shape
+      CHECK (agenda IS NULL OR (jsonb_typeof(agenda) = 'array' AND jsonb_array_length(agenda) <= 40));
+  END IF;
+END
+$agenda$;
+
+-- ============================================================================
+-- Conversation list: one summary row per channel (last message + unread count) instead of downloading every
+-- message of every channel. SECURITY INVOKER, so chat RLS still decides what the caller may see.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.get_my_conversation_summaries(p_limit integer DEFAULT 100)
+RETURNS TABLE (
+  id uuid,
+  name text,
+  is_direct_message boolean,
+  created_by uuid,
+  created_at timestamptz,
+  updated_at timestamptz,
+  last_message_content text,
+  last_message_at timestamptz,
+  last_message_sender uuid,
+  unread_count integer
+)
+LANGUAGE sql STABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT c.id, c.name, c.is_direct_message, c.created_by, c.created_at, c.updated_at,
+         lm.content, lm.created_at, lm.sender_id,
+         COALESCE(u.n, 0)::integer
+  FROM public.chat_channels c
+  JOIN public.chat_channel_members me ON me.channel_id = c.id AND me.user_id = auth.uid()
+  LEFT JOIN LATERAL (
+    SELECT m.content, m.created_at, m.sender_id
+    FROM public.chat_messages m
+    WHERE m.channel_id = c.id
+    ORDER BY m.created_at DESC
+    LIMIT 1
+  ) lm ON true
+  LEFT JOIN LATERAL (
+    SELECT count(*) AS n
+    FROM public.chat_messages m
+    WHERE m.channel_id = c.id
+      AND m.sender_id IS DISTINCT FROM auth.uid()
+      AND NOT COALESCE(m.is_read, false)
+  ) u ON true
+  WHERE auth.uid() IS NOT NULL
+  ORDER BY COALESCE(lm.created_at, c.updated_at, c.created_at) DESC
+  LIMIT GREATEST(LEAST(COALESCE(p_limit, 100), 200), 1);
+$$;
+REVOKE ALL ON FUNCTION public.get_my_conversation_summaries(integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_my_conversation_summaries(integer) TO authenticated, service_role;
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_channel_created ON public.chat_messages (channel_id, created_at DESC);
+
 NOTIFY pgrst, 'reload schema';
 
 COMMIT;

@@ -21,6 +21,7 @@ import {
 } from '@/api/resources';
 import { isResourceBookmarked, toggleResourceBookmark } from '@/utils/resourceBookmarks';
 import { useToast } from '@/context/ToastContext';
+import { PermissionGate } from './PermissionGate';
 import { haptics } from '@/utils/haptics';
 import { useResourceFileSize } from '@/utils/fileSize';
 import { useResourceDownload } from '@/hooks/useResourceDownload';
@@ -301,6 +302,7 @@ export const ResourceCard = React.memo(function ResourceCard({
           <View style={{ flex: 1, minWidth: 0 }}>
             <AppButton label="Read Online" variant="secondary" size="sm" onPress={() => onPreview?.(resource)} fullWidth />
           </View>
+          <PermissionGate permission="can_download_resources">
           <View style={{ flex: 1, minWidth: 0 }}>
             <AppButton
               label={downloaded ? 'Downloaded' : fileSizeLabel ? `Download · ${fileSizeLabel}` : 'Download'}
@@ -311,6 +313,7 @@ export const ResourceCard = React.memo(function ResourceCard({
               fullWidth
             />
           </View>
+          </PermissionGate>
         </View>
       </View>
       {!onReport && reportOpen && (

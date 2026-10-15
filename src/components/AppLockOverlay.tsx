@@ -18,6 +18,7 @@ import { AppButton } from '@/components/AppButton';
 import { SolidCard } from '@/components/SolidCard';
 import { Avatar } from '@/components/Avatar';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
+import { captchaRequired } from '@/utils/captcha';
 import { haptics } from '@/utils/haptics';
 import {
   BIOMETRICS_ENABLED_KEY,
@@ -59,7 +60,7 @@ export function AppLockOverlay() {
 
   const authenticating = authMethod !== null;
   const bioLabel = getBiometricMethodLabel();
-  const needsCaptcha = Platform.OS === 'web';
+  const needsCaptcha = Platform.OS === 'web' && captchaRequired();
 
   // Check initial preference & biometric availability
   const userId = user?.id ?? null;

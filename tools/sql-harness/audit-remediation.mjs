@@ -671,6 +671,56 @@ await check('cross-campus authors of global posts are readable (name/avatar) by 
     eq((await c.q(`SELECT count(*)::int n FROM public.profiles WHERE id = '${U.verI}'`)).rows[0].n, 0, 'UNILAG campus admin read a UI author');
   });
 });
+await check('usernames: a collision at sign-up still yields a unique handle, reserved/malformed handles are replaced, and the availability check fails closed', async () => {
+  const mkUser = (n, email, handle) => db.exec(`INSERT INTO auth.users (id, email, raw_user_meta_data, email_confirmed_at) VALUES ('${id(n)}','${email}','${JSON.stringify({ campus_code: 'UNILAG', username: handle })}'::jsonb, now())`);
+  await mkUser(800, 'first.person@gmail.test', 'popular_handle');
+  await mkUser(801, 'second.person@gmail.test', 'Popular_Handle'); // same handle, different case: the race the index decides
+  await mkUser(802, 'third.person@gmail.test', 'admin');           // reserved
+  await mkUser(803, 'fourth.person@gmail.test', 'no spaces!');     // malformed
+  const u = async (n) => (await db.query(`SELECT username FROM public.profiles WHERE id='${id(n)}'`)).rows[0]?.username;
+  eq(await u(800), 'popular_handle');
+  assert(/^popular_handle\d{4}$/.test(await u(801)), `second person got ${await u(801)}`);
+  eq(await u(802), 'third.person', 'reserved handle must be replaced by one derived from the e-mail');
+  eq(await u(803), 'fourth.person');
+  await as('anon', async (c) => {
+    eq((await c.q(`SELECT public.check_username_available('popular_handle') ok`)).rows[0].ok, false);
+    eq((await c.q(`SELECT public.check_username_available('Admin') ok`)).rows[0].ok, false);
+    eq((await c.q(`SELECT public.check_username_available('bad name') ok`)).rows[0].ok, false);
+    eq((await c.q(`SELECT public.check_username_available('brand_new_handle') ok`)).rows[0].ok, true);
+  });
+});
+await check('event schedule: the organiser can save an agenda, another student cannot, and a malformed agenda is refused', async () => {
+  await ins('events', { id: id(950), creator_id: U.verU, campus_code: 'UNILAG', title: 'Agenda test', status: 'upcoming' });
+  await as(U.verU, async (c) => {
+    const r = await c.t(`UPDATE public.events SET agenda = '[{"time":"10:00","title":"Opening"}]'::jsonb WHERE id='${id(950)}' RETURNING id`);
+    assert(r.ok && r.rows.length === 1, 'organiser could not save the agenda');
+    const bad = await c.t(`UPDATE public.events SET agenda = '{"not":"an array"}'::jsonb WHERE id='${id(950)}'`);
+    assert(!bad.ok, 'a non-array agenda was accepted');
+  });
+  await as(U.verI, async (c) => {
+    const r = await c.t(`UPDATE public.events SET agenda = '[]'::jsonb WHERE id='${id(950)}' RETURNING id`);
+    assert(!r.ok || r.rows.length === 0, 'another student edited the organiser\'s schedule');
+  });
+});
+await check('conversation summaries: one row per channel with last message and unread count, members only', async () => {
+  await as(U.verI, async (c) => {
+    const r = await c.q(`SELECT * FROM public.get_my_conversation_summaries(50) WHERE id = '${id(900)}'`);
+    eq(r.rows.length, 1, 'channel missing for a member');
+    eq(r.rows[0].last_message_content, 'notes');
+    eq(r.rows[0].unread_count, 1, 'peer message should count as unread');
+  });
+  await as(U.verU, async (c) => {
+    const r = await c.q(`SELECT unread_count FROM public.get_my_conversation_summaries(50) WHERE id = '${id(900)}'`);
+    eq(r.rows[0].unread_count, 0, 'own message must not count as unread');
+  });
+  await as(U.unvU, async (c) => {
+    eq((await c.q(`SELECT count(*)::int n FROM public.get_my_conversation_summaries(50)`)).rows[0].n, 0, 'non-member saw a channel');
+  });
+  await as('anon', async (c) => {
+    const r = await c.t(`SELECT * FROM public.get_my_conversation_summaries(5)`);
+    assert(!r.ok, 'anon could call the summaries function');
+  });
+});
 await check('storage: résumés are not readable by an admin of another campus', async () => {
   await as(CAU, async (c) => { eq(await names(c, 'resumes'), [], 'UNILAG admin read a UI résumé'); });
   await as({ sub: id(9), email: 'campadmin.i@school.test' }, async (c) => { eq(await names(c, 'resumes'), [`${U.verI}/cv.pdf`]); });

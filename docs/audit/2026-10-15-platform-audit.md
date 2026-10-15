@@ -273,11 +273,26 @@ Three independent read-only reviews of the student journey, each finding verifie
 * Notification preferences no longer reset to "all on" when offline and no longer fail silently; event/post cards follow
   refetched RSVP / like state; reply bar sits above the iOS keyboard; event Back works from a cold start.
 
+**Fixed in the follow-up (round 3)**
+* **CAPTCHA on phones**: the Turnstile check is now rendered in a WebView on iOS/Android (`TurnstileWidget.native.tsx`,
+  same site key as the web build, origin `EXPO_PUBLIC_SITE_URL`), on login, register, password reset, the app-lock
+  password fallback and the confirmation-code resend (which previously sent no token at all). Phones never hard-block on
+  a widget that cannot load - the server decides. Set `EXPO_PUBLIC_DISABLE_NATIVE_CAPTCHA=1` only if CAPTCHA
+  protection is off in Supabase.
+* **Username race**: the sign-up trigger no longer swallows a collision - the second person gets the handle plus a
+  number (and is told on the profile step); reserved/malformed handles are replaced; `check_username_available` shares
+  the same rules, fails closed and ignores the caller's own row.
+* **Role Permissions in the UI**: with a permission off, the student sees no forum composer/FAB, no reply bar, no
+  Sell, Upload, Download or chat composer (a notice replaces it); permissions reload on sign-in, every 5 minutes and on
+  app foreground; refusals read "turned off by campus administration" instead of "try again".
+* **Event schedule**: `events.agenda` column + API read/write; the editor now actually saves.
+* **Data volume**: the chat list loads one summary row per channel (`get_my_conversation_summaries`) instead of every
+  message of every channel; chats load the newest 150 messages with "Load earlier messages"; polling drops to a
+  safety-net interval while realtime is connected; feeds are bounded (default page 100, dashboard 30, search 50) and
+  embed only the viewer's own like row.
+
 **Still open (deliberate or needs a product decision)**
-* Native sign-in/sign-up cannot show the CAPTCHA widget (see "Needs a decision" #4); the app now says so honestly.
-* Username uniqueness race (trigger swallows duplicates) and weaker server-side username rules - needs a small migration.
-* Role-permission toggles are enforced by the database but the student UI does not hide the controls or explain the refusal.
-* Event "Edit schedule" (agenda) saves nothing (no column); chat history loads fully and polls (performance);
-  "My Campus" feed pagination can end early; admin kill-switches do not gate every student route.
+* "My Campus" feed pagination can end early (client-side filtering after the page is fetched); admin kill-switches do
+  not gate every student route.
 * Reminders: the `event_reminders` table is never read server-side; reminders on web do nothing.
 * iOS saves downloads through "Save to Files" (a Files-app folder needs a native config change in the next store build).
