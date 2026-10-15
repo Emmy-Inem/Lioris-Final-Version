@@ -286,49 +286,61 @@ export async function listNotifications(
 
 export async function markNotificationRead(id: string) {
  const openedAt = new Date().toISOString();
+ const before = localNotificationsCache;
  localNotificationsCache = localNotificationsCache.map((n) => (n.id === id ? { ...n, openedAt } : n));
  try {
- await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+ const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+ if (error) throw error;
  } catch {
- // Fallback
+ // Not saved: put it back so the badge is truthful (callers refetch right after; opening the item still works).
+ localNotificationsCache = before;
  }
  return { id, openedAt };
 }
 
 export async function markAllNotificationsRead() {
  const openedAt = new Date().toISOString();
+ const before = localNotificationsCache;
  localNotificationsCache = localNotificationsCache.map((n) => ({ ...n, openedAt }));
  try {
  const { data: authData } = await supabase.auth.getUser();
  const uid = authData?.user?.id;
  if (uid) {
- await supabase.from('notifications').update({ is_read: true }).eq('recipient_id', uid).eq('is_read', false);
+ const { error } = await supabase.from('notifications').update({ is_read: true }).eq('recipient_id', uid).eq('is_read', false);
+ if (error) throw error;
  }
  } catch {
- // Fallback
+ localNotificationsCache = before;
+ throw new Error('Could not mark your notifications as read. Check your connection and try again.');
  }
  return { success: true, count: localNotificationsCache.length };
 }
 
 export async function clearAllNotifications() {
+ const before = localNotificationsCache;
  localNotificationsCache = [];
  try {
  const { data: authData } = await supabase.auth.getUser();
  const uid = authData?.user?.id;
  if (uid) {
- await supabase.from('notifications').delete().eq('recipient_id', uid);
+ const { error } = await supabase.from('notifications').delete().eq('recipient_id', uid);
+ if (error) throw error;
  }
  } catch {
- // Fallback
+ localNotificationsCache = before;
+ throw new Error('Could not clear your notifications. Check your connection and try again.');
  }
 }
 
 export async function deleteNotification(id: string) {
+ const before = localNotificationsCache;
  localNotificationsCache = localNotificationsCache.filter((n) => n.id !== id);
  try {
- await supabase.from('notifications').delete().eq('id', id);
+ const { error } = await supabase.from('notifications').delete().eq('id', id);
+ if (error) throw error;
  } catch {
- // Fallback
+ localNotificationsCache = before;
+ throw new Error('Could not delete that notification. Check your connection and try again.');
  }
 }
 

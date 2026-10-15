@@ -295,7 +295,11 @@ export function DesktopTopBar() {
                 {unreadCount > 0 && (
                   <Pressable
                     onPress={async () => {
-                      await markAllNotificationsRead();
+                      try {
+                        await markAllNotificationsRead();
+                      } catch {
+                        // the list refetches below and shows what is really still unread
+                      }
                       queryClient.invalidateQueries({ queryKey: ['notifications'] });
                     }}
                   >

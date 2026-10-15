@@ -226,7 +226,13 @@ export default function ResourcesScreen() {
 
   useEffect(() => {
     if (!resourcesPageData) return;
-    setAccumulatedResources((prev) => (resourcesPage === 0 ? resourcesPageData : [...prev, ...resourcesPageData]));
+    setAccumulatedResources((prev) => {
+      if (resourcesPage === 0) return resourcesPageData;
+      // Keyed by id: an invalidation refetches the current page, which used to append the same rows again.
+      const byId = new Map(prev.map((r) => [r.id, r]));
+      for (const r of resourcesPageData) byId.set(r.id, r);
+      return Array.from(byId.values());
+    });
   }, [resourcesPageData, resourcesPage]);
 
   // A full page came back, so there may be more past it - an exact total

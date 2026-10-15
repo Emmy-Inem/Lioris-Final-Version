@@ -438,8 +438,9 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         pageSize: FEED_PAGE_SIZE,
       }),
     initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.length < FEED_PAGE_SIZE ? undefined : allPages.length,
+    // The database now narrows by campus, so an empty page is the real end. A short page can also just mean some
+    // rows were hidden (blocked, bots), which used to stop "My Campus" scrolling early.
+    getNextPageParam: (lastPage, allPages) => (lastPage.length === 0 ? undefined : allPages.length),
   });
 
   const rawPosts = React.useMemo(() => feedPages?.pages.flat() ?? [], [feedPages]);

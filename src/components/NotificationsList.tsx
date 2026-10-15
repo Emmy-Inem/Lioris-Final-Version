@@ -1,6 +1,6 @@
 import { ConnectionRequestCard } from './ConnectionRequestCard';
 import React, { useState } from 'react';
-import { FlatList, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Alert, FlatList, Platform, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,9 +40,14 @@ const NOTIFICATION_ICONS: Record<
 };
 
 function formatNotificationTime(iso?: string) {
- if (!iso) return '9:30 AM';
+ if (!iso) return '';
  const d = new Date(iso);
- return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+ const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+ const now = new Date();
+ if (d.toDateString() === now.toDateString()) return time;
+ // Older alerts used to show only a time of day and looked like they were from today.
+ const sameYear = d.getFullYear() === now.getFullYear();
+ return `${d.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' })}, ${time}`;
 }
 
 export function NotificationsScreen() {
@@ -85,20 +90,19 @@ export function NotificationsScreen() {
     router.push(targetRoute as any);
   }
 
-  async function handleDelete(id: string) {
-    await deleteNotification(id);
-    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  async function runMutation(action: () => Promise<unknown>) {
+    try {
+      await action();
+    } catch (err) {
+      Alert.alert('Notifications', err instanceof Error ? err.message : 'That did not go through. Please try again.');
+    } finally {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
   }
 
-  async function handleReadAll() {
-    await markAllNotificationsRead();
-    queryClient.invalidateQueries({ queryKey: ['notifications'] });
-  }
-
-  async function handleClear() {
-    await clearAllNotifications();
-    queryClient.invalidateQueries({ queryKey: ['notifications'] });
-  }
+  const handleDelete = (id: string) => runMutation(() => deleteNotification(id));
+  const handleReadAll = () => runMutation(() => markAllNotificationsRead());
+  const handleClear = () => runMutation(() => clearAllNotifications());
 
   const unreadCount = notifications?.filter((n) => !n.openedAt).length ?? 0;
 

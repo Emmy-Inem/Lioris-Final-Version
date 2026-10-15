@@ -271,6 +271,8 @@ export interface FeedQuery {
   /** Verified super-admin-only: include campus-scoped threads from every institution. */
   includeAllCampuses?: boolean;
   showBots?: boolean;
+  /** Internal: the viewer's id, so their own posts are never filtered out of their feed. */
+  viewerId?: string;
   /**
    * 0-based page past the first. Only takes effect when `pageSize` is also
    * given - omitting both preserves the previous unbounded fetch for callers
@@ -303,8 +305,11 @@ function filterPosts(pool: Post[], query: FeedQuery): Post[] {
   // cross-university chatter and "Global" hid the user's own campus entirely.
   const viewerCode = query.viewerInstitutionCode?.toUpperCase();
   const isGlobalPost = (p: Post) => p.scopeVisibility === 'global' || !p.institutionCode || p.institutionCode === 'GLOBAL';
+  // A viewer's own post always stays in their feed: publishing to "All Universities" while looking at My Campus
+  // used to make the thread vanish ("Thread published" and nothing there).
   const isOwnCampusPost = (p: Post) =>
-    !!viewerCode && !!p.institutionCode && p.institutionCode.toUpperCase() === viewerCode;
+    (!!query.viewerId && p.authorId === query.viewerId) ||
+    (!!viewerCode && !!p.institutionCode && p.institutionCode.toUpperCase() === viewerCode);
 
   if (query.includeAllCampuses) {
     // Super-admin authorization is established inside listFeedPosts before
@@ -391,6 +396,20 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
       if (viewerId && select.includes('post_likes')) {
         dbQuery = dbQuery.eq('post_likes.user_id', viewerId);
       }
+      // Narrow by campus IN THE DATABASE. RLS lets a student read their campus plus every campus's global posts, and
+      // this used to fetch a full page of all of it and throw most away in the browser - so "My Campus" pages came
+      // back short and the list stopped early. Codes are alphanumeric, so they are safe inside the filter string.
+      if (!includeAllCampuses) {
+        const code = viewerInstitutionCode && /^[A-Za-z0-9_-]{1,32}$/.test(viewerInstitutionCode) ? viewerInstitutionCode : undefined;
+        const own = viewerId ? `,author_id.eq.${viewerId}` : '';
+        if (query.viewScope === 'global') {
+          dbQuery = dbQuery.or(`${code ? `campus_code.ilike.${code},` : ''}campus_code.eq.GLOBAL,campus_code.is.null,visibility_scope.eq.global${own}`);
+        } else if (code) {
+          dbQuery = dbQuery.or(`campus_code.ilike.${code}${own}`);
+        } else {
+          dbQuery = dbQuery.or(`campus_code.eq.GLOBAL,campus_code.is.null,visibility_scope.eq.global${own}`);
+        }
+      }
       // No caller gets an unbounded feed: without a page size the query used to return up to 1000 posts.
       const pageSize = query.pageSize ?? DEFAULT_FEED_PAGE_SIZE;
       const page = Math.max(0, query.page ?? 0);
@@ -417,7 +436,7 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     }
     // Drafts/scheduled rows are dropped by filterPosts (the author's own come
     // back from the database; everyone else's are already hidden by RLS).
-    const visible = filterPosts(merged, { ...query, viewerInstitutionCode, includeAllCampuses });
+    const visible = filterPosts(merged, { ...query, viewerInstitutionCode, includeAllCampuses, viewerId });
     return await decorateViewerState(visible, viewerId);
   } catch (err) {
     console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);

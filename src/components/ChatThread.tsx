@@ -8,7 +8,6 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { AppText } from './AppText';
 import { Avatar } from './Avatar';
-import { TypingIndicator } from './TypingIndicator';
 import { EmptyState } from './EmptyState';
 import { ActionSheetModal } from './ActionSheetModal';
 import { CallModal } from './CallModal';
@@ -136,14 +135,13 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const partnerRole = currentConversation?.participantRole;
 
   const subtitleText = partnerDepartment
-    ? `Online | ${partnerDepartment}`
+    ? partnerDepartment
     : partnerRole
-    ? `Online | ${partnerRole.charAt(0).toUpperCase() + partnerRole.slice(1)}`
-    : 'Online | Campus Verified';
+    ? partnerRole.charAt(0).toUpperCase() + partnerRole.slice(1)
+    : 'Campus member';
 
   const [draft, setDraft] = useState('');
   const [pending, setPending] = useState<OutgoingMessage[]>([]);
-  const [partnerTyping, setPartnerTyping] = useState(false);
   const [replyingTo, setReplyingTo] = useState<OutgoingMessage | null>(null);
   const [attachmentSheetOpen, setAttachmentSheetOpen] = useState(false);
   const [activeCall, setActiveCall] = useState<CallDetails | null>(null);
@@ -279,8 +277,6 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
       setPending((prev) => prev.filter((m) => m.id !== optimistic.id));
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      setPartnerTyping(true);
-      setTimeout(() => setPartnerTyping(false), 1800);
     } catch {
       haptics.error();
       setPending((prev) =>
@@ -619,7 +615,6 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         }
       />
 
-      {partnerTyping ? <TypingIndicator /> : null}
 
       {/* Replying Banner */}
       {replyingTo ? (

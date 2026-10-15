@@ -26,7 +26,7 @@ import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 import { useSignedUrl } from '@/api/signedUrls';
-import { SUPABASE_URL } from '@/api/supabase';
+import { SUPABASE_URL, supabase } from '@/api/supabase';
 import { pickImageFromLibrary } from '@/utils/pickImage';
 import { CropKind, ImageCropperModal } from './ImageCropperModal';
 import { ImageViewerModal } from './ImageViewerModal';
@@ -109,6 +109,22 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     enabled: !!profile?.id,
   });
   const isOwnProfile = !!user && !!profile && user.id === profile.id;
+  // The connections number was never filled in (always 0). Count the accepted connections of the person whose
+  // profile this is - the table only lets you read your own, so it is shown on your own profile only.
+  const { data: connectionsTotal } = useQuery({
+    queryKey: ['connections', 'count', profile?.id],
+    enabled: isOwnProfile && !!profile?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('connections')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'accepted')
+        .or(`requester_id.eq.${profile!.id},recipient_id.eq.${profile!.id}`);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
 
   async function handleToggleEndorsement(skill: string, alreadyEndorsed: boolean) {
     if (!profile) return;
@@ -607,7 +623,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         {/* Quick Metrics Bar - stays on one line at 375px */}
         <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, marginBottom: spacing.sm }}>
           <StatChip label="Posts" value={myPosts?.length ?? profile.postsCount ?? 0} />
-          <StatChip label="Connections" value={profile.connectionsCount ?? 0} />
+          {isOwnProfile ? <StatChip label="Connections" value={connectionsTotal ?? profile.connectionsCount ?? 0} /> : null}
         </View>
 
         {/* Saved / bookmarks entry point - the phone-friendly way into the hub */}

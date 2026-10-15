@@ -259,6 +259,9 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
               </Pressable>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 0 }}>
+                  {/* Reminders are phone notifications scheduled on the device: the browser has no scheduler, so the bell
+                      used to say "Reminder set" and do nothing. */}
+                  {Platform.OS !== 'web' ? (
                   <Pressable
                     onPress={handleToggleReminder}
                     hitSlop={8}
@@ -272,6 +275,7 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
                       color={reminderOn ? colors.brandPrimary : colors.textSecondary}
                     />
                   </Pressable>
+                  ) : null}
                   <Pressable
                     onPress={() => setMenuOpen(true)}
                     hitSlop={8}

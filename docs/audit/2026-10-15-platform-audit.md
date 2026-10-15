@@ -291,8 +291,18 @@ Three independent read-only reviews of the student journey, each finding verifie
   safety-net interval while realtime is connected; feeds are bounded (default page 100, dashboard 30, search 50) and
   embed only the viewer's own like row.
 
+**Fixed in round 4**
+* "My Campus" / "Global" feed pages are narrowed in the database (campus, global and the viewer's own posts), so pages
+  are full and scrolling no longer stops early; a viewer's own "All Universities" post stays visible in their feed.
+* Admin kill-switches now gate the student ROUTES (links, notifications, typed URLs) as well as the tabs, and search
+  tabs for disabled modules are hidden.
+* Notifications: failed mark-read / delete / clear roll back and tell the person; older alerts show their date.
+* Resources "Load more" no longer duplicates rows; the Connections number on your profile is real; the invented
+  "typing" / "Online" indicators in chat are gone; the reminder bell is hidden on the web (it can only schedule on a phone).
+* CI: the dependency-audit step (15 high advisories in build tooling whose only "fix" is downgrading Expo/React Native)
+  no longer skips the web-bundle export and bundle secret scan after it.
+
 **Still open (deliberate or needs a product decision)**
-* "My Campus" feed pagination can end early (client-side filtering after the page is fetched); admin kill-switches do
-  not gate every student route.
-* Reminders: the `event_reminders` table is never read server-side; reminders on web do nothing.
+* The dependency advisories above (build tooling: metro, react-native, expo-updates -> node-forge) until Expo ships a clean release.
+* `event_reminders` is not read server-side (reminders are device-local notifications).
 * iOS saves downloads through "Save to Files" (a Files-app folder needs a native config change in the next store build).

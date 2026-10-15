@@ -1,3 +1,4 @@
+import { useFeatureFlags, FeatureKey } from '@/context/FeatureFlagsContext';
 import React, { useState } from 'react';
 import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -33,6 +34,13 @@ import { isSuperAdminIdentity } from '@/utils/campusAccess';
 
 type SearchTab = 'posts' | 'events' | 'resources' | 'jobs' | 'alumni' | 'marketplace';
 
+const SEARCH_TAB_FLAG: Partial<Record<SearchTab, FeatureKey>> = {
+  posts: 'discussion_workspaces',
+  events: 'campus_events',
+  resources: 'academic_resources',
+  marketplace: 'marketplace',
+};
+
 const TAB_LABEL: Record<SearchTab, string> = {
   posts: 'Threads',
   events: 'Events',
@@ -55,6 +63,7 @@ export function SearchScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
+  const { isFeatureEnabled } = useFeatureFlags();
   const isSuperAdmin = isSuperAdminIdentity(user);
   const { campusCode } = useCampusScope();
   const { scope: forumScope } = useForumScope();
@@ -81,6 +90,9 @@ export function SearchScreen() {
   const visibleTabs = (Object.keys(TAB_LABEL) as SearchTab[]).filter((t) => {
     if (t === 'jobs' && user?.role === 'student') return false;
     if (t === 'marketplace' && user?.role === 'alumni') return false;
+    // An admin who switched a module off must not have it searchable either.
+    const flag = SEARCH_TAB_FLAG[t];
+    if (flag && !isFeatureEnabled(flag)) return false;
     return true;
   });
 
