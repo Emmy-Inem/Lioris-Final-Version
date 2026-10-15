@@ -13,6 +13,7 @@ import { newDb, bootstrap, applyFile, MIGRATIONS, ROOT } from './lib.mjs';
 
 const BEFORE = process.argv.includes('--before');
 const REMEDIATION = 'supabase/migrations/20261028000000_audit_remediation.sql';
+const REMEDIATION_2 = 'supabase/migrations/20261029000000_admin_scope_completion.sql';
 const ROOT_EXTRAS = [
   'supabase_campus_access_2026.sql',
   'supabase_account_email_change_2026.sql',
@@ -29,7 +30,13 @@ const migrationFiles = readdirSync(resolve(ROOT, 'supabase/migrations')).filter(
 let remediationResult = null;
 for (const f of migrationFiles) {
   const path = `supabase/migrations/${f}`;
-  if (path === REMEDIATION) {
+  if (path.includes('20261030000000')) {
+    if (BEFORE) continue;
+    try { await applyFile(db, path, true, () => {}); } catch (e) { console.log(`FATAL: mfa switch did not apply: ${e.message}`); process.exit(2); }
+  } else if (path === REMEDIATION_2) {
+    if (BEFORE) continue;
+    try { await applyFile(db, path, true, () => {}); } catch (e) { console.log(`FATAL: scope completion did not apply: ${e.message}${e.detail ? ' | ' + e.detail : ''}`); process.exit(2); }
+  } else if (path === REMEDIATION) {
     if (BEFORE) continue;
     // strict: the remediation must apply in one transaction, no statement may fail
     try {
@@ -64,7 +71,7 @@ async function as(who, fn) {
     else if (who === 'service_role') await db.exec(`SET LOCAL ROLE service_role; SELECT set_config('request.jwt.claims', '{"role":"service_role"}', true)`);
     else {
       const sub = typeof who === 'object' ? who.sub : who;
-      const claims = { sub, role: 'authenticated', ...(typeof who === 'object' && who.email ? { email: who.email } : {}) };
+      const claims = { sub, role: 'authenticated', ...(typeof who === 'object' && who.email ? { email: who.email } : {}), ...(typeof who === 'object' && who.aal ? { aal: who.aal } : {}) };
       await db.exec(`SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '${JSON.stringify(claims)}', true); SELECT set_config('request.jwt.claim.sub', '${sub}', true)`);
     }
     const role = who === 'postgres' ? null : who === 'anon' || who === 'service_role' ? who : 'authenticated';
@@ -505,6 +512,216 @@ await check('sign-up trigger: never admin from metadata, records the age answer 
   eq(p.rows[0], { r: 'student', campus_code: 'GLOBAL', username: 'sneaky_one', admin_role: null }, 'profile minted from hostile metadata');
   const c = await db.query(`SELECT age_confirmed_18 a FROM public.consent_records WHERE user_id='${id(70)}'`);
   eq(c.rows[0]?.a, true, 'age answer not recorded');
+});
+
+// --------------------------------------------------------------------------- 8b. scope completion (20261029)
+// generic row inserter: fills NOT NULL columns, FK/trigger checks off (fixtures only)
+async function ins(table, vals) {
+  const cols = (await db.query(`SELECT column_name c, data_type d, udt_name u, is_nullable n, column_default df FROM information_schema.columns WHERE table_schema='public' AND table_name=$1`, [table])).rows;
+  const row = { ...vals };
+  for (const c of cols) {
+    if (c.c in row || c.n === 'YES' || c.df !== null) continue;
+    if (c.d === 'uuid') row[c.c] = '00000000-0000-4000-8000-0000000000aa';
+    else if (c.d === 'ARRAY') row[c.c] = '{}';
+    else if (c.d === 'boolean') row[c.c] = false;
+    else if (/int|numeric|double|real/.test(c.d)) row[c.c] = 0;
+    else if (/timestamp/.test(c.d)) row[c.c] = new Date().toISOString();
+    else if (c.d === 'jsonb' || c.d === 'json') row[c.c] = '{}';
+    else if (c.d === 'USER-DEFINED') row[c.c] = (await db.query(`SELECT e.enumlabel l FROM pg_enum e JOIN pg_type ty ON ty.oid=e.enumtypid WHERE ty.typname=$1 ORDER BY e.enumsortorder LIMIT 1`, [c.u])).rows[0].l;
+    else row[c.c] = 'x';
+  }
+  const keys = Object.keys(row);
+  await db.exec('SET session_replication_role = replica');
+  try {
+    await db.query(`INSERT INTO public.${table} (${keys.join(',')}) VALUES (${keys.map((_, i) => `$${i + 1}`).join(',')})`, keys.map((k) => row[k]));
+  } finally { await db.exec('SET session_replication_role = origin'); }
+}
+const S = { // fixture ids
+  postU: id(101), postI: id(102), postIglobal: id(103), annI: id(104), annU: id(105), mktI: id(106), jobI: id(107), evI: id(108), sgI: id(109),
+  cmtI: id(110), cmtU: id(111), tkI: id(112), tkU: id(113),
+};
+await ins('posts', { id: S.postU, author_id: U.verU, campus_code: 'UNILAG', visibility_scope: 'campus', audience_scope: 'global', status: 'published' });
+await ins('posts', { id: S.postI, author_id: U.verI, campus_code: 'UI', visibility_scope: 'campus', audience_scope: 'global', status: 'published' });
+await ins('posts', { id: S.postIglobal, author_id: U.verI, campus_code: 'UI', visibility_scope: 'global', audience_scope: 'global', status: 'published', image_url: `https://x.supabase.co/storage/v1/object/public/campus-media/${U.verI}/globalpost.jpg` });
+await ins('announcements', { id: S.annI, author_id: U.verI, campus_code: 'UI' });
+await ins('announcements', { id: S.annU, author_id: U.verU, campus_code: 'UNILAG' });
+await ins('marketplace_listings', { id: S.mktI, seller_id: U.verI, campus_code: 'UI' });
+await ins('jobs', { id: S.jobI, poster_id: U.verI, campus_code: 'UI', is_approved: true });
+await ins('events', { id: S.evI, creator_id: U.verI, campus_code: 'UI', visibility_scope: 'campus' });
+await ins('study_groups', { id: S.sgI, creator_id: U.verI, campus_code: 'UI', name: 'Study group', max_members: 10 });
+await ins('post_comments', { id: S.cmtI, post_id: S.postI, author_id: U.verI });
+await ins('post_comments', { id: S.cmtU, post_id: S.postU, author_id: U.verU });
+await ins('support_tickets', { id: S.tkI, user_id: U.verI, category: 'general' });
+await ins('support_tickets', { id: S.tkU, user_id: U.verU, category: 'general' });
+await ins('push_tokens', { user_id: U.verI, token: 'ExponentPushToken[ui-user-token]' });
+await ins('client_errors', { user_id: U.verI, message: 'boom' });
+for (const [uid, b, n] of [[U.verI, 'verifications', 'doc.jpg'], [U.verU, 'verifications', 'doc.jpg'], [U.verI, 'resumes', 'cv.pdf'], [U.verI, 'campus-media', 'cover.jpg'], [U.verU, 'campus-media', 'cover.jpg'], [U.verI, 'campus-media', 'globalpost.jpg'], [U.glob, 'campus-media', 'pub.jpg']]) {
+  await db.exec(`INSERT INTO storage.buckets (id, name, public) VALUES ('${b}','${b}',false) ON CONFLICT (id) DO NOTHING`);
+  await db.exec(`INSERT INTO storage.objects (bucket_id, name, owner) VALUES ('${b}','${uid}/${n}','${uid}')`);
+}
+const CAU = { sub: U.campAdminU, email: 'campadmin.u@school.test' };
+const names = async (c, bucket) => (await c.q(`SELECT name FROM storage.objects WHERE bucket_id='${bucket}' ORDER BY name`)).rows.map((x) => x.name);
+
+await check('scope: a Campus Admin and staff cannot READ another campus\'s campus-only content, but see own campus, GLOBAL and global-visibility rows', async () => {
+  for (const who of [CAU, U.staffU]) {
+    await as(who, async (c) => {
+      const posts = (await c.q(`SELECT id FROM public.posts`)).rows.map((x) => x.id);
+      assert(posts.includes(S.postU), 'own-campus post hidden');
+      assert(!posts.includes(S.postI), 'UI campus-only post visible to a UNILAG admin/staff');
+      assert(posts.includes(S.postIglobal), 'global-visibility UI post must stay visible');
+      for (const [t, col, bad] of [['announcements', 'id', S.annI], ['marketplace_listings', 'id', S.mktI], ['jobs', 'id', S.jobI], ['events', 'id', S.evI], ['study_groups', 'id', S.sgI]]) {
+        const rows = (await c.q(`SELECT ${col} FROM public.${t}`)).rows.map((x) => x[col]);
+        assert(!rows.includes(bad), `${t}: UI row visible to a UNILAG admin/staff`);
+      }
+    });
+  }
+});
+await check('scope: a Campus Admin / staff cannot UPDATE or DELETE other-campus rows, and cannot INSERT into another campus; own campus still works', async () => {
+  for (const who of [CAU, U.staffU]) {
+    await as(who, async (c) => {
+      for (const [t, id_] of [['posts', S.postI], ['announcements', S.annI], ['marketplace_listings', S.mktI], ['jobs', S.jobI], ['events', S.evI], ['study_groups', S.sgI]]) {
+        const up = await c.t(`UPDATE public.${t} SET campus_code = campus_code WHERE id='${id_}'`);
+        assert(!up.ok || up.n === 0, `${t}: updated another campus's row`);
+        const del = await c.t(`DELETE FROM public.${t} WHERE id='${id_}'`);
+        assert(!del.ok || del.n === 0, `${t}: deleted another campus's row`);
+      }
+    });
+  }
+  await as(CAU, async (c) => {
+    const ok = await c.t(`UPDATE public.announcements SET campus_code = campus_code WHERE id='${S.annU}'`);
+    assert(ok.ok && ok.n === 1, ok.err?.message || 'own-campus announcement not editable');
+    const okPost = await c.t(`UPDATE public.posts SET campus_code = campus_code WHERE id='${S.postU}'`);
+    assert(okPost.ok && okPost.n === 1, okPost.err?.message || 'own-campus post not editable');
+    const bad = await c.t(`INSERT INTO public.announcements (id, author_id, campus_code, title, body) VALUES ('${id(120)}','${U.campAdminU}','UI','x','x')`);
+    assert(!bad.ok, 'campus admin published an announcement into another campus');
+  });
+});
+await check('scope: child rows follow the parent (comments on another campus\'s post)', async () => {
+  await as(CAU, async (c) => {
+    const ids = (await c.q(`SELECT id FROM public.post_comments`)).rows.map((x) => x.id);
+    assert(!ids.includes(S.cmtI), 'comment on a UI post visible to a UNILAG admin');
+    const del = await c.t(`DELETE FROM public.post_comments WHERE id='${S.cmtI}'`);
+    assert(!del.ok || del.n === 0, 'deleted a comment on another campus');
+    const own = await c.t(`DELETE FROM public.post_comments WHERE id='${S.cmtU}' RETURNING id`);
+    assert(own.ok && own.n === 1, own.err?.message || 'could not moderate an own-campus comment');
+  });
+});
+await check('scope: support tickets by member campus; push tokens / client errors are Super Admin only', async () => {
+  await as(CAU, async (c) => {
+    const tk = (await c.q(`SELECT id FROM public.support_tickets`)).rows.map((x) => x.id);
+    assert(tk.includes(S.tkU) && !tk.includes(S.tkI), `ticket scope wrong: ${tk}`);
+    eq((await c.q(`SELECT count(*)::int n FROM public.push_tokens`)).rows[0].n, 0, 'campus admin reads push tokens');
+    eq((await c.q(`SELECT count(*)::int n FROM public.client_errors`)).rows[0].n, 0, 'campus admin reads client errors');
+  });
+  await as({ sub: U.root, email: ROOT_EMAIL }, async (c) => {
+    assert((await c.q(`SELECT count(*)::int n FROM public.push_tokens`)).rows[0].n >= 1, 'super admin lost push tokens');
+    assert((await c.q(`SELECT count(*)::int n FROM public.support_tickets`)).rows[0].n >= 2, 'super admin lost tickets');
+  });
+  await as(U.verI, async (c) => { assert((await c.q(`SELECT count(*)::int n FROM public.push_tokens`)).rows[0].n === 1, 'owner lost own push token'); });
+});
+await check('scope: students are unaffected (own-campus reads, global posts, own writes)', async () => {
+  await as(U.verU, async (c) => {
+    const posts = (await c.q(`SELECT id FROM public.posts`)).rows.map((x) => x.id);
+    assert(posts.includes(S.postU) && posts.includes(S.postIglobal) && !posts.includes(S.postI), `student post visibility: ${posts.length}`);
+    const own = await c.t(`UPDATE public.posts SET campus_code = campus_code WHERE id='${S.postU}'`);
+    assert(own.ok && own.n === 1, own.err?.message || 'student cannot edit own post');
+  });
+});
+await check('storage: verification documents are readable only by the owner, the Super Admin and the admin of the OWNER\'s campus', async () => {
+  await as(CAU, async (c) => {
+    const n = await names(c, 'verifications');
+    assert(n.includes(`${U.verU}/doc.jpg`), 'campus admin cannot review own-campus evidence');
+    assert(!n.includes(`${U.verI}/doc.jpg`), 'UNILAG admin can read a UI member\'s ID document');
+  });
+  await as(U.verI, async (c) => { eq(await names(c, 'verifications'), [`${U.verI}/doc.jpg`], 'owner view'); });
+  await as({ sub: U.root, email: ROOT_EMAIL }, async (c) => { eq((await names(c, 'verifications')).length, 2); });
+  await as(CAU, async (c) => {
+    const del = await c.t(`DELETE FROM storage.objects WHERE bucket_id='verifications' AND name='${U.verI}/doc.jpg'`);
+    assert(!del.ok || del.n === 0, 'campus admin deleted another campus\'s ID document');
+  });
+});
+await check('storage: résumés are not readable by an admin of another campus', async () => {
+  await as(CAU, async (c) => { eq(await names(c, 'resumes'), [], 'UNILAG admin read a UI résumé'); });
+  await as({ sub: id(9), email: 'campadmin.i@school.test' }, async (c) => { eq(await names(c, 'resumes'), [`${U.verI}/cv.pdf`]); });
+});
+await check('storage: campus-media is no longer readable across campuses by verified members; global content and own campus still work', async () => {
+  await as(U.verU, async (c) => {
+    const n = await names(c, 'campus-media');
+    assert(n.includes(`${U.verU}/cover.jpg`), 'own upload hidden');
+    assert(n.includes(`${U.glob}/pub.jpg`), 'GLOBAL member media hidden');
+    assert(n.includes(`${U.verI}/globalpost.jpg`), 'media of a global-visibility post must stay readable cross-campus');
+    if (n.includes(`${U.verI}/cover.jpg`)) {
+      const d = await c.q(`SELECT public.storage_owner_campus('${U.verI}/cover.jpg') oc, public.auth_campus_access() a, public.can_admin_campus('UI') adm, public.auth_is_super_admin() sa, (SELECT role::text||'/'||campus_code FROM public.profiles WHERE id='${U.verU}') me`);
+      const nm = `${U.verI}/cover.jpg`;
+      const probes = {};
+      probes.posts = (await c.su(`SELECT count(*)::int n FROM public.posts p WHERE (p.visibility_scope='global' OR p.campus_code IS NULL OR p.campus_code='GLOBAL') AND (public.media_ref_matches(p.image_url,'${nm}') OR public.media_ref_matches(p.video_url,'${nm}'))`)).rows[0].n;
+      probes.events = (await c.su(`SELECT count(*)::int n FROM public.events e WHERE public.media_ref_matches(e.banner_url,'${nm}')`)).rows[0].n;
+      probes.mkt = (await c.su(`SELECT count(*)::int n FROM public.marketplace_listings m WHERE public.media_ref_matches(m.image_url,'${nm}') OR public.media_ref_matches(m.image_path,'${nm}')`)).rows[0].n;
+      probes.giving = (await c.su(`SELECT count(*)::int n FROM public.giving_campaigns g WHERE public.media_ref_matches(g.cover_image_url,'${nm}')`)).rows[0].n;
+      probes.policies = (await c.su(`SELECT string_agg(policyname,' | ') s FROM pg_policies WHERE schemaname='storage' AND cmd='SELECT'`)).rows[0].s;
+      throw new Error('UNILAG member can read UI campus media: ' + JSON.stringify(d.rows[0]) + JSON.stringify(probes));
+    }
+  });
+  await as(U.unvU, async (c) => { // unverified: GLOBAL + referenced global content only
+    const n = await names(c, 'campus-media');
+    assert(n.includes(`${U.glob}/pub.jpg`) && n.includes(`${U.verI}/globalpost.jpg`), 'unverified member lost global media');
+    assert(!n.includes(`${U.verU}/cover.jpg`), 'unverified member can read campus media');
+  });
+  await as(CAU, async (c) => {
+    const n = await names(c, 'campus-media');
+    assert(n.includes(`${U.verU}/cover.jpg`) && !n.includes(`${U.verI}/cover.jpg`), `campus admin media scope: ${n}`);
+  });
+});
+await check('Role Permissions are enforced for forum posts and comments (can_post_forum / can_comment_forum)', async () => {
+  await db.exec('BEGIN');
+  try {
+    await db.exec(`UPDATE public.role_permissions SET enabled=false WHERE role='student' AND permission_key IN ('can_post_forum','can_comment_forum')`);
+    await db.exec(`SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claims', '{"sub":"${U.verU}","role":"authenticated"}', true); SELECT set_config('request.jwt.claim.sub','${U.verU}', true)`);
+    await db.exec('SAVEPOINT s1');
+    let blocked = false;
+    try { await db.exec(`INSERT INTO public.posts (id, author_id, campus_code, visibility_scope, audience_scope, status, title, content) VALUES ('${id(130)}','${U.verU}','UNILAG','campus','global','published','t','c')`); } catch (e) { blocked = /row-level security/i.test(e.message) || /permission/i.test(e.message); await db.exec('ROLLBACK TO s1'); }
+    assert(blocked, 'a student posted although can_post_forum is off');
+  } finally { await db.exec('ROLLBACK'); }
+});
+await check('the default permission matrix does not block normal behaviour for any role (post / comment / list / message)', async () => {
+  const r = await db.query(`SELECT role, permission_key, enabled FROM public.role_permissions WHERE permission_key IN ('can_post_forum','can_comment_forum','can_list_marketplace','can_send_messages') AND enabled = false ORDER BY 1,2`);
+  // informational: any disabled default is reported so the owner can decide; only fail if a role that has the feature is off
+  const offenders = r.rows.filter((x) => ['student', 'campus_admin', 'staff', 'super_admin'].includes(x.role) && !(x.role === 'staff' && x.permission_key === 'can_list_marketplace'));
+  assert(offenders.length === 0, `default matrix disables features roles use: ${JSON.stringify(offenders)}`);
+});
+await check('scope completion is idempotent (second run)', async () => {
+  await db.exec((await import('node:fs')).readFileSync(resolve(ROOT, REMEDIATION_2), 'utf8'));
+});
+
+await check('optional MFA switch: OFF changes nothing; ON requires AAL2 only for admins with a verified factor', async () => {
+  await db.exec(`CREATE TABLE IF NOT EXISTS auth.mfa_factors (id uuid DEFAULT gen_random_uuid(), user_id uuid, status text)`);
+  const probe = (who) => as(who, async (c) => (await c.q(`SELECT public.can_admin_campus('UNILAG') AS v`)).rows[0].v);
+  const admin = { sub: U.campAdminU, email: 'campadmin.u@school.test' };
+  try {
+    await db.exec(`INSERT INTO auth.mfa_factors (user_id, status) VALUES ('${U.campAdminU}', 'verified')`);
+    eq(await probe(admin), true, 'switch off must not change anything');
+    await db.exec(`INSERT INTO public.platform_settings (key, value) VALUES ('admin_mfa_required','{"enabled": true}') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`);
+    eq(await probe(admin), false, 'enrolled admin on aal1 must lose authority when the switch is on');
+    eq(await probe({ ...admin, aal: 'aal2' }), true, 'aal2 session must keep authority');
+    eq(await probe({ sub: U.staffU, email: 'staff.u@school.test' }), true, 'a staff member with no factor must not be locked out');
+  } finally {
+    await db.exec(`DELETE FROM public.platform_settings WHERE key = 'admin_mfa_required'; DELETE FROM auth.mfa_factors`);
+  }
+});
+
+await check('live diagnostic script runs and the "applied" section reports all three migrations', async () => {
+  const sql = (await import('node:fs')).readFileSync(resolve(ROOT, 'supabase/diagnostics/audit_live_state.sql'), 'utf8');
+  const res = await db.exec(sql);
+  const rows = res[res.length - 1].rows;
+  const g = rows.filter((r) => r.section === 'G applied');
+  assert(g.length >= 8, `expected 8 G rows, got ${g.length}`);
+  const bad = g.filter((r) => String(r.value).startsWith('ERROR:'));
+  assert(bad.length === 0, `G rows errored: ${JSON.stringify(bad)}`);
+  const get = (s) => g.find((r) => r.item.includes(s)).value;
+  eq(get('can_read_media_object'), 'true', 'media helper');
+  eq(get('admin_aal2_ok() exists'), 'true', '2fa helper');
+  assert(Number(get('restrictive scope_')) >= 40, `restrictive policy count ${get('restrictive scope_')}`);
+  eq(get('role_permission_insert'), '4', 'role_permission_insert');
 });
 
 // --------------------------------------------------------------------------- 9. nothing else broke

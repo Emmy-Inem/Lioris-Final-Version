@@ -73,46 +73,6 @@ interface DirectoryUser {
   adminRole?: 'super_admin' | 'campus_admin' | null;
 }
 
-/**
- * Cryptographically random one-time password (never shown to anyone - the user
- * sets their own via the invitation / password-reset email).
- */
-function generateSecureTempPassword(): string {
- const cryptoObj = (globalThis as any).crypto as Crypto | undefined;
- if (!cryptoObj || typeof cryptoObj.getRandomValues !== 'function') {
- throw new Error('A secure random number generator is not available on this device, so an account cannot be provisioned safely.');
- }
- const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
- const lower = 'abcdefghijkmnopqrstuvwxyz';
- const digits = '23456789';
- const special = '!@#$%^&*-_=+?';
- const all = upper + lower + digits + special;
- const pick = (set: string, n: number) => {
- // Rejection sampling to avoid modulo bias.
- const out: string[] = [];
- const limit = 256 - (256 % set.length);
- while (out.length < n) {
- const buf = cryptoObj.getRandomValues(new Uint8Array(n * 2));
- for (let i = 0; i < buf.length && out.length < n; i++) {
- if (buf[i] < limit) out.push(set[buf[i] % set.length]);
- }
- }
- return out;
- };
- const chars = [...pick(upper, 2), ...pick(lower, 2), ...pick(digits, 2), ...pick(special, 2), ...pick(all, 16)];
- // Fisher-Yates shuffle with secure randomness.
- for (let i = chars.length - 1; i > 0; i--) {
- const limit = 256 - (256 % (i + 1));
- let r = 0;
- do {
- r = cryptoObj.getRandomValues(new Uint8Array(1))[0];
- } while (r >= limit);
- const j = r % (i + 1);
- [chars[i], chars[j]] = [chars[j], chars[i]];
- }
- return chars.join('');
-}
-
 const ROLE_FILTERS = ['All Roles', 'Ambassadors', 'Student', 'Alumni', 'Staff', 'Admin'];
 const ALL_CAMPUSES = 'All Campuses';
 
@@ -460,63 +420,31 @@ export default function UserDirectoryScreen() {
   let userId: string | null = null;
 
  try {
- const tempPassword = generateSecureTempPassword();
- const { createClient } = await import('@supabase/supabase-js');
- const { SUPABASE_URL, SUPABASE_ANON_KEY, supabase } = await import('@/api/supabase');
-
- // Use an isolated client instance without session persistence to prevent overwriting admin session
- const isolatedAuthClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
- auth: {
- persistSession: false,
- autoRefreshToken: false,
- detectSessionInUrl: false,
- },
- });
-
-  const { data, error } = await isolatedAuthClient.auth.signUp({
-  email,
-  password: tempPassword,
-  options: {
-  data: {
-  full_name: newFullName.trim(),
-  username,
-  role: newRole.toLowerCase(),
-  campus_code: targetCampus,
-  department: newDepartment.trim() || 'General Studies',
-  },
-  },
+  // Accounts are created on the SERVER (admin-create-user edge function): it checks that a Campus Admin can
+  // only create members of their own campus, creates the login with the service role (no CAPTCHA / public
+  // sign-up limits on an admin's request), completes the profile and sends the invitation e-mail.
+  const { supabase } = await import('@/api/supabase');
+  const { readEdgeFunctionError } = await import('@/api/auth');
+  const { data: created, error: createError } = await supabase.functions.invoke('admin-create-user', {
+    body: {
+      email,
+      fullName: newFullName.trim(),
+      role: newRole.toLowerCase(),
+      campusCode: targetCampus,
+      department: newDepartment.trim() || undefined,
+      matricNo: matricNo || undefined,
+      adminRole: currentUser?.isSuperAdmin && newRole === 'Admin' ? newAdminRole : undefined,
+    },
   });
-
-  if (error || !data?.user?.id) {
-  throw new Error(error?.message || 'The account could not be created.');
+  if (createError) {
+    throw await readEdgeFunctionError(createError, 'The account could not be created. Please try again.');
   }
-  userId = data.user.id;
-
-  // Admins have full profile access under RLS; a failure here means the
-  // account exists but its profile fields are incomplete - say so.
-  const profilePayload: Record<string, any> = {
-    id: userId,
-    email,
-    full_name: newFullName.trim(),
-    username,
-    role: newRole.toLowerCase(),
-    campus_code: targetCampus,
-    department: newDepartment.trim() || 'General Studies',
-    student_id_number: matricNo || null,
-    verification_status: 'verified',
-    is_suspended: false,
+  userId = (created as { userId?: string } | null)?.userId ?? null;
+  if (!userId) throw new Error('The account could not be created. Please try again.');
+  const invite = {
+    success: (created as { inviteSent?: boolean }).inviteSent === true,
+    message: 'the invitation e-mail could not be sent',
   };
-  if (currentUser?.isSuperAdmin && newRole === 'Admin') {
-    profilePayload.admin_role = newAdminRole;
-  }
-  const { error: profileError } = await supabase.from('profiles').upsert(profilePayload);
-  if (profileError) {
-  throw new Error(`The login was created but its profile could not be completed (${profileError.message}). Review it in the directory.`);
-  }
-
-  // The temporary password is never displayed: the user receives a
-  // password-reset / invitation email and chooses their own.
-  const invite = await adminTriggerPasswordReset(email);
 
   const newUser: DirectoryUser = {
   id: userId,
@@ -536,14 +464,7 @@ export default function UserDirectoryScreen() {
   };
   setUsers((prev) => [newUser, ...prev]);
 
-  recordAuditLogEntry({
-  action: 'verification_approved',
-  summary: `Created new ${newRole} account for ${newUser.fullName}${newUser.matricNo ? ` (${newUser.matricNo})` : ''} on ${targetCampus}`,
-  targetType: 'user',
-  targetId: newUser.id,
-  institutionCode: targetCampus,
-  reason: 'Admin provisioned university account',
-  });
+  // The edge function already wrote the audit entry (actor, role, campus).
 
  setCreateModalOpen(false);
  setNewFullName('');

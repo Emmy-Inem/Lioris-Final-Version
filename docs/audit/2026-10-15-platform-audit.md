@@ -58,8 +58,13 @@ Legend: **[fixed]** code/SQL in this change, covered by tests. **[confirm]** nee
   only their own real campus, never GLOBAL/NULL, never while suspended); profiles, verifications,
   resources, events, audit_logs, campuses and storage rewritten on it; Campus Admins can no longer delete or
   transfer members; admin tier is normalised (an admin with NULL `admin_role` becomes `campus_admin`).
-* **[open]** The remaining **89 policies on 40 tables** still treat any admin as global. They need the same
-  treatment table by table (the helper is in place); the diagnostic lists them.
+* The remaining 89 policies were closed by migration `20261029000000_admin_scope_completion.sql`
+  [fixed] [confirm]: instead of rewriting each one it adds a RESTRICTIVE policy per table (ANDed with the
+  existing permissive ones) so a Campus Admin / staff member can only read or write rows of their own
+  campus (posts, events, announcements, jobs, marketplace, study groups, moderation queue, analytics, portal
+  links, giving campaigns, communities, plus their child tables), and only a Super Admin touches push
+  tokens, client errors, consent records, waitlist, blocks and partnerships. Students are unaffected.
+  chat_* tables stay membership-governed on purpose.
 
 ### C3 - Resource files: cross-campus leak, and "unable to download"  [fixed] [confirm]
 Database:
@@ -144,7 +149,11 @@ deleting a row sets members' `campus_code` to NULL. Now Super Admin only.
 `can_download_resources`, `can_upload_resources`, `can_verify_students`... are read only by the editor screen.
 No client code or SQL consulted them, so the Super Admin could toggle a permission and nothing changed - an
 "admin sync" illusion. `has_role_permission()` now enforces download, upload and verify in the database.
-**[open]** the other 19 keys are still decorative.
+Migration `20261029` also enforces `can_post_forum`, `can_comment_forum`, `can_list_marketplace` and
+`can_send_messages` on insert. **[open, deliberately]** the other ~15 keys stay decorative: the seeded
+defaults contradict shipped behaviour (e.g. students can propose events although `can_create_events` is
+false for students), so enforcing them would break working features. Decide each default, then add its
+`role_permission_insert` policy (one line per table in the migration).
 
 ### H6 - Onboarding / authentication client bugs  [fixed]
 | Symptom reported | Cause | Fix |
@@ -180,7 +189,12 @@ both keys). The diagnostic reports both facts for production.
   (shared phones), and tried to write `verified` to the profile. [fixed]
 * **M5** Admin "create user" fabricated a random `CAMPUS/2026/NNNN` student number and stored it. [fixed]
   It also creates accounts with the public key (`signUp`), so captcha / rate limits / two e-mails apply.
-  **[open]** should be an edge function with the service role.
+  Now the `admin-create-user` edge function [fixed]: authority is checked on the server (Super Admin: any
+  campus/role; Campus Admin: own campus, student/alumni/staff only), the account is created with the
+  service role and confirmed, the profile is completed or the user is rolled back, the person gets a
+  "choose your password" e-mail, no matric number is invented, and an audit row is written.
+  **Deploy it** (`supabase functions deploy admin-create-user`); the admin screen no longer creates users
+  from the browser.
 * **M6** `audit_logs` policy treated GLOBAL-campus admins as super admins and read `profiles.email`. [fixed]
 
 ## Needs a decision or live access  [open]
@@ -188,17 +202,22 @@ both keys). The diagnostic reports both facts for production.
 1. **Migration provenance.** Two migration systems and no single baseline. Once the live schema is
    readable, take a `supabase db pull` baseline and retire the root files. (The harness cannot know which
    were applied.)
-2. **89 other policies (40 tables)** that grant any admin global power (list in the diagnostic, section C).
-3. **`campus-media` bucket** is still "any verified member of any campus"; needs a media -> post/event
-   lookup like the one built for `resources`.
-4. **Owner e-mail hard-coded** in ~15 SQL functions, the client and the edge functions as a Super Admin
+2. ~~89 other policies~~ [fixed] and ~~`campus-media` bucket~~ [fixed] by migration `20261029`
+   (`can_read_media_object()`: own folder, own-campus admin, own campus, or referenced by a global post /
+   event / marketplace listing / giving campaign / chat the caller belongs to).
+3. **Owner e-mail hard-coded** in 5 SQL functions, the client and the edge functions as a Super Admin
    bootstrap. Convenient, but the mailbox is a master key; prefer `admin_role` alone once the roster is
-   confirmed.
-5. **Native sign-up/sign-in and CAPTCHA.** The Turnstile widget is web-only. If Supabase CAPTCHA protection
-   is ON, native sign-ups and logins cannot succeed. Dashboard check (not visible from SQL).
-6. **MFA** is a client flag; edge functions require AAL2 only for admins who enrolled a factor, and no RLS
-   policy checks AAL2.
-7. Feature flags (`FeatureFlagsContext`) hide tabs but do not block routes or data.
+   confirmed (then delete the e-mail comparison in `auth_is_super_admin()`).
+4. **Native sign-up/sign-in and CAPTCHA.** The Turnstile widget is web-only. If Supabase CAPTCHA protection
+   is ON, native sign-ups and logins cannot succeed. Dashboard check (not visible from SQL): leave CAPTCHA
+   OFF for native or ship a WebView widget (react-native-webview is already installed) - not done here
+   because it cannot be tested without a device and the live CAPTCHA keys.
+5. **MFA** is now optional in the database [fixed, off by default]: migration `20261030` adds
+   `admin_aal2_ok()`; once every admin has enrolled (diagnostic row "admins who already enrolled") run
+   `INSERT INTO platform_settings (key, value) VALUES ('admin_mfa_required', '{"enabled": true}') ON CONFLICT
+   (key) DO UPDATE SET value = EXCLUDED.value;` and enrolled admins need an AAL2 session to hold any admin
+   authority. Admins without a factor are never locked out.
+6. Feature flags (`FeatureFlagsContext`) hide tabs but do not block routes or data (UX only by design).
 
 ## Rollout order
 
@@ -207,8 +226,11 @@ both keys). The diagnostic reports both facts for production.
 3. In the diagnostic's ADMIN ROSTER, make sure every platform-wide administrator has
    `admin_role = 'super_admin'` (the migration prints the roster as NOTICEs and turns NULL into
    `campus_admin`).
-4. Apply `supabase/migrations/20261028000000_audit_remediation.sql`.
-5. Re-run the diagnostic: every "(must be false)" row must read false.
+4. Deploy `admin-create-user` too (`supabase functions deploy admin-create-user`), then paste
+   `supabase/manual/02_apply_fixes.sql` into the SQL editor (migrations 20261028 + 20261029 + 20261030,
+   one run, each its own transaction, safe to re-run).
+5. Re-run the diagnostic (`03_verify_after.sql`): every "(must be false)" row must read false and section
+   G must show `true` / counts as labelled. See `supabase/manual/README.md`.
 6. Ship the app/web build. It works before and after step 4 (it falls back to the old calls while the new
    functions are missing).
 7. Smoke test: student downloads a GLOBAL file (unverified) and a campus file (verified); campus admin sees
@@ -216,5 +238,5 @@ both keys). The diagnostic reports both facts for production.
 
 ## Tests added
 * `tools/sql-harness/audit-remediation.mjs` (`npm run audit` / `npm run audit:before` in
-  `tools/sql-harness`): 42 behavioural checks as anon / student / staff / Campus Admin / Super Admin.
+  `tools/sql-harness`): 55 behavioural checks as anon / student / staff / Campus Admin / Super Admin.
 * `src/utils/fileNames.test.ts`, updated `src/utils/verificationGate.test.ts`.

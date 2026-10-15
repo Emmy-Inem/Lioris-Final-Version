@@ -155,7 +155,25 @@ FROM (VALUES
   ('F permissions', 'download / upload / verify toggles per role',
      pg_temp.q($q$ SELECT string_agg(role || '.' || permission_key || '=' || enabled::text, ', ' ORDER BY role, permission_key) FROM public.role_permissions WHERE permission_key IN ('can_download_resources','can_upload_resources','can_verify_students') $q$)),
   ('F permissions', 'has_role_permission() exists (permissions enforced in the database)',
-     pg_temp.q($q$ SELECT (to_regprocedure('public.has_role_permission(text)') IS NOT NULL)::text $q$))
+     pg_temp.q($q$ SELECT (to_regprocedure('public.has_role_permission(text)') IS NOT NULL)::text $q$)),
+
+  -- ---------------------------------------------------------------- G. migrations 20261028 / 29 / 30 applied?
+  ('G applied', '20261028 audit_remediation: can_admin_campus() exists',
+     pg_temp.q($q$ SELECT (to_regprocedure('public.can_admin_campus(text)') IS NOT NULL)::text $q$)),
+  ('G applied', '20261028 audit_remediation: submit_verification_request() exists',
+     pg_temp.q($q$ SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname='submit_verification_request' AND pronamespace='public'::regnamespace)::text $q$)),
+  ('G applied', '20261029 scope completion: can_read_media_object() exists',
+     pg_temp.q($q$ SELECT (to_regprocedure('public.can_read_media_object(text)') IS NOT NULL)::text $q$)),
+  ('G applied', '20261029 scope completion: restrictive scope_* policies (expect ~50+)',
+     pg_temp.q($q$ SELECT count(*)::text FROM pg_policies WHERE schemaname='public' AND policyname LIKE 'scope\_%' AND permissive = 'RESTRICTIVE' $q$)),
+  ('G applied', '20261029 scope completion: role_permission_insert policies (expect 4)',
+     pg_temp.q($q$ SELECT count(*)::text FROM pg_policies WHERE schemaname='public' AND policyname = 'role_permission_insert' $q$)),
+  ('G applied', '20261030 optional 2FA switch: admin_aal2_ok() exists',
+     pg_temp.q($q$ SELECT (to_regprocedure('public.admin_aal2_ok()') IS NOT NULL)::text $q$)),
+  ('G applied', '20261030 optional 2FA switch: current setting (none = off)',
+     pg_temp.q($q$ SELECT value::text FROM public.platform_settings WHERE key = 'admin_mfa_required' $q$)),
+  ('G applied', 'admins who already enrolled a verified 2FA factor (safe to switch the 2FA requirement on once all admins are here)',
+     pg_temp.q($q$ SELECT count(DISTINCT f.user_id)::text || ' of ' || (SELECT count(*) FROM public.profiles WHERE role::text='admin')::text FROM auth.mfa_factors f JOIN public.profiles p ON p.id=f.user_id WHERE f.status::text='verified' AND p.role::text='admin' $q$))
 ) AS t(section, item, value)
 ORDER BY section, item;
 
@@ -168,5 +186,5 @@ ORDER BY section, item;
 --   Authentication -> URL Configuration: Site URL and every Redirect URL (web origin + app scheme)
 --   Authentication -> Email Templates: "Confirm signup" shows {{ .Token }} (6-digit code)?
 --   Project Settings -> API: is the legacy `service_role` key ever shipped in the client? (it must not be)
---   Edge Functions: is `login-with-username` deployed? ALLOWED_ORIGINS includes your web origin(s)?
+--   Edge Functions: are `login-with-username` and `admin-create-user` deployed? ALLOWED_ORIGINS includes your web origin(s)?
 -- ============================================================================

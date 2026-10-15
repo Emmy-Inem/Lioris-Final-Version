@@ -57,18 +57,36 @@ $do$;
 -- ----------------------------------------------------------------------------
 -- auth_is_super_admin(): role = admin AND admin_role = super_admin, or the root
 -- account (kept as a bootstrap so the owner can never be locked out).
+-- admin_aal2_ok(): hook for the OPTIONAL two-factor requirement (migration 20261030000000 replaces this body).
+-- Created only if absent, so re-running this file never undoes that migration. Permissive until then.
+DO $mfa$
+BEGIN
+  IF to_regprocedure('public.admin_aal2_ok()') IS NULL THEN
+    EXECUTE $f$
+      CREATE FUNCTION public.admin_aal2_ok() RETURNS boolean
+      LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp
+      AS 'SELECT true'
+    $f$;
+    REVOKE ALL ON FUNCTION public.admin_aal2_ok() FROM PUBLIC, anon;
+    GRANT EXECUTE ON FUNCTION public.admin_aal2_ok() TO authenticated, service_role;
+  END IF;
+END
+$mfa$;
+
 CREATE OR REPLACE FUNCTION public.auth_is_super_admin()
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-  SELECT COALESCE((
-    SELECT (p.role::text = 'admin' AND p.admin_role = 'super_admin')
-        OR LOWER(COALESCE(p.email, '')) = 'inememmanuel@gmail.com'
-    FROM public.profiles p
-    WHERE p.id = auth.uid()
-  ), false)
-  OR LOWER(COALESCE(auth.jwt() ->> 'email', '')) = 'inememmanuel@gmail.com';
+  SELECT (
+    COALESCE((
+      SELECT (p.role::text = 'admin' AND p.admin_role = 'super_admin')
+          OR LOWER(COALESCE(p.email, '')) = 'inememmanuel@gmail.com'
+      FROM public.profiles p
+      WHERE p.id = auth.uid()
+    ), false)
+    OR LOWER(COALESCE(auth.jwt() ->> 'email', '')) = 'inememmanuel@gmail.com'
+  ) AND public.admin_aal2_ok();
 $$;
 
 -- is_super_admin() used to be a second, LOOSER definition (role = 'admin'). Both
@@ -95,16 +113,19 @@ LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
   SELECT public.auth_is_super_admin()
-      OR COALESCE((
-           SELECT p.role::text IN ('admin', 'staff')
-              AND p.campus_code IS NOT NULL
-              AND p.campus_code <> 'GLOBAL'
-              AND p_campus IS NOT NULL
-              AND p.campus_code = p_campus
-              AND NOT COALESCE(p.is_suspended, false)
-           FROM public.profiles p
-           WHERE p.id = auth.uid()
-         ), false);
+      OR (
+        COALESCE((
+          SELECT p.role::text IN ('admin', 'staff')
+             AND p.campus_code IS NOT NULL
+             AND p.campus_code <> 'GLOBAL'
+             AND p_campus IS NOT NULL
+             AND p.campus_code = p_campus
+             AND NOT COALESCE(p.is_suspended, false)
+          FROM public.profiles p
+          WHERE p.id = auth.uid()
+        ), false)
+        AND public.admin_aal2_ok()
+      );
 $$;
 
 REVOKE ALL ON FUNCTION public.can_admin_campus(text) FROM PUBLIC;
@@ -1012,13 +1033,17 @@ GRANT EXECUTE ON FUNCTION public.can_read_resource_object(text) TO authenticated
 DO $do$
 BEGIN
   DROP POLICY IF EXISTS "Campus media and resources viewable by verified members" ON storage.objects;
+  -- 20261029 replaces this with a per-object rule (can_read_media_object). Re-running THIS file after
+  -- that migration must not re-open the bucket, so the interim rule is only created when it is absent.
   DROP POLICY IF EXISTS "Campus media viewable by verified members" ON storage.objects;
-  CREATE POLICY "Campus media viewable by verified members" ON storage.objects
-    FOR SELECT TO authenticated
-    USING (
-      bucket_id = 'campus-media'
-      AND (public.auth_is_verified_member() OR (storage.foldername(name))[1] = auth.uid()::text)
-    );
+  IF to_regprocedure('public.can_read_media_object(text)') IS NULL THEN
+    CREATE POLICY "Campus media viewable by verified members" ON storage.objects
+      FOR SELECT TO authenticated
+      USING (
+        bucket_id = 'campus-media'
+        AND (public.auth_is_verified_member() OR (storage.foldername(name))[1] = auth.uid()::text)
+      );
+  END IF;
 
   DROP POLICY IF EXISTS "Resource files readable by entitled members" ON storage.objects;
   CREATE POLICY "Resource files readable by entitled members" ON storage.objects
