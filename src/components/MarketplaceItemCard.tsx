@@ -149,8 +149,8 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  try {
  const conversation = await getOrCreateConversationWithUser(item.sellerId, item.sellerName, item.sellerAvatarUrl);
  router.push(`/${roleGroup}/messages/${conversation.id}` as any);
- } catch {
- Alert.alert('Conversation Initiated', `Opening chat thread with ${item.sellerName}`);
+ } catch (err) {
+ Alert.alert('Could not open the chat', err instanceof Error && err.message ? err.message : 'Please try again in a moment.');
  } finally {
  setMessaging(false);
  }

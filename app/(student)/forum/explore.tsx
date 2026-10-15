@@ -41,7 +41,7 @@ export default function ExploreForumsScreen() {
   const showAllCampuses = isSuperAdmin && (!activeCampus || activeCampus === 'GLOBAL');
   const effectiveCampus = showAllCampuses
     ? 'ALL'
-    : (activeCampus && activeCampus !== 'GLOBAL') ? activeCampus : (homeInstitutionCode || 'UNILAG');
+    : (activeCampus && activeCampus !== 'GLOBAL') ? activeCampus : (homeInstitutionCode || user?.campusCode || 'GLOBAL');
   const isGlobalActive = globalEnabled && forumScope === 'global';
 
   const { data: profile } = useQuery({

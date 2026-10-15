@@ -62,6 +62,10 @@ export function IncomingCallListener() {
     const myId = userIdRef.current;
     if (!myId || !row?.content || row.sender_id === myId) return;
     if (!isCallMessage(row.content)) return;
+    // The realtime feed also delivers UPDATEs (opening a chat marks old messages read). A call invitation
+    // that is more than a minute old, or already read, is a dead call - never ring for it.
+    const ageMs = Date.now() - new Date(row.created_at ?? Date.now()).getTime();
+    if (row.is_read === true || (Number.isFinite(ageMs) && ageMs > 60_000)) return;
 
     const conv = conversationsRef.current?.find((c) => c.id === row.channel_id);
     if (!conv) return; // not a channel this user belongs to

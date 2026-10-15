@@ -90,9 +90,25 @@ export async function listConversations(): Promise<Conversation[]> {
       try {
         const { data: archivedRows } = await supabase
           .from('chat_channel_archives')
-          .select('channel_id')
+          .select('channel_id, archived_at')
           .eq('user_id', currentUserId);
-        archivedChannelIds = new Set((archivedRows ?? []).map((r: any) => r.channel_id));
+        // An archived chat stays hidden only until someone writes in it again: before this, archiving was
+        // permanent and a friend's later replies never surfaced (not even in the unread badge).
+        const newestByChannel = new Map<string, number>();
+        for (const row of data ?? []) {
+          for (const m of (row as any).chat_messages ?? []) {
+            const ts = new Date(m.created_at).getTime();
+            if (ts > (newestByChannel.get((row as any).id) ?? 0)) newestByChannel.set((row as any).id, ts);
+          }
+        }
+        archivedChannelIds = new Set(
+          (archivedRows ?? [])
+            .filter((r: any) => {
+              const archivedAt = r.archived_at ? new Date(r.archived_at).getTime() : 0;
+              return (newestByChannel.get(r.channel_id) ?? 0) <= archivedAt;
+            })
+            .map((r: any) => r.channel_id),
+        );
       } catch (archiveErr) {
         console.warn('[Messaging] Failed to load archived channels:', archiveErr);
       }
@@ -208,12 +224,9 @@ export async function archiveConversation(id: string): Promise<void> {
     }
 
     if (currentUserId) {
-      await supabase
-        .from('chat_channel_archives')
-        .upsert(
-          { channel_id: id, user_id: currentUserId },
-          { onConflict: 'channel_id,user_id', ignoreDuplicates: true },
-        );
+      // Replace any older marker so archived_at is "now" (the list un-hides a chat that gets newer messages).
+      await supabase.from('chat_channel_archives').delete().eq('channel_id', id).eq('user_id', currentUserId);
+      await supabase.from('chat_channel_archives').insert({ channel_id: id, user_id: currentUserId, archived_at: new Date().toISOString() });
     }
   } catch {
     // Session fallback
@@ -261,6 +274,8 @@ export async function getOrCreateConversationWithUser(
 
         if (shared && shared.length > 0) {
           const channelId = shared[0].channel_id;
+          // Opening a chat with this person again un-archives it.
+          void supabase.from('chat_channel_archives').delete().eq('channel_id', channelId).eq('user_id', currentUserId).then(() => {}, () => {});
           const found: Conversation = {
             id: channelId,
             participantId: userId,
@@ -296,7 +311,7 @@ export async function getOrCreateConversationWithUser(
 
   try {
     // 1. Insert chat channel
-    await supabase.from('chat_channels').insert({
+    const { error: channelError } = await supabase.from('chat_channels').insert({
       id: convId,
       name: userName,
       is_direct_message: true,
@@ -304,6 +319,11 @@ export async function getOrCreateConversationWithUser(
       created_at: now,
       updated_at: now,
     });
+    // Signed in: a refused insert (blocked, suspended, permission off) is a real failure. Opening a "ghost"
+    // chat that can never deliver anything is worse than saying so.
+    if (channelError && currentUserId) {
+      throw new Error('Could not start this conversation right now. Please try again.');
+    }
 
     // 2. Enroll both members in chat_channel_members
     const memberRows: { channel_id: string; user_id: string }[] = [];
@@ -316,9 +336,11 @@ export async function getOrCreateConversationWithUser(
         .upsert(memberRows, { onConflict: 'channel_id,user_id', ignoreDuplicates: true });
       if (memberError) {
         console.warn('[Messaging] Channel member enrollment warning:', memberError.message);
+        if (currentUserId) throw new Error('Could not start this conversation right now. Please try again.');
       }
     }
   } catch (err) {
+    if (currentUserId) throw err instanceof Error ? err : new Error('Could not start this conversation right now. Please try again.');
     console.warn('[Messaging] Supabase channel creation fallback:', err);
   }
 

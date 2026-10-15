@@ -83,6 +83,8 @@ export function EventDetailScreen() {
   const { user } = useAuth();
   const toast = useToast();
   const roleGroup = user?.role ? `(${user.role})` : '(student)';
+  // A push-notification or shared-link cold start has no history: Back must still go somewhere.
+  const goBackSafely = () => (router.canGoBack() ? router.back() : router.replace(`/${roleGroup}/events-list` as any));
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
 
@@ -709,7 +711,7 @@ export function EventDetailScreen() {
             marginBottom: spacing.lg,
           }}
         >
-          <Pressable onPress={() => router.back()} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Pressable onPress={goBackSafely} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
             <AppText weight="bold" variant="bodySmall">
               Back to Events Hub
@@ -1421,7 +1423,7 @@ export function EventDetailScreen() {
             {/* Floating Navigation Controls */}
             <View style={{ position: 'absolute', top: 44, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Pressable accessibilityRole="button" accessibilityLabel="Go back"
-                onPress={() => router.back()}
+                onPress={goBackSafely}
                 style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Ionicons name="chevron-back" size={24} color="#FFFFFF" />

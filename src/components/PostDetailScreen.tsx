@@ -1,5 +1,6 @@
-import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, findNodeHandle, Modal, Platform, Pressable, ScrollView, TextInput, UIManager, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Dimensions, findNodeHandle, Keyboard, Modal, Platform, Pressable, ScrollView, TextInput, UIManager, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from'expo-image';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams, useSegments } from'expo-router';
@@ -74,6 +75,21 @@ export function PostDetailScreen() {
   };
   const { isDesktop, contentMaxWidth } = useResponsive();
   const { user } = useAuth();
+  // The reply bar is pinned to the bottom of the screen: on iOS it must rise with the keyboard (Android resizes
+  // the window itself) and clear the home indicator when the keyboard is closed.
+  const safeInsets = useSafeAreaInsets();
+  const [keyboardLift, setKeyboardLift] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return undefined;
+    const change = Keyboard.addListener('keyboardWillChangeFrame', (e) => {
+      setKeyboardLift(Math.max(0, Dimensions.get('window').height - e.endCoordinates.screenY));
+    });
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKeyboardLift(0));
+    return () => {
+      change.remove();
+      hide.remove();
+    };
+  }, []);
   const queryClient = useQueryClient();
 
   const { data: post, isLoading: postLoading } = useQuery({
@@ -955,14 +971,15 @@ export function PostDetailScreen() {
         <View
           style={{
             position: 'absolute',
-            bottom: 0,
+            bottom: keyboardLift,
             left: 0,
             right: 0,
             backgroundColor: isDark ? 'rgba(10, 19, 38, 0.96)' : 'rgba(255, 255, 255, 0.98)',
             borderTopWidth: 1,
             borderColor: colors.border,
             paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
+            paddingTop: spacing.sm,
+            paddingBottom: keyboardLift > 0 ? spacing.sm : Math.max(safeInsets.bottom, spacing.sm),
             zIndex: 20,
             alignItems: 'center',
           }}

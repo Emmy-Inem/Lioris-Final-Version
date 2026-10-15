@@ -240,13 +240,18 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
     }
   }
 
-  async function handleSend(contentToSend?: string, mediaUrl?: string) {
+  async function handleSend(contentToSend?: string, mediaUrl?: string, retry?: { replaceId: string }) {
     const content = (contentToSend ?? draft).trim();
     if (!content) return;
     haptics.medium();
-    const outgoingContent = replyingTo ? `↳ "${replyingTo.content.substring(0, 30)}..."\n${content}` : content;
-    setDraft('');
-    setReplyingTo(null);
+    // A retry resends the exact text that failed and must not touch what is being typed now.
+    const outgoingContent = !retry && replyingTo ? `↳ "${replyingTo.content.substring(0, 30)}..."\n${content}` : content;
+    if (!retry) {
+      setDraft('');
+      setReplyingTo(null);
+    } else {
+      setPending((prev) => prev.filter((m) => m.id !== retry.replaceId));
+    }
 
     const optimistic: OutgoingMessage = {
       id: `pending-${Date.now()}`,
@@ -273,6 +278,10 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         prev.map((m) => (m.id === optimistic.id ? { ...m, status: 'failed', failed: true } : m)),
       );
     }
+  }
+
+  function retryFailed(message: OutgoingMessage) {
+    void handleSend(message.content, message.mediaUrl, { replaceId: message.id });
   }
 
   async function handlePickAndSendPhoto() {
@@ -501,7 +510,12 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                     >
                       {new Date(item.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </AppText>
-                    {isMe && (
+                    {isMe && item.status === 'failed' ? (
+                      <Pressable onPress={() => retryFailed(item as OutgoingMessage)} accessibilityRole="button" accessibilityLabel="Message not sent. Tap to retry" hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                        <Ionicons name="alert-circle" size={13} color="#E53E3E" />
+                        <AppText variant="caption" style={{ fontSize: 11, color: '#E53E3E' }}>Not sent · tap to retry</AppText>
+                      </Pressable>
+                    ) : isMe && (
                       <Ionicons
                         name={item.status === 'read' ? 'checkmark-done' : 'checkmark'}
                         size={12}
@@ -549,7 +563,12 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                   >
                     {new Date(item.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </AppText>
-                  {isMe && (
+                  {isMe && item.status === 'failed' ? (
+                    <Pressable onPress={() => retryFailed(item as OutgoingMessage)} accessibilityRole="button" accessibilityLabel="Message not sent. Tap to retry" hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                      <Ionicons name="alert-circle" size={13} color="#FEB2B2" />
+                      <AppText variant="caption" style={{ fontSize: 11, color: '#FEB2B2' }}>Not sent · tap to retry</AppText>
+                    </Pressable>
+                  ) : isMe && (
                     <Ionicons
                       name={item.status === 'read' ? 'checkmark-done' : 'checkmark'}
                       size={12}
