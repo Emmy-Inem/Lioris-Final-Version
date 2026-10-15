@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Resource } from '@/api/types';
 import { trackResourceDownload } from '@/api/resources';
 import { prepareResourceDownload, ResourceFileError } from '@/api/resourceFiles';
-import { downloadRemoteFile } from '@/utils/downloadFile';
+import { downloadRemoteFile, shareLocalFile } from '@/utils/downloadFile';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
 
@@ -26,16 +26,27 @@ export function useResourceDownload(resource: Pick<Resource, 'id' | 'title' | 'f
     haptics.light();
     try {
       const prepared = await prepareResourceDownload(resource);
-      const outcome = await downloadRemoteFile(prepared.url, prepared.fileName, prepared.mimeType);
+      const result = await downloadRemoteFile(prepared.url, prepared.fileName, prepared.mimeType);
       setDownloaded(true);
       trackResourceDownload(resource.id).catch(() => {});
-      toast.success(
-        outcome === 'shared'
-          ? `Choose where to save ${resource.title}.`
-          : outcome === 'opened'
-          ? `Opening ${resource.title}.`
-          : `Downloading ${resource.title}.`,
-      );
+      if (result.outcome === 'saved') {
+        const share = result.localUri
+          ? () => shareLocalFile(result.localUri!, prepared.fileName, prepared.mimeType).catch(() => {})
+          : undefined;
+        Alert.alert(
+          'Download complete',
+          `${resource.title} was saved to ${result.location ?? 'your device'}.`,
+          share ? [{ text: 'Done', style: 'cancel' }, { text: 'Share / open in…', onPress: share }] : [{ text: 'OK' }],
+        );
+      } else {
+        toast.success(
+          result.outcome === 'shared'
+            ? `Choose where to save ${resource.title}.`
+            : result.outcome === 'opened'
+            ? `Opening ${resource.title}.`
+            : `Downloading ${resource.title}.`,
+        );
+      }
     } catch (err) {
       haptics.error();
       if (err instanceof ResourceFileError) {
