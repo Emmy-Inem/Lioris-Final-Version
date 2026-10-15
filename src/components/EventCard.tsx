@@ -43,7 +43,6 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  if (submitting) return;
  setRsvpd(!!event.isRsvpd);
  setRsvpCount(event.rsvpCount);
- // eslint-disable-next-line react-hooks/exhaustive-deps
  }, [event.isRsvpd, event.rsvpCount]);
   const { reminderOn, notificationId: reminderNotificationId, toggleReminder } = useEventReminder(event.id);
   const [submitting, setSubmitting] = useState(false);
