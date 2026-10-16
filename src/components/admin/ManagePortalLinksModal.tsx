@@ -75,7 +75,7 @@ export function ManagePortalLinksModal({
   const { user } = useAuth();
   const { homeInstitutionCode } = useCampusScope();
   const queryClient = useQueryClient();
-  const isAdmin = user?.role === 'admin' || user?.actualRole === 'admin';
+  const isAdmin = Boolean(user?.isSuperAdmin);
 
   const [filter, setFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');

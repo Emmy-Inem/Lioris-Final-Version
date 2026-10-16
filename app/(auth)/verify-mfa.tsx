@@ -25,7 +25,7 @@ interface EnrollmentData {
 
 export default function VerifyMfaScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
-  const { user, verifyMfa, logout } = useAuth();
+  const { user, verifyMfa, updateUser, logout } = useAuth();
   const [mode, setMode] = useState<Mode>('loading');
   const [enrollment, setEnrollment] = useState<EnrollmentData | null>(null);
   const [code, setCode] = useState('');
@@ -107,19 +107,13 @@ export default function VerifyMfaScreen() {
       setSubmitting(false);
       return;
     }
-    // The factor is now verified (and the Supabase session is aal2). Mark the
-    // app-level session as MFA-verified using the same path as a normal login
-    // challenge. Reusing the identical code may be rejected as a replay, in
-    // which case ask for the next code.
+    // The factor is now verified (and confirmMfaEnrollment already challenged +
+    // verified the TOTP code, elevating the Supabase session to aal2). Mark the
+    // app-level session as MFA-verified without replaying the same TOTP code.
     try {
-      await verifyMfa(code.trim());
+      await updateUser({ mfaVerified: true });
       haptics.success();
       router.replace('/');
-    } catch {
-      setEnrollment(null);
-      setCode('');
-      setMode('challenge');
-      setInfoMessage('Authenticator added. Enter the next 6-digit code shown in your app to finish signing in.');
     } finally {
       setSubmitting(false);
     }

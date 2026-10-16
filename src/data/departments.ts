@@ -1282,6 +1282,28 @@ export const MUN_STRUCTURE: AcademicStructure = {
   ],
 };
 
+const JSIIT_STRUCTURE: AcademicStructure = {
+  campusCode: 'JSIIT',
+  groupType: 'Faculty',
+  groups: [
+    {
+      faculty: 'School of Informatics & Computing',
+      code: 'SIC',
+      departments: ['Computer Science', 'Software Engineering', 'Cyber Security', 'Networking & System Security', 'Multimedia Technology', 'Information Technology'],
+    },
+    {
+      faculty: 'School of Engineering Technology',
+      code: 'SET',
+      departments: ['Computer Software Engineering Technology', 'Computer Hardware Engineering Technology', 'Electrical & Electronic Engineering Technology', 'Telecommunications Technology'],
+    },
+    {
+      faculty: 'School of Science & Management Studies',
+      code: 'SSMS',
+      departments: ['Accountancy', 'Business Administration & Management', 'Library & Information Science', 'Office Technology & Management', 'Statistics', 'Science Laboratory Technology', 'Islamic Banking & Finance'],
+    },
+  ],
+};
+
 // Map of all academic structures by campus code
 const STRUCTURE_MAP: Record<string, AcademicStructure> = {
   FUNAAB: FUNAAB_STRUCTURE,
@@ -1294,6 +1316,7 @@ const STRUCTURE_MAP: Record<string, AcademicStructure> = {
   NOUN: NOUN_STRUCTURE,
   ESUT: ESUT_STRUCTURE,
   MUN: MUN_STRUCTURE,
+  JSIIT: JSIIT_STRUCTURE,
   GLOBAL: GLOBAL_STRUCTURE,
 };
 

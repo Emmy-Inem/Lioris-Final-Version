@@ -41,7 +41,7 @@ import { requireUser } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
 import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 
-const MODELS = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
 const MAX_MESSAGE_CHARS = 2000;
 const MAX_HISTORY_TURNS = 12;
 const MAX_BODY_BYTES = (MAX_MESSAGE_CHARS * (MAX_HISTORY_TURNS + 1) * 4) + 4096;

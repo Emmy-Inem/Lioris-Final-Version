@@ -101,8 +101,23 @@ export default function VerifyEmailScreen() {
             setSigningIn(true);
             return;
           }
-        } catch {
-          // Fall through to manual code entry
+          if (error && !cancelled) {
+            setErrorMessage(
+              getFriendlyErrorMessage(
+                error,
+                'This confirmation link has expired or was already used. Enter your 6-digit code below or request a new one.',
+              ),
+            );
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setErrorMessage(
+              getFriendlyErrorMessage(
+                err,
+                'This confirmation link has expired or was already used. Enter your 6-digit code below or request a new one.',
+              ),
+            );
+          }
         } finally {
           if (!cancelled) setSubmitting(false);
         }

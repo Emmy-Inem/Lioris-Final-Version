@@ -24,6 +24,7 @@ const KNOWN_INSTITUTION_DOMAINS = [
   'noun.edu.ng',
   'esut.edu.ng',
   'madonnauniversity.edu.ng',
+  'jspict.edu.ng',
 ];
 
 const INSTITUTION_NAMES: Record<string, string> = {
@@ -38,6 +39,7 @@ const INSTITUTION_NAMES: Record<string, string> = {
   NOUN: 'National Open University of Nigeria',
   ESUT: 'Enugu State University of Science and Technology',
   MUN: 'Madonna University, Nigeria',
+  JSIIT: 'Jigawa State Institute of Information Technology (JSPICT)',
 };
 
 /**

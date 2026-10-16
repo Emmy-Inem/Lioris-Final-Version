@@ -1660,7 +1660,7 @@ export default function UserDirectoryScreen() {
  <AppTextField
  label="6-digit code"
  value={mfaCode}
- onChangeText={(v) => setMfaCode(v.replace(/D/g, '').slice(0, 6))}
+ onChangeText={(v) => setMfaCode(v.replace(/\D/g, '').slice(0, 6))}
  placeholder="123456"
  keyboardType="number-pad"
  maxLength={6}

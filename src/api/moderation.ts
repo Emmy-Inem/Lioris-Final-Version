@@ -102,6 +102,14 @@ async function resolveActionedUserId(target: Report): Promise<string | null> {
  const { data } = await supabase.from('jobs').select('poster_id').eq('id', target.targetId).maybeSingle();
  return data?.poster_id ?? null;
  }
+ if (target.targetType === 'pod_post') {
+ const { data } = await supabase.from('study_group_posts').select('author_id').eq('id', target.targetId).maybeSingle();
+ return data?.author_id ?? null;
+ }
+ if (target.targetType === 'message') {
+ const { data } = await supabase.from('chat_messages').select('sender_id').eq('id', target.targetId).maybeSingle();
+ return data?.sender_id ?? null;
+ }
  } catch {
  // Notifying the actioned user is best-effort - never let a lookup
  // failure here block the moderation decision itself.

@@ -239,7 +239,8 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+        const shouldPurgeContent = punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban';
+        if (shouldPurgeContent) {
           await deletePost(report.targetId);
           actionLabel = 'Post purged from campus feed';
         }
@@ -256,7 +257,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+        if (punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban') {
           await deletePodPost(report.targetId);
           actionLabel = 'Study pod post removed';
         }
@@ -273,7 +274,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+        if (punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban') {
           await purgeEvent(report.targetId);
           actionLabel = 'Event purged from campus calendar';
         }
@@ -290,7 +291,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+        if (punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban') {
           await deleteMessageAsAdmin(report.targetId);
           actionLabel = 'Message removed from the conversation';
         }
@@ -307,7 +308,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+        if (punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban') {
           await takedownListing(report.targetId, adminModNote.trim() || `Removed following a user report: ${report.reason}`);
           actionLabel = 'Listing removed from the marketplace';
         }
@@ -324,7 +325,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        if (punishmentType === 'takedown' || punishmentType === 'permaban') {
+        if (punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban') {
           await rejectJob(report.targetId, adminModNote.trim() || `Removed following a user report: ${report.reason}`);
           actionLabel = 'Job posting removed from the career board';
         }
@@ -344,13 +345,15 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
       if (punishmentType === 'mute') {
         actionLabel = 'Content flagged and author temporarily muted for 24 hours';
       } else if (punishmentType === 'escalate') {
-        actionLabel = 'Report escalated to admin for further review (no action taken by staff)';
+        actionLabel = 'Report escalated to admin for further review (kept open in admin queue)';
       }
 
-      await resolveReport(report.id, 'resolved');
+      if (punishmentType !== 'escalate') {
+        await resolveReport(report.id, 'resolved');
+      }
 
       recordAuditLogEntry({
- action: 'report_resolved',
+ action: punishmentType === 'escalate' ? 'item_moderated' : 'report_resolved',
  summary: `Moderation Action on #${report.id.substring(0, 8)} (${report.targetType}): ${actionLabel}`,
  targetType: 'report',
  targetId: report.id,

@@ -26,7 +26,7 @@ function firstParam(value: string | string[] | undefined): string {
 
 export default function ResetPasswordScreen() {
   const { spacing, colors, radius, isDark } = useTheme();
-  const { user, isPasswordRecovery, clearPasswordRecovery } = useAuth();
+  const { user, isPasswordRecovery, clearPasswordRecovery, logout } = useAuth();
   const params = useLocalSearchParams<{
     email?: string | string[];
     token_hash?: string | string[];
@@ -196,11 +196,12 @@ export default function ResetPasswordScreen() {
     setSubmitting(true);
     try {
       await authApi.updateUserPassword(newPassword);
-      await supabase.auth.signOut({ scope: 'local' });
+      await logout();
       clearPasswordRecovery();
       haptics.success();
+      setHasRecoverySession(false);
       setSuccessMessage('Password changed. You can now sign in with your new password.');
-      setTimeout(() => router.replace({ pathname: '/(auth)/login', params: { email: email || undefined } }), 1000);
+      setTimeout(() => router.replace({ pathname: '/(auth)/login', params: { email: email || undefined } }), 900);
     } catch (error) {
       haptics.error();
       setErrorMessage(getFriendlyErrorMessage(error, 'We could not save the new password. Request a fresh recovery email and try again.'));

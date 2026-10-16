@@ -1147,15 +1147,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('role, full_name, admin_role, campus_code, department')
+            .select('role, full_name, admin_role, campus_code, department, onboarding_complete, onboarding_step, avatar_url, banner_url')
             .eq('id', current.id)
             .maybeSingle();
           if (profile) {
+            const isMaster = (current.email ?? '').toLowerCase().trim() === 'inememmanuel@gmail.com';
+            const resolvedRole = isMaster ? 'admin' : ((profile.role || current.actualRole) as UserRole);
+            const isSuper = isMaster || (resolvedRole === 'admin' && profile.admin_role === 'super_admin');
+            const isCampus = resolvedRole === 'admin' && !isSuper;
             const next: SessionUser = {
               ...current,
               fullName: profile.full_name || current.fullName,
-              campusCode: (current.isSuperAdmin && profile.campus_code === 'GLOBAL') ? 'GLOBAL' : (profile.campus_code || current.campusCode),
+              actualRole: resolvedRole,
+              role: current.actualRole === 'admin' && current.isSuperAdmin ? current.role : resolvedRole,
+              adminRole: isSuper ? 'super_admin' : isCampus ? 'campus_admin' : null,
+              isSuperAdmin: isSuper,
+              isCampusAdmin: isCampus,
+              campusCode: (isSuper && profile.campus_code === 'GLOBAL') ? 'GLOBAL' : (profile.campus_code || current.campusCode),
               department: profile.department || current.department,
+              avatarUrl: profile.avatar_url || current.avatarUrl,
+              coverUrl: profile.banner_url || current.coverUrl,
+              onboardingComplete: isMaster || resolvedRole === 'admin' || resolvedRole === 'staff' || profile.onboarding_complete === true || current.onboardingComplete,
             };
             await persist(next);
             userRef.current = next;

@@ -292,18 +292,18 @@ export async function submitVerificationRequest(payload: SubmitVerificationPaylo
  throw new Error(friendlySubmitError(rpcError.message ?? ''));
  }
 
- const created: VerificationRequest = {
- id: row?.id ?? reqId,
- userId: authUserId,
- applicantName: payload.applicantName,
- documentType: payload.documentType,
- documentReference: payload.documentReference || undefined,
- institutionClaimed: row?.campus_code ?? payload.institutionClaimed,
- documentPhotoUri: row?.id_card_front_url ?? filePath,
- documentStoragePath: row?.id_card_front_url ?? filePath,
- submittedAt: row?.created_at ?? new Date().toISOString(),
- status: 'pending',
- };
+  const created: VerificationRequest = {
+    id: row?.id ?? reqId,
+    userId: authUserId,
+    applicantName: payload.applicantName,
+    documentType: payload.documentType,
+    documentReference: payload.documentReference || undefined,
+    institutionClaimed: row?.campus_code ?? payload.institutionClaimed,
+    documentPhotoUri: row?.id_card_front_url ?? filePath,
+    documentStoragePath: row?.id_card_front_url ?? filePath,
+    submittedAt: row?.created_at ?? new Date().toISOString(),
+    status: 'pending',
+  };
  verificationState = [...verificationState, created];
  return created;
 }

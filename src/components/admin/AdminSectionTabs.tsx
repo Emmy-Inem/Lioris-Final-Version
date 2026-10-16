@@ -4,7 +4,8 @@ import { router, usePathname } from 'expo-router';
 import { AppText } from '../AppText';
 import { useTheme } from '@/theme/ThemeProvider';
 import { haptics } from '@/utils/haptics';
-import { ADMIN_GROUPS, AdminGroupKey, stripGroups } from './adminNav';
+import { useAuth } from '@/auth/AuthContext';
+import { getVisibleAdminGroups, AdminGroupKey, stripGroups } from './adminNav';
 
 const savedScrollXByGroup: Record<string, number> = {};
 const savedViewportWidthByGroup: Record<string, number> = {};
@@ -25,8 +26,9 @@ export function AdminSectionTabs({
   badges?: Record<string, number | undefined>;
 }) {
   const { colors, spacing, radius } = useTheme();
+  const { user } = useAuth();
   const pathname = stripGroups(usePathname());
-  const definition = ADMIN_GROUPS.find((g) => g.key === group);
+  const definition = getVisibleAdminGroups(user?.isSuperAdmin).find((g) => g.key === group);
   const scrollRef = useRef<ScrollView>(null);
 
   const activeSectionKey = definition?.sections.find(

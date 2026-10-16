@@ -24,7 +24,7 @@
 // SUPABASE_URL / SUPABASE_ANON_KEY are provided at runtime; SUPABASE_SERVICE_ROLE_KEY is a secret.
 
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
-import { isUuid, requireAdmin } from '../_shared/auth.ts';
+import { isUuid, requireSuperAdmin } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
 import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 
@@ -136,22 +136,9 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, { error: 'server_misconfigured', message: 'Server misconfiguration. Missing required secrets.' }, 500);
   }
 
-  const auth = await requireAdmin(req);
+  const auth = await requireSuperAdmin(req);
   if (!auth.ok) return auth.response;
   const { user: caller } = auth.caller;
-
-  // Campus provisioning changes the platform's trust boundary (not merely
-  // one campus), so a campus admin must never be able to call this endpoint
-  // directly even if they discover it outside the hidden UI.
-  const { data: callerProfile, error: callerProfileError } = await admin
-    .from('profiles')
-    .select('admin_role')
-    .eq('id', caller.id)
-    .maybeSingle();
-  const isSuperAdmin = caller.email?.toLowerCase() === 'inememmanuel@gmail.com' || callerProfile?.admin_role === 'super_admin';
-  if (callerProfileError || !isSuperAdmin) {
-    return jsonResponse(req, { error: 'forbidden', message: 'Only a Super Admin can create or change campuses.' }, 403);
-  }
 
   const limited = await consumeRateLimit(admin, `manage-institution:${caller.id}`, 30, 3600);
   if (limited === 'limited') return jsonResponse(req, { error: 'rate_limited', message: 'Too many campus changes. Try again later.' }, 429);

@@ -125,7 +125,7 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
   }
 
   try {
-    const { data: analyticsSummary, error: analyticsError } = await supabase.rpc('get_admin_analytics_summary', {
+    const { data: analyticsSummary, error: analyticsError } = await supabase.rpc('get_scoped_admin_analytics_summary', {
       p_days: 1,
       p_campus_code: null,
     });

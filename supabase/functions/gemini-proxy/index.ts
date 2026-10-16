@@ -33,7 +33,7 @@ import { readJsonBody } from '../_shared/body.ts';
 import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 
 const MODES = ['explain', 'past_question', 'quiz', 'schedule', 'math_solve', 'flashcards'];
-const MODELS = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
 const MAX_PROMPT_CHARS = 8000;
 const MAX_IMAGE_BASE64_CHARS = 5_000_000;
 // Whole-body cap: image base64 + prompt (up to 4 bytes/char in UTF-8) + JSON overhead.

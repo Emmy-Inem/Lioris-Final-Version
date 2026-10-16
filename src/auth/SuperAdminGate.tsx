@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from './AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -14,8 +14,9 @@ export function SuperAdminGate({ children }: { children: React.ReactNode }) {
   const { colors, spacing } = useTheme();
 
   if (isLoading) return null;
+  if (!user) return <Redirect href="/(auth)/login" />;
 
-  if (user && !user.isSuperAdmin) {
+  if (!user.isSuperAdmin) {
     return (
       <ScreenContainer glow={false}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>

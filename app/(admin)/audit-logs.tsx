@@ -180,6 +180,7 @@ export default function AuditLogsScreen() {
           since,
           until,
           actorSearch: trimmedActorSearch || undefined,
+          institutionCode: lockedCampus,
           page: exportPage,
           pageSize: EXPORT_PAGE_SIZE,
         });

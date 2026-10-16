@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -808,15 +808,19 @@ export function ResourcesModerationTab() {
 
             <View style={{ backgroundColor: colors.divider, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md }}>
               <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 4 }}>
-                VERIFICATION CLEARANCES:
+                RESOURCE METADATA:
               </AppText>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <Ionicons name="shield-checkmark" size={14} color={colors.success} />
-                <AppText variant="caption">Virus & Malware Scan: Clean</AppText>
+                <Ionicons name="person-outline" size={14} color={colors.textSecondary} />
+                <AppText variant="caption">Uploaded by: {previewModalResource.authorName || 'Campus Member'}</AppText>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <Ionicons name="school-outline" size={14} color={colors.textSecondary} />
+                <AppText variant="caption">Campus: {previewModalResource.campusCode || 'GLOBAL'} • Level: {previewModalResource.academicLevel || 'All Levels'}</AppText>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="school" size={14} color={colors.success} />
-                <AppText variant="caption">Syllabus Match: University of Ibadan Department Archive</AppText>
+                <Ionicons name={previewModalResource.approvalStatus === 'approved' ? 'checkmark-circle' : 'time-outline'} size={14} color={previewModalResource.approvalStatus === 'approved' ? colors.success : colors.warning} />
+                <AppText variant="caption">Status: {(previewModalResource.approvalStatus || 'pending').toUpperCase()} • {previewModalResource.downloadsCount ?? 0} downloads</AppText>
               </View>
             </View>
 
@@ -829,8 +833,23 @@ export function ResourcesModerationTab() {
           </ScrollView>
         ) : null}
 
-        <View style={{ marginTop: spacing.md }}>
-          <AppButton label="Close Inspection" onPress={() => setPreviewModalResource(null)} />
+        <View style={{ marginTop: spacing.md, flexDirection: 'row', gap: spacing.sm }}>
+          {previewModalResource?.fileUrl ? (
+            <View style={{ flex: 1 }}>
+              <AppButton
+                label="Open Document"
+                variant="secondary"
+                onPress={() => {
+                  if (previewModalResource?.fileUrl) {
+                    Linking.openURL(previewModalResource.fileUrl).catch(() => {});
+                  }
+                }}
+              />
+            </View>
+          ) : null}
+          <View style={{ flex: 1 }}>
+            <AppButton label="Close Inspection" onPress={() => setPreviewModalResource(null)} />
+          </View>
         </View>
       </View>
     </View>
