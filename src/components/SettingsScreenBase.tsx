@@ -23,6 +23,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { deactivateMyAccount, deleteMyAccount, exportMyData, getMyProfile, updateMyProfile } from '@/api/profile';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { PROFILE_ACADEMIC_LEVELS } from './ProfileScreenBase';
 import { getMyNotificationPreferences, updateMyNotificationPreferences } from '@/api/notificationPreferences';
 import { listMyDevices, removeMyDevice, MyDevice } from '@/api/devices';
@@ -349,6 +350,8 @@ export function SettingsScreen() {
   const [editCompany, setEditCompany] = useState('');
   const [editJobTitle, setEditJobTitle] = useState('');
   const [editLocation, setEditLocation] = useState('');
+  const [editLinkedinUrl, setEditLinkedinUrl] = useState('');
+  const [editInterests, setEditInterests] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [editProfileError, setEditProfileError] = useState<string | null>(null);
 
@@ -840,6 +843,8 @@ export function SettingsScreen() {
     setEditCompany(profile.company || '');
     setEditJobTitle(profile.jobTitle || '');
     setEditLocation(profile.location || '');
+    setEditLinkedinUrl(profile.linkedinUrl || '');
+    setEditInterests((profile.interests ?? []).join(', '));
     setEditProfileError(null);
     setEditProfileModalOpen(true);
   }
@@ -854,6 +859,15 @@ export function SettingsScreen() {
       setEditProfileError('Username must be at least 3 characters (letters, numbers, dots, underscores).');
       return;
     }
+    const trimmedLinkedin = editLinkedinUrl.trim();
+    if (trimmedLinkedin && !/^https:\/\/([a-z]{2,3}\.)?linkedin\.com\//i.test(trimmedLinkedin)) {
+      setEditProfileError('Please enter a full LinkedIn profile URL, e.g. https://www.linkedin.com/in/yourname');
+      return;
+    }
+    const interestsArray = editInterests
+      .split(',')
+      .map((i) => i.trim())
+      .filter(Boolean);
     const parsedYear = editGraduationYear.trim() ? Number(editGraduationYear.trim()) : null;
     if (editGraduationYear.trim() && (!Number.isInteger(parsedYear) || parsedYear! < 1950 || parsedYear! > 2100)) {
       setEditProfileError('Graduation year must be a valid year between 1950 and 2100.');
@@ -867,6 +881,8 @@ export function SettingsScreen() {
         username: cleanUsername,
         department: editDepartment.trim(),
         bio: editBio.trim(),
+        linkedinUrl: trimmedLinkedin || null,
+        interests: interestsArray,
         // Academic progression (level & graduation year) is the student's own to edit here, not
         // just from the main Profile screen - mirrors the same picker/field ProfileScreenBase uses.
         ...(user?.role === 'student'
@@ -1061,7 +1077,7 @@ export function SettingsScreen() {
                     borderBottomColor: colors.border,
                   }}
                 >
-                  <Avatar name={profile?.fullName ?? user?.fullName ?? 'User'} size={isDesktop ? 60 : 48} />
+                  <Avatar name={profile?.fullName ?? user?.fullName ?? 'User'} uri={profile?.avatarUrl ?? user?.avatarUrl} size={isDesktop ? 60 : 48} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText variant={isDesktop ? 'h2' : 'h3'} weight="bold">
                       {profile?.fullName ?? user?.fullName ?? 'User'}
@@ -1072,9 +1088,11 @@ export function SettingsScreen() {
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 1 }}>
                       {profile?.email ?? user?.email ?? ''}
                     </AppText>
-                    <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
-                      <Badge label="Verified Academic" tone="success" />
-                    </View>
+                    {!isUnverifiedPersonalUser(profile) && (
+                      <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
+                        <Badge label="Verified Academic" tone="success" />
+                      </View>
+                    )}
                   </View>
                 </View>
 
@@ -2447,6 +2465,22 @@ export function SettingsScreen() {
                   multiline
                   numberOfLines={3}
                   placeholder="Tell classmates about your academic focus or projects..."
+                />
+                <AppTextField
+                  label="Skills & Interests (comma-separated)"
+                  value={editInterests}
+                  onChangeText={setEditInterests}
+                  placeholder="e.g. Machine Learning, Python, Robotics, Chess"
+                />
+                <AppTextField
+                  label="LinkedIn URL"
+                  value={editLinkedinUrl}
+                  onChangeText={setEditLinkedinUrl}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                  placeholder="https://www.linkedin.com/in/yourname"
+                  helperText="Optional. Shown on your public profile and in directory listings."
                 />
                 {user?.role === 'student' && (
                   <>

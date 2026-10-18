@@ -3,7 +3,8 @@ import { ActivityIndicator, Alert, Dimensions, findNodeHandle, Keyboard, Modal, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from'expo-image';
 import * as Clipboard from 'expo-clipboard';
-import { router, useLocalSearchParams, useSegments } from'expo-router';
+import { router, useLocalSearchParams, useSegments } from'expo-router'; 
+import { getFeedRoute } from '@/utils/notificationRouter';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { ScreenContainer } from'./ScreenContainer';
@@ -71,7 +72,7 @@ export function PostDetailScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace(`/${roleGroup}/feed` as any);
+      router.replace(getFeedRoute(user?.role) as any);
     }
   };
   const { isDesktop, contentMaxWidth } = useResponsive();

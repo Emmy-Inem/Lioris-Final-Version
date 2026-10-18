@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { CampaignCardSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useCampusScope } from '@/hooks/useCampusScope';
 import { useToast } from '@/context/ToastContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import {
@@ -183,6 +184,7 @@ export default function AlumniGivingScreen() {
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { campusCode } = useCampusScope();
   const isUnverified = isUnverifiedPersonalUser(user);
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -198,8 +200,8 @@ export default function AlumniGivingScreen() {
   const [tab, setTab] = useState<'browse' | 'mine'>('browse');
 
   const { data: campaigns = [], isLoading } = useQuery({
-    queryKey: ['giving-campaigns', 'approved', user?.campusCode ?? undefined],
-    queryFn: () => listGivingCampaigns(user?.campusCode ?? undefined),
+    queryKey: ['giving-campaigns', 'approved', campusCode],
+    queryFn: () => listGivingCampaigns(campusCode && campusCode !== 'ALL' ? campusCode : undefined),
     enabled: isEnabled && tab === 'browse',
   });
 

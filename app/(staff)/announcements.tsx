@@ -13,6 +13,8 @@ import { ShimmerCardList } from'@/components/ShimmerSkeleton';
 import { EmptyState } from'@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/auth/AuthContext';
+import { useCampusScope } from '@/hooks/useCampusScope';
 import {
   listAnnouncements,
   publishAnnouncement,
@@ -25,12 +27,14 @@ import { haptics } from '@/utils/haptics';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 import { parseLocalDateTime, toDateInput } from '@/utils/dateTime';
 
-const AUDIENCES: PublishAnnouncementPayload['audienceScope'][] = ['student', 'alumni', 'staff', 'global'];
+const AUDIENCES: PublishAnnouncementPayload['audienceScope'][] = ['student', 'alumni', 'staff'];
 const PRIORITIES: PublishAnnouncementPayload['priority'][] = ['normal', 'high', 'critical'];
 
 export default function StaffAnnouncementsScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
+  const { user } = useAuth();
+  const { campusCode } = useCampusScope();
   const queryClient = useQueryClient();
   const [composing, setComposing] = useState(false);
   // Set while editing an existing announcement instead of composing a new one -
@@ -46,7 +50,10 @@ export default function StaffAnnouncementsScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const { data: announcements, isLoading } = useQuery({ queryKey: ['announcements'], queryFn: listAnnouncements });
+  const { data: announcements, isLoading } = useQuery({
+    queryKey: ['announcements', campusCode],
+    queryFn: () => listAnnouncements(campusCode && campusCode !== 'ALL' ? { campusCode } : undefined),
+  });
 
   function resetForm() {
     setEditingId(null);
@@ -89,7 +96,7 @@ export default function StaffAnnouncementsScreen() {
           expiresAt: resolveExpiresAt(),
         });
       } else {
-        await publishAnnouncement({ title, content, audienceScope: audience, priority, expiresAt: resolveExpiresAt() ?? undefined });
+        await publishAnnouncement({ title, content, audienceScope: audience, priority, expiresAt: resolveExpiresAt() ?? undefined, campusCode: campusCode && campusCode !== 'ALL' ? campusCode : undefined });
       }
       queryClient.invalidateQueries({ queryKey: ['announcements'] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -207,27 +214,29 @@ export default function StaffAnnouncementsScreen() {
                     Expires {new Date(a.expiresAt).toLocaleDateString()}
                   </AppText>
                 ) : null}
-                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: -spacing.xs, marginBottom: spacing.md }}>
-                  <Pressable
-                    onPress={() => startEdit(a)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Edit announcement"
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 4 }}
-                  >
-                    <Ionicons name="create-outline" size={15} color={colors.textSecondary} />
-                    <AppText variant="caption" weight="semiBold" tone="secondary">Edit</AppText>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => handleDelete(a)}
-                    disabled={deletingId === a.id}
-                    accessibilityRole="button"
-                    accessibilityLabel="Delete announcement"
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 4, opacity: deletingId === a.id ? 0.5 : 1 }}
-                  >
-                    <Ionicons name="trash-outline" size={15} color={colors.critical} />
-                    <AppText variant="caption" weight="semiBold" style={{ color: colors.critical }}>Delete</AppText>
-                  </Pressable>
-                </View>
+                {a.authorId === user?.id ? (
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: -spacing.xs, marginBottom: spacing.md }}>
+                    <Pressable
+                      onPress={() => startEdit(a)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Edit announcement"
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 4 }}
+                    >
+                      <Ionicons name="create-outline" size={15} color={colors.textSecondary} />
+                      <AppText variant="caption" weight="semiBold" tone="secondary">Edit</AppText>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleDelete(a)}
+                      disabled={deletingId === a.id}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete announcement"
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 4, opacity: deletingId === a.id ? 0.5 : 1 }}
+                    >
+                      <Ionicons name="trash-outline" size={15} color={colors.critical} />
+                      <AppText variant="caption" weight="semiBold" style={{ color: colors.critical }}>Delete</AppText>
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
             ))}
           </View>

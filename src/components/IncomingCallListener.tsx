@@ -11,6 +11,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useRealtimeChannel, RealtimeEvent } from '@/realtime/useRealtimeChannel';
 import { listConversations, sendMessage } from '@/api/messaging';
 import { isCallMessage, extractCallDetails, CallDetails, CALL_DECLINED_MARKER } from '@/api/calling';
+import { isUserBlocked, isUserMuted } from '@/api/connections';
 import { haptics } from '@/utils/haptics';
 
 interface IncomingCall {
@@ -61,6 +62,7 @@ export function IncomingCallListener() {
     const row: any = event.message;
     const myId = userIdRef.current;
     if (!myId || !row?.content || row.sender_id === myId) return;
+    if (row.sender_id && (isUserBlocked(row.sender_id) || isUserMuted(row.sender_id))) return;
     if (!isCallMessage(row.content)) return;
     // The realtime feed also delivers UPDATEs (opening a chat marks old messages read). A call invitation
     // that is more than a minute old, or already read, is a dead call - never ring for it.

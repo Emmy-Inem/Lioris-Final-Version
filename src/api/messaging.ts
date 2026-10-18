@@ -4,6 +4,7 @@ import { Conversation, Message } from './types';
 import { generateUUID } from '../utils/uuid';
 import { getSessionUser } from '../auth/tokenStorage';
 import { isCallMessage } from './calling';
+import { isUserBlocked } from './connections';
 import { assertSafeHttpUrl } from '../utils/safeUrl';
 import { storagePathFor } from './signedUrls';
 import { escapePostgrestLike } from '../utils/postgrest';
@@ -66,7 +67,8 @@ const CHANNEL_MEMBER_SELECT = `
       avatar_url,
       department,
       role,
-      campus_code
+      campus_code,
+      last_active_at
     )
   )`;
 
@@ -182,6 +184,7 @@ export async function listConversations(): Promise<Conversation[]> {
       let participantAvatarUrl: string | null = null;
       let participantDepartment: string | null = null;
       let participantRole: string | null = null;
+      let partnerLastActiveAt: string | null = null;
 
       const isDirect = row.is_direct_message !== false;
       const members = row.chat_channel_members ?? [];
@@ -195,6 +198,7 @@ export async function listConversations(): Promise<Conversation[]> {
           participantAvatarUrl = profile.avatar_url ?? null;
           participantDepartment = profile.department ?? null;
           participantRole = profile.role ?? null;
+          partnerLastActiveAt = profile.last_active_at ?? null;
         } else if (otherMember) {
           participantId = otherMember.user_id;
         }
@@ -205,6 +209,7 @@ export async function listConversations(): Promise<Conversation[]> {
         const other = members.find((m: any) => m.user_id !== currentUserId);
         if (other?.profiles?.full_name) {
           participantName = other.profiles.full_name;
+          partnerLastActiveAt = other.profiles.last_active_at ?? partnerLastActiveAt;
         }
       }
 
@@ -213,6 +218,12 @@ export async function listConversations(): Promise<Conversation[]> {
       const lastMessageAt = latestMsg?.created_at || row.updated_at || row.created_at;
       const lastMessagePreview = toPreviewText(latestMsg?.content);
 
+      // Compute real online status: active within the last 5 minutes
+      const ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
+      const isOnline = partnerLastActiveAt
+        ? new Date().getTime() - new Date(partnerLastActiveAt).getTime() < ONLINE_THRESHOLD_MS
+        : false;
+
       return {
         id: row.id,
         participantId,
@@ -220,7 +231,7 @@ export async function listConversations(): Promise<Conversation[]> {
         participantAvatarUrl,
         participantDepartment,
         participantRole,
-        isOnline: true,
+        isOnline,
         lastMessageAt,
         lastMessagePreview,
         unreadCount,
@@ -228,14 +239,15 @@ export async function listConversations(): Promise<Conversation[]> {
     });
 
     // Filter to only channels where the current user is an enrolled member (if signed in)
-    const userChannels = currentUserId
+    const userChannels = (currentUserId
       ? dbConvs.filter((c) => {
           const raw = data?.find((d: any) => d.id === c.id);
           const members = raw?.chat_channel_members ?? [];
           if (members.length === 0) return true;
           return members.some((m: any) => m.user_id === currentUserId) || raw?.created_by === currentUserId;
         })
-      : dbConvs;
+      : dbConvs
+    ).filter((c) => !isUserBlocked(c.participantId));
 
     // Sort by latest message time
     userChannels.sort((a, b) => {
@@ -334,7 +346,8 @@ export async function getOrCreateConversationWithUser(
             participantId: userId,
             participantName: userName,
             participantAvatarUrl: avatarUrl ?? null,
-            isOnline: true,
+            // Online status is unknown without last_active_at; resolved on next list refresh
+            isOnline: false,
             lastMessageAt: (shared[0].chat_channels as any)?.updated_at || new Date().toISOString(),
             lastMessagePreview: 'Active chat channel',
             unreadCount: 0,
@@ -356,7 +369,8 @@ export async function getOrCreateConversationWithUser(
     participantId: userId,
     participantName: userName,
     participantAvatarUrl: avatarUrl ?? null,
-    isOnline: true,
+    // Online status is unknown at creation time; resolved on next list refresh
+    isOnline: false,
     lastMessageAt: now,
     lastMessagePreview: 'Started conversation',
     unreadCount: 0,
@@ -685,6 +699,7 @@ export async function searchUsersToMessage(
     let req = supabase
       .from('profiles')
       .select('id, full_name, avatar_url, role, department, campus_code')
+      .eq('is_suspended', false)
       .order('full_name', { ascending: true })
       .limit(30);
 
@@ -703,14 +718,16 @@ export async function searchUsersToMessage(
     const { data, error } = await req;
     if (error) throw error;
 
-    return (data ?? []).map((row: any) => ({
-      id: row.id,
-      fullName: row.full_name || 'Campus Member',
-      avatarUrl: row.avatar_url ?? null,
-      role: row.role || 'student',
-      department: row.department ?? null,
-      campusCode: row.campus_code ?? null,
-    }));
+    return (data ?? [])
+      .map((row: any) => ({
+        id: row.id,
+        fullName: row.full_name || 'Campus Member',
+        avatarUrl: row.avatar_url ?? null,
+        role: row.role || 'student',
+        department: row.department ?? null,
+        campusCode: row.campus_code ?? null,
+      }))
+      .filter((u: any) => !isUserBlocked(u.id));
   } catch (err) {
     console.warn('[Messaging] searchUsersToMessage error:', err);
     return [];

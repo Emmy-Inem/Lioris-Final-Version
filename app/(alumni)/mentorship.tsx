@@ -62,7 +62,6 @@ export default function AlumniMentorshipScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
-  const isUnverified = isUnverifiedPersonalUser(user);
   const toast = useToast();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('requests');
@@ -74,6 +73,7 @@ export default function AlumniMentorshipScreen() {
   const profileQuery = useQuery({ queryKey: ['mentor-profile', 'me'], queryFn: getMyMentorProfile });
   const reviews = useQuery({ queryKey: ['mentor-reviews'], queryFn: listMyMentorReviews });
   const { data: me } = useQuery({ queryKey: ['profile', 'me', user?.id], queryFn: () => getMyProfile(user!), enabled: !!user });
+  const isUnverified = isUnverifiedPersonalUser(me);
 
   const profile = profileQuery.data;
   const mine = useMemo(
@@ -99,6 +99,17 @@ export default function AlumniMentorshipScreen() {
   const open = (id: string) => router.push(`/(alumni)/mentorship-space/${id}` as any);
 
   async function toggleAccepting(next: boolean) {
+    if (isUnverified) {
+      Alert.alert(
+        'Verification Required',
+        'Please verify your alumni status before accepting mentorship requests.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Verify Now', onPress: () => router.push('/(alumni)/profile' as any) },
+        ],
+      );
+      return;
+    }
     try {
       await setMentorAccepting(next);
       haptics.success();
@@ -265,10 +276,23 @@ export default function AlumniMentorshipScreen() {
                   Accepting new requests
                 </AppText>
               </View>
-              <Switch value={profile.isAccepting} onValueChange={toggleAccepting} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+              <Switch value={profile.isAccepting} onValueChange={toggleAccepting} disabled={isUnverified} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
             </View>
             <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
-              <AppButton label="Edit profile" size="sm" variant="secondary" icon="create-outline" onPress={() => setEditorOpen(true)} />
+              <AppButton label="Edit profile" size="sm" variant="secondary" icon="create-outline" onPress={() => {
+                if (isUnverified) {
+                  Alert.alert(
+                    'Verification Required',
+                    'Please verify your alumni status before editing your mentor profile.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Verify Now', onPress: () => router.push('/(alumni)/profile' as any) },
+                    ],
+                  );
+                  return;
+                }
+                setEditorOpen(true);
+              }} />
               <AppButton label="Preview as student" size="sm" variant="ghost" icon="eye-outline" onPress={() => setPreviewOpen(true)} />
             </View>
           </SolidCard>

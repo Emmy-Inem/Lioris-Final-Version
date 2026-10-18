@@ -8,7 +8,7 @@
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-export const USER_STORAGE_BUCKETS = ['avatars', 'resources', 'campus-media', 'verifications'] as const;
+export const USER_STORAGE_BUCKETS = ['avatars', 'resources', 'campus-media', 'verifications', 'resumes'] as const;
 
 const PAGE_SIZE = 100;
 const REMOVE_BATCH = 100;

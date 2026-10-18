@@ -527,7 +527,7 @@ export async function takedownListing(id: string, reason: string): Promise<void>
  type: 'moderation',
  title: 'Marketplace listing removed',
  body: `Your listing "${data.title || 'your listing'}" was removed by campus moderation. Reason: ${cleanReason}. Contact support if you believe this was a mistake.`,
- deepLinkPath: '/marketplace',
+ deepLinkPath: '/marketplace-mine',
  });
  } catch (err) {
  console.warn('[Marketplace] takedownListing notification failed:', err);

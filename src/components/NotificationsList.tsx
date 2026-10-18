@@ -25,7 +25,7 @@ import { listIncomingConnectionRequests, listSuggestedConnections } from '@/api/
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { AppNotification } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
-import { resolveNotificationRoute } from '@/utils/notificationRouter';
+import { resolveNotificationRoute, getFeedRoute } from '@/utils/notificationRouter';
 
 const NOTIFICATION_ICONS: Record<
  AppNotification['type'],
@@ -279,7 +279,7 @@ export function NotificationsScreen() {
                     { label: 'Content Moderation Queue', icon: 'shield-checkmark-outline' as const, href: '/(admin)/moderation-queue' },
                   ]
                 : [
-                    { label: 'Browse Discussion Space', icon: 'chatbubbles-outline' as const, href: '/(student)/feed' },
+                    { label: 'Browse Discussion Space', icon: 'chatbubbles-outline' as const, href: getFeedRoute(user?.role) },
                     { label: 'Explore Events & Meetups', icon: 'calendar-outline' as const, href: '/(student)/events-list' },
                     { label: 'Academic Past Questions Vault', icon: 'folder-open-outline' as const, href: '/(student)/resources' },
                   ]

@@ -72,7 +72,8 @@ Room: ${roomName}`;
   try {
     await sendMessage(conversationId, content);
   } catch (err) {
-    console.warn('[Calling] Could not post call invitation message:', err);
+    // Re-throw so ChatThread can catch and display "You cannot call this user"
+    throw err;
   }
 
   if (recipientId) {
@@ -83,7 +84,8 @@ Room: ${roomName}`;
       type: 'message',
       title: `Incoming ${label}`,
       body: `${callerName} is calling you - tap to join.`,
-      deepLinkPath: `/(student)/messages/${conversationId}`,
+      // Role-agnostic path so alumni/staff call notifications deep-link correctly
+      deepLinkPath: `/messages/${conversationId}`,
     });
   }
 

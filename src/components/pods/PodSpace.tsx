@@ -651,11 +651,30 @@ function ComposeSheet({ visible, onClose, canAnnounce, podId, onPosted }: { visi
   );
 }
 
+function ThreadAttachment({ filePath }: { filePath: string }) {
+  const { colors } = useTheme();
+  const attachment = useSignedUrl('resources', filePath);
+  return (
+    <Pressable
+      onPress={() => { if (attachment.url) void saveAttachment(attachment.url, filePath); }}
+      disabled={!attachment.url}
+      accessibilityRole="link"
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.divider, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 8, alignSelf: 'flex-start', marginTop: 4 }}
+    >
+      <Ionicons name="document-attach-outline" size={15} color={colors.brandPrimary} />
+      <AppText variant="caption" tone="brand" weight="semiBold" numberOfLines={1}>
+        {attachment.loading ? 'Preparing file…' : attachment.error ? 'Attachment unavailable' : 'Download attachment'}
+      </AppText>
+    </Pressable>
+  );
+}
+
 function ThreadSheet({ post, onClose, podId, viewerId, mod, onChanged }: { post: PodPost | null; onClose: () => void; podId: string; viewerId?: string; mod: boolean; onChanged: () => void }) {
   const { colors, spacing } = useTheme();
   const toast = useToast();
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
+  const [reportingReplyId, setReportingReplyId] = useState<string | null>(null);
   const replies = useQuery({ queryKey: ['pod', podId, 'replies', post?.id], queryFn: () => listPodPosts(podId, post!.id), enabled: !!post, refetchInterval: 15000 });
 
   async function send() {
@@ -690,10 +709,26 @@ function ThreadSheet({ post, onClose, podId, viewerId, mod, onChanged }: { post:
       }
     >
       {post ? (
-        <SolidCard radius={14}>
+        <SolidCard radius={14} style={{ gap: 4 }}>
+          {post.title ? (
+            <AppText weight="bold" style={{ lineHeight: 21 }}>
+              {post.title}
+            </AppText>
+          ) : null}
           <AppText variant="bodySmall" style={{ lineHeight: 19 }}>
             {post.body}
           </AppText>
+          {post.linkUrl && isSafeHttpUrl(post.linkUrl) ? (
+            <Pressable onPress={() => void openExternalUrl(post.linkUrl as string)} accessibilityRole="link" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+              <Ionicons name="link-outline" size={14} color={colors.brandPrimary} />
+              <AppText variant="caption" tone="brand" numberOfLines={1} style={{ flex: 1 }}>
+                {post.linkUrl}
+              </AppText>
+            </Pressable>
+          ) : null}
+          {post.filePath ? (
+            <ThreadAttachment filePath={post.filePath} />
+          ) : null}
         </SolidCard>
       ) : null}
       {(replies.data ?? []).length === 0 && !replies.isLoading ? (
@@ -735,9 +770,22 @@ function ThreadSheet({ post, onClose, podId, viewerId, mod, onChanged }: { post:
             >
               <Ionicons name="close-circle-outline" size={16} color={colors.textSecondary} />
             </Pressable>
-          ) : null}
+          ) : (
+            <Pressable
+              onPress={() => setReportingReplyId(r.id)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Report reply"
+              style={{ paddingTop: 8 }}
+            >
+              <Ionicons name="flag-outline" size={15} color={colors.textSecondary} />
+            </Pressable>
+          )}
         </View>
       ))}
+      {reportingReplyId && (
+        <ReportPostSheet postId={reportingReplyId} visible={!!reportingReplyId} onClose={() => setReportingReplyId(null)} />
+      )}
     </FormSheet>
   );
 }
@@ -931,25 +979,10 @@ function MembersPanel({ pod, members, viewerId, busy, run }: { pod: StudyGroup; 
   const pending = members.filter((m) => m.status === 'pending');
   const active = members.filter((m) => m.status === 'active');
 
+  const [managingMember, setManagingMember] = useState<PodMember | null>(null);
+
   function manage(m: PodMember) {
-    const options: Array<{ text: string; style?: 'destructive' | 'cancel'; onPress?: () => void }> = [];
-    if (owner && m.role === 'member') options.push({ text: 'Make moderator', onPress: () => void run(`m-${m.userId}`, async () => setPodMemberRole(pod.id, m.userId, 'moderator'), `${m.fullName} is now a moderator.`) });
-    if (owner && m.role === 'moderator') options.push({ text: 'Make regular member', onPress: () => void run(`m-${m.userId}`, async () => setPodMemberRole(pod.id, m.userId, 'member')) });
-    if (owner)
-      options.push({
-        text: 'Hand over ownership',
-        onPress: () =>
-          Alert.alert('Hand over ownership?', `${m.fullName} will run this pod and you become a moderator.`, [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Hand over', onPress: () => void run(`m-${m.userId}`, async () => setPodMemberRole(pod.id, m.userId, 'owner'), 'Ownership handed over.') },
-          ]),
-      });
-    if (m.role !== 'owner' && (owner || m.role === 'member')) {
-      options.push({ text: 'Remove from pod', style: 'destructive', onPress: () => void run(`m-${m.userId}`, async () => removePodMember(pod.id, m.userId, false), `${m.fullName} was removed.`) });
-      options.push({ text: 'Remove and block', style: 'destructive', onPress: () => void run(`m-${m.userId}`, async () => removePodMember(pod.id, m.userId, true), `${m.fullName} was removed and cannot rejoin.`) });
-    }
-    options.push({ text: 'Close', style: 'cancel' });
-    Alert.alert(m.fullName, undefined, options);
+    setManagingMember(m);
   }
 
   return (
@@ -985,6 +1018,82 @@ function MembersPanel({ pod, members, viewerId, busy, run }: { pod: StudyGroup; 
       ) : null}
 
       <AppText weight="bold">Members ({active.length})</AppText>
+      <FormSheet
+        visible={!!managingMember}
+        onClose={() => setManagingMember(null)}
+        title={managingMember ? `Manage ${managingMember.fullName}` : 'Manage Member'}
+        subtitle={`Current role: ${managingMember?.role || 'member'}`}
+      >
+        {managingMember ? (
+          <View style={{ gap: spacing.sm, paddingVertical: spacing.xs }}>
+            {owner && managingMember.role === 'member' && (
+              <AppButton
+                label="Promote to Moderator"
+                variant="secondary"
+                icon="shield-outline"
+                onPress={() => {
+                  const m = managingMember;
+                  setManagingMember(null);
+                  void run(`m-${m.userId}`, async () => setPodMemberRole(pod.id, m.userId, 'moderator'), `${m.fullName} is now a moderator.`);
+                }}
+              />
+            )}
+            {owner && managingMember.role === 'moderator' && (
+              <AppButton
+                label="Make Regular Member"
+                variant="secondary"
+                icon="person-outline"
+                onPress={() => {
+                  const m = managingMember;
+                  setManagingMember(null);
+                  void run(`m-${m.userId}`, async () => setPodMemberRole(pod.id, m.userId, 'member'));
+                }}
+              />
+            )}
+            {owner && (
+              <AppButton
+                label="Hand Over Ownership"
+                variant="secondary"
+                icon="key-outline"
+                onPress={() => {
+                  const m = managingMember;
+                  setManagingMember(null);
+                  Alert.alert('Hand over ownership?', `${m.fullName} will run this pod and you become a moderator.`, [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Hand over', onPress: () => void run(`m-${m.userId}`, async () => setPodMemberRole(pod.id, m.userId, 'owner'), 'Ownership handed over.') },
+                  ]);
+                }}
+              />
+            )}
+            {managingMember.role !== 'owner' && (owner || managingMember.role === 'member') && (
+              <>
+                <AppButton
+                  label="Remove from Pod"
+                  variant="ghost"
+                  icon="person-remove-outline"
+                  onPress={() => {
+                    const m = managingMember;
+                    setManagingMember(null);
+                    void run(`m-${m.userId}`, async () => removePodMember(pod.id, m.userId, false), `${m.fullName} was removed.`);
+                  }}
+                />
+                <AppButton
+                  label="Remove and Block from Pod"
+                  variant="ghost"
+                  icon="ban-outline"
+                  onPress={() => {
+                    const m = managingMember;
+                    setManagingMember(null);
+                    void run(`m-${m.userId}`, async () => removePodMember(pod.id, m.userId, true), `${m.fullName} was removed and cannot rejoin.`);
+                  }}
+                />
+              </>
+            )}
+            <AppButton label="Cancel" variant="ghost" onPress={() => setManagingMember(null)} />
+          </View>
+        ) : null}
+      </FormSheet>
+
       {active.map((m) => (
         <SolidCard key={m.userId} radius={16} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Avatar name={m.fullName} uri={m.avatarUrl} size={38} />

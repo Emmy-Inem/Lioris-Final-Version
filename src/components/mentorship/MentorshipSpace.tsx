@@ -41,7 +41,7 @@ import {
 } from '@/api/mentorship';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { submitReport } from '@/api/moderation';
-import { getCallRoomName, getCallUrl } from '@/api/calling';
+import { getCallRoomName, getCallUrl, startCallInChat } from '@/api/calling';
 import { Mentorship, MentorshipSession, MentorSessionMode } from '@/api/types';
 import { SESSION_MODES, mentorshipStatusLabel, mentorshipStatusTone, sessionStatusLabel } from '@/utils/mentorship';
 import { formatWhen, parseLocalDateTime, relativeTime, endTimeOf } from '@/utils/dateTime';
@@ -184,9 +184,16 @@ export function MentorshipSpace({ mentorshipId, role }: { mentorshipId: string; 
     else router.replace((`/(${role})/mentorship`) as any);
   }
 
-  function startCall() {
-    const roomName = getCallRoomName(mentorshipId);
-    setCall({ roomName, callUrl: getCallUrl(roomName, false) });
+  async function startCall() {
+    if (!partner) return;
+    try {
+      const conv = await getOrCreateConversationWithUser(partner.id, partner.name, partner.avatar);
+      const callerName = user?.fullName || (iAmMentor ? 'Mentor' : 'Student Mentee');
+      const details = await startCallInChat(conv.id, 'video', callerName, partner.id);
+      setCall({ roomName: details.roomName, callUrl: details.callUrl });
+    } catch (err: any) {
+      Alert.alert('Call Not Started', err?.message || 'Could not start the video call. Please try again.');
+    }
   }
 
   async function openChat() {

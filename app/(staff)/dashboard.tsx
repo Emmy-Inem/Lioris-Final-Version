@@ -9,7 +9,8 @@ import { SolidCard } from '@/components/SolidCard';
 import { GlassCard } from '@/components/GlassCard';
 import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
 import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
-import { CurrencyConverterModal } from '@/components/CurrencyConverterModal';
+import { UnverifiedAccountNotice } from '@/components/UnverifiedAccountNotice';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { Badge } from '@/components/Badge';
@@ -42,7 +43,7 @@ export default function StaffDashboard() {
   const { isFeatureEnabled } = useFeatureFlags();
   const { user } = useAuth();
   const { campusCode, homeInstitutionCode, activeCampusCode } = useCampusScope();
-  const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
+
 
   const { data: profile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -91,7 +92,7 @@ export default function StaffDashboard() {
     queryFn: () => listPortalLinks(effectiveCampus),
   });
 
-  const fullName = profile?.fullName ?? user?.fullName ?? 'Dr. Faculty Member';
+  const fullName = profile?.fullName ?? user?.fullName ?? 'Faculty Member';
   const institutionName = profile?.institutionName || LAUNCH_INSTITUTIONS.find((i) => i.code === effectiveCampus)?.name || 'Campus Network';
   const openReportsCount = openReports?.length ?? 0;
   const pendingResourcesCount = pendingResources?.length ?? 0;
@@ -181,21 +182,22 @@ export default function StaffDashboard() {
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', flexShrink: 0 }} />
                   </View>
                   <AppText tone="secondary" variant="caption" style={{ marginTop: 2, fontSize: isDesktop ? 12 : 11.5, fontWeight: '500' }}>
-                    {profile?.department || 'Department of Computer Science'}
+                    {profile?.department || 'Academic Department'}
                   </AppText>
                   <AppText tone="secondary" variant="caption" style={{ fontSize: isDesktop ? 11 : 10.5, opacity: 0.8 }}>
-                    Faculty Member • {profile?.institutionCode || 'UI Node'}
+                    Faculty Member • {profile?.institutionCode || effectiveCampus || 'Campus'}
                   </AppText>
                 </View>
               </View>
 
               <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap', alignItems: 'center', marginTop: isDesktop ? 0 : 4 }}>
                 <Badge label="Faculty Staff" tone="neutral" />
-                <Badge label="Harmattan Term 2026" tone="success" />
               </View>
             </View>
           </View>
         </GlassCard>
+
+        {isUnverifiedPersonalUser(profile) && <UnverifiedAccountNotice />}
 
         {/* 2. Action Required: Moderation & Resource Review */}
         {(openReportsCount > 0 || pendingResourcesCount > 0) && (
@@ -578,7 +580,6 @@ export default function StaffDashboard() {
           </View>
         </View>
       </ScrollView>
-      <CurrencyConverterModal visible={currencyModalOpen} onClose={() => setCurrencyModalOpen(false)} />
     </ScreenContainer>
   );
 }

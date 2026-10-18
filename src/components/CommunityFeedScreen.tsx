@@ -311,7 +311,11 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             icon="compass-outline"
             onPress={() => {
               haptics.light();
-              router.push('/(student)/forum/explore' as any);
+              if (user?.role === 'student') {
+                router.push('/(student)/forum/explore' as any);
+              } else {
+                setSubForumsDirectoryOpen(true);
+              }
             }}
           />
         </SolidCard>

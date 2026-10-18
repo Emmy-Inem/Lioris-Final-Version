@@ -33,6 +33,12 @@ interface MarketplaceItemOverrides {
   isSold?: boolean;
 }
 
+function MarketplaceImageItem({ path, style }: { path: string; style?: any }) {
+  const { url } = useSignedUrl('campus-media', path);
+  if (!url) return null;
+  return <Image source={{ uri: url }} style={style} contentFit="cover" transition={200} />;
+}
+
 function trustLabel(level: number) {
  if (level >= 10) return { icon: 'trophy'as const, color: '#FFD700' };
  if (level >= 5) return { icon: 'star'as const, color: '#C0C0C0' };
@@ -241,7 +247,20 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
   return (
     <SolidCard radius={18} padded={false} style={{ flex: 1 }}>
       <View style={{ height: 100, backgroundColor: colors.divider, borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden', opacity: isSold ? 0.5 : 1 }}>
-        {resolvedImageUrl ? (
+        {item.imageUrls && item.imageUrls.length > 1 ? (
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            style={StyleSheet.absoluteFill}
+          >
+            {item.imageUrls.map((imgPath, idx) => (
+              <View key={`${imgPath}-${idx}`} style={{ width: 180, height: 100 }}>
+                <MarketplaceImageItem path={imgPath} style={StyleSheet.absoluteFill} />
+              </View>
+            ))}
+          </ScrollView>
+        ) : resolvedImageUrl ? (
           <Image
             source={{ uri: resolvedImageUrl }}
             style={StyleSheet.absoluteFill}
@@ -312,9 +331,14 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  <Badge label="Sold" tone="critical" />
  </View>
  ) : null}
- <AppText variant="bodySmall"weight="bold" style={{ marginBottom: 2 }}>
- {displayTitle}
- </AppText>
+ <AppText variant="bodySmall" weight="bold" style={{ marginBottom: 2 }}>
+    {displayTitle}
+  </AppText>
+  {item.description ? (
+    <AppText variant="caption" tone="secondary" numberOfLines={2} style={{ marginBottom: 4, lineHeight: 15 }}>
+      {item.description}
+    </AppText>
+  ) : null}
  <View style={{ marginBottom: spacing.xs }}>
     <AppText weight="bold">
       {displayPrice}

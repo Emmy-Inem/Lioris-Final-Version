@@ -25,6 +25,7 @@ import { deletePost, listMyDrafts, listMyPosts, listMyScheduled, publishDraft } 
 import { submitVerificationRequest } from '@/api/verification';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { getFriendlyErrorMessage } from '@/utils/errors';
+import { getFeedRoute } from '@/utils/notificationRouter';
 import { useSignedUrl } from '@/api/signedUrls';
 import { SUPABASE_URL, supabase } from '@/api/supabase';
 import { pickImageFromLibrary } from '@/utils/pickImage';
@@ -87,6 +88,10 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   const [editBio, setEditBio] = useState('');
   const [editInterests, setEditInterests] = useState('');
   const [editLinkedinUrl, setEditLinkedinUrl] = useState('');
+  const [editCompany, setEditCompany] = useState('');
+  const [editJobTitle, setEditJobTitle] = useState('');
+  const [editIndustry, setEditIndustry] = useState('');
+  const [editLocation, setEditLocation] = useState('');
   const [editLevel, setEditLevel] = useState<string>('100L');
   const [savingProfile, setSavingProfile] = useState(false);
   const [endorsingSkill, setEndorsingSkill] = useState<string | null>(null);
@@ -256,6 +261,10 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     setEditBio(profile.bio ?? '');
     setEditInterests((profile.interests ?? []).join(', '));
     setEditLinkedinUrl(profile.linkedinUrl ?? '');
+    setEditCompany(profile.company ?? '');
+    setEditJobTitle(profile.jobTitle ?? '');
+    setEditIndustry(profile.industry ?? '');
+    setEditLocation(profile.location ?? '');
     setEditLevel(profile.academicLevel || '100L');
     setEditModalOpen(true);
   }
@@ -294,6 +303,10 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         bio: editBio.trim(),
         interests: interestsArray,
         linkedinUrl: trimmedLinkedin || null,
+        company: editCompany.trim() || null,
+        jobTitle: editJobTitle.trim() || null,
+        industry: editIndustry.trim() || null,
+        location: editLocation.trim() || null,
       });
 
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
@@ -830,7 +843,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  <AppText tone="secondary" variant="bodySmall" style={{ textAlign: 'center', marginBottom: spacing.sm, maxWidth: 360 }}>
  Share study questions, poll your cohort, or showcase projects on the Forum!
  </AppText>
- <AppButton label="Publish First Thread" onPress={() => router.push('./feed' as any)} />
+ <AppButton label="Publish First Thread" onPress={() => router.push(getFeedRoute(user?.role) as any)} />
  </SolidCard>
  )}
  </View>
@@ -908,7 +921,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                   Start a thread and save it as a draft to finish writing it later, or pick a future time to schedule publication.
                 </AppText>
                 <View style={{ marginTop: spacing.md }}>
-                  <AppButton label="Compose a Thread" onPress={() => router.push('./feed' as any)} />
+                  <AppButton label="Compose a Thread" onPress={() => router.push(getFeedRoute(user?.role) as any)} />
                 </View>
               </SolidCard>
             )}
@@ -1157,6 +1170,10 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
               </View>
             ) : null}
             <AppTextField label="Graduation Year" value={editGradYear} onChangeText={setEditGradYear} keyboardType="numeric" />
+            <AppTextField label="Job Title" value={editJobTitle} onChangeText={setEditJobTitle} placeholder="e.g. Software Engineer" />
+            <AppTextField label="Company / Organization" value={editCompany} onChangeText={setEditCompany} placeholder="e.g. Paystack, UI Faculty" />
+            <AppTextField label="Industry" value={editIndustry} onChangeText={setEditIndustry} placeholder="e.g. Tech, Healthcare, Education" />
+            <AppTextField label="Location" value={editLocation} onChangeText={setEditLocation} placeholder="e.g. Lagos, Nigeria" />
             <AppTextField label="Skills & Interests (comma-separated)" value={editInterests} onChangeText={setEditInterests} />
             <AppTextField
               label="LinkedIn URL"

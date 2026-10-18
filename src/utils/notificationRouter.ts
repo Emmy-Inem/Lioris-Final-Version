@@ -94,8 +94,8 @@ export function resolveNotificationRoute(
     if (subPath === '/mentorship') {
       return role === 'student' || role === 'alumni' ? `/(${role})/mentorship` : `/(${role})/dashboard`;
     }
-    if (subPath === '/marketplace') {
-      if (role === 'student') return '/(student)/marketplace';
+    if (subPath === '/marketplace' || subPath === '/marketplace-mine') {
+      if (role === 'student') return subPath === '/marketplace-mine' ? '/(student)/marketplace?tab=mine' : '/(student)/marketplace';
       if (role === 'admin') return '/(admin)/content-moderation';
       return `/(${role})/dashboard`;
     }
@@ -144,4 +144,15 @@ export function resolveNotificationRoute(
     default:
       return `/(${role})/dashboard`;
   }
+}
+
+/**
+ * Returns the primary discussion/feed route for a given user role.
+ * Only students have `/(student)/feed`. Alumni, staff, and admin portals use `/forum`.
+ */
+export function getFeedRoute(userRole?: string | null): string {
+  const role = userRole && ['student', 'staff', 'alumni', 'admin'].includes(userRole)
+    ? userRole
+    : 'student';
+  return role === 'student' ? '/(student)/feed' : `/(${role})/forum`;
 }

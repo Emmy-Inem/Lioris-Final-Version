@@ -82,7 +82,7 @@ export default function StudyGroupsScreen() {
       setVerificationModalOpen(true);
       return;
     }
-    const created = await createStudyGroup({ ...payload, campusCode: undefined });
+    const created = await createStudyGroup({ ...payload, campusCode: campusCode || me?.institutionCode || undefined });
     await queryClient.invalidateQueries({ queryKey: ['study-groups'] });
     toast.success('Study pod created.');
     openPod(created.id);

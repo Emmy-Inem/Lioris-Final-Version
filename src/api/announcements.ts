@@ -12,12 +12,22 @@ let locallyCreatedAnnouncements: Announcement[] = [];
 
 
 
-export async function listAnnouncements(): Promise<Announcement[]> {
- try {
- const { data, error } = await supabase
- .from('announcements')
- .select('*, author:profiles!announcements_author_id_fkey(full_name)')
- .order('published_at', { ascending: false });
+export async function listAnnouncements(options?: { campusCode?: string; [key: string]: any }): Promise<Announcement[]> {
+  try {
+    let q = supabase
+      .from('announcements')
+      .select('*, author:profiles!announcements_author_id_fkey(full_name)')
+      .order('published_at', { ascending: false });
+
+    const targetCampus = options && typeof options === 'object' && typeof options.campusCode === 'string'
+      ? options.campusCode
+      : undefined;
+
+    if (targetCampus && targetCampus !== 'ALL') {
+      q = q.or(`campus_code.eq.${targetCampus},campus_code.eq.GLOBAL,campus_code.is.null`);
+    }
+
+    const { data, error } = await q;
 
  if (error) throw error;
 
@@ -83,7 +93,7 @@ export async function publishAnnouncement(
  .eq('id', realAuthorId)
  .maybeSingle();
 
- const userCampus = prof?.campus_code || payload.campusCode || 'GLOBAL';
+ const userCampus = payload.campusCode || prof?.campus_code || 'GLOBAL';
  const publishedAt = new Date().toISOString();
 
  const { error } = await supabase.from('announcements').insert({

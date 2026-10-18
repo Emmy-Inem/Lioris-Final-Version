@@ -28,6 +28,13 @@ import { isUserBlocked } from '@/api/connections';
 import { Message } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
 import { usePermissions } from '@/context/RolePermissionsContext';
+import { useFeatureFlags } from '@/context/FeatureFlagsContext';
+import { useToast } from '@/context/ToastContext';
+import { VerificationRequiredGate } from './VerificationRequiredGate';
+import { ApplyForVerificationModal } from './ApplyForVerificationModal';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
+import { getMyProfile, markVerificationPending } from '@/api/profile';
+import { submitVerificationRequest } from '@/api/verification';
 import { haptics } from '@/utils/haptics';
 
 interface OutgoingMessage extends Message {
@@ -109,9 +116,34 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const canSend = hasPermission('can_send_messages');
   const queryClient = useQueryClient();
   const flatListRef = useRef<FlatList>(null);
+  const { isFeatureEnabled } = useFeatureFlags();
+  const toast = useToast();
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile', 'me', user?.id],
+    queryFn: () => getMyProfile(user!),
+    enabled: !!user,
+  });
+
+  const isRestrictedGuest = isUnverifiedPersonalUser(profile);
+  const messagingEnabled = isFeatureEnabled('e2ee_messaging');
+
+  const handleRealtimeEvent = React.useCallback(
+    (event: any) => {
+      if (event.type === 'message.created' && event.conversationId === conversationId) {
+        if (event.message?.sender_id && event.message.sender_id !== user?.id) {
+          void markConversationAsRead(conversationId);
+        }
+        queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      }
+    },
+    [conversationId, user?.id, queryClient],
+  );
 
   // Realtime pushes new messages; polling is only a safety net, and a fast one only while realtime is down.
-  const { status: realtimeStatus } = useRealtimeChannel();
+  const { status: realtimeStatus } = useRealtimeChannel(handleRealtimeEvent);
   const realtimeLive = realtimeStatus === 'open';
   const [messageLimit, setMessageLimit] = useState(MESSAGE_PAGE_SIZE);
   const skipNextAutoScroll = useRef(false);
@@ -120,6 +152,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
     queryKey: ['messages', conversationId, messageLimit],
     queryFn: () => listMessages(conversationId, messageLimit),
     refetchInterval: realtimeLive ? 30_000 : 3000,
+    enabled: !isRestrictedGuest && messagingEnabled,
   });
 
   const { data: conversations } = useQuery({
@@ -352,6 +385,43 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
     }
   }
 
+  if (isRestrictedGuest || !messagingEnabled) {
+    return (
+      <View style={{ flex: 1, padding: spacing.lg, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <VerificationRequiredGate
+          campusCode={profile?.institutionCode}
+          featureName="chat"
+          onStartVerification={() => setVerificationModalOpen(true)}
+        />
+        <ApplyForVerificationModal
+          visible={verificationModalOpen}
+          onClose={() => setVerificationModalOpen(false)}
+          onSubmit={async (data) => {
+            if (!user) return;
+            try {
+              await submitVerificationRequest({
+                userId: user.id,
+                applicantName: profile?.fullName ?? user.fullName,
+                documentType: data.documentType,
+                documentReference: data.documentReference,
+                institutionClaimed: data.institutionClaimed,
+                documentPhotoUri: data.documentPhotoUri,
+                photoBlob: data.photoBlob,
+              });
+              markVerificationPending(user.id);
+              await queryClient.invalidateQueries({ queryKey: ['profile'] });
+              setVerificationModalOpen(false);
+              toast.success('Verification submitted! Campus moderators are reviewing your credentials.');
+            } catch (err: any) {
+              toast.error(err?.message || 'Could not submit verification request. Please try again.');
+            }
+          }}
+          defaultInstitution={profile?.institutionCode}
+        />
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.background }}
@@ -394,7 +464,9 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
               {partnerName}
             </AppText>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
-              <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.success, flexShrink: 0 }} />
+              {currentConversation?.isOnline ? (
+                <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.success, flexShrink: 0 }} />
+              ) : null}
               <AppText tone="secondary" variant="caption" style={{ fontSize: 11 }}>
                 {subtitleText}
               </AppText>

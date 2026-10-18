@@ -50,10 +50,10 @@ export function AnnouncementsWidget({
  const announcementsEnabled = isFeatureEnabled('campus_announcements');
  const { campusCode: viewerCampus } = useCampusScope();
  const { data: announcements, isLoading } = useQuery({
- queryKey: ['announcements'],
- queryFn: listAnnouncements,
- enabled: announcementsEnabled,
- });
+    queryKey: ['announcements', viewerCampus],
+    queryFn: () => listAnnouncements({ campusCode: viewerCampus }),
+    enabled: announcementsEnabled,
+  });
 
  if (!announcementsEnabled) return null;
 

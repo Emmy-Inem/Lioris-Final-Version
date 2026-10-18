@@ -4,6 +4,8 @@
  * Integrated with OpenStreetMap Overpass API for live campus amenities (ATMs, food, health, study areas).
  */
 
+import { supabase } from './supabase';
+
 export interface CampusLandmark {
   id: string;
   name: string;
@@ -1952,21 +1954,16 @@ export async function fetchOverpassCampusAmenities(
     if (cached && Date.now() - cached.at < OVERPASS_CACHE_TTL_MS) {
       data = cached.data;
     } else {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 45000);
       try {
-        const res = await fetch(OVERPASS_PROXY_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', apikey: OVERPASS_PROXY_KEY },
-          body: JSON.stringify({ lat: centerLat, lon: centerLon }),
-          signal: controller.signal,
+        const { data: invokeData, error: invokeErr } = await supabase.functions.invoke('overpass-proxy', {
+          body: { lat: centerLat, lon: centerLon },
         });
-        if (res.ok) {
-          data = await res.json();
+        if (!invokeErr && invokeData) {
+          data = invokeData;
           overpassCache.set(normalizedCampus, { at: Date.now(), data });
         }
-      } finally {
-        clearTimeout(timer);
+      } catch (invokeFailure) {
+        console.warn('[CampusMap] overpass-proxy invocation error:', invokeFailure);
       }
     }
 

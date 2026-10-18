@@ -260,8 +260,7 @@ function rowToItem(row: any): SavedItem {
 
 /** Newest first. Falls back to the local mirror when signed out or offline. */
 export async function listSavedItems(kind?: SavedKind): Promise<SavedItem[]> {
-  await hydrateSavedItems();
-  const uid = await currentUserId();
+  const [_, uid] = await Promise.all([hydrateSavedItems(), currentUserId()]);
   if (!uid) return getSavedItemsSync(kind);
 
   try {
@@ -316,8 +315,7 @@ export async function listSavedItems(kind?: SavedKind): Promise<SavedItem[]> {
 }
 
 export async function isItemSaved(kind: SavedKind, itemId: string): Promise<boolean> {
-  await hydrateSavedItems();
-  const uid = await currentUserId();
+  const [_, uid] = await Promise.all([hydrateSavedItems(), currentUserId()]);
   if (!uid) return isItemSavedSync(kind, itemId);
 
   try {

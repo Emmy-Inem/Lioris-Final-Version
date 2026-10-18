@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
 import { router, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -9,6 +9,8 @@ import { AppText } from './AppText';
 import { SolidCard } from './SolidCard';
 import { EmptyState } from './EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { getFeedRoute } from '@/utils/notificationRouter';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { listSavedItems, toggleSavedItem, SAVED_ITEMS_KEY, SavedKind, SavedItem } from '@/api/bookmarks';
@@ -55,6 +57,7 @@ function savedAtLabel(iso: string): string {
 
 export function SavedItemsScreen() {
   const { colors, spacing, radius } = useTheme();
+  const { user } = useAuth();
   const { isDesktop } = useResponsive();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -97,15 +100,19 @@ export function SavedItemsScreen() {
       case 'job':
         if (roleGroup === '(admin)') {
           router.push({ pathname: '/(admin)/content-desk', params: { tab: 'jobs' } } as any);
-        } else {
+        } else if (roleGroup === '(alumni)' || roleGroup === '(student)') {
           router.push(`/${roleGroup}/jobs` as any);
+        } else {
+          Alert.alert('Not Available', 'Job listings are available for students and alumni.');
         }
         break;
       case 'marketplace':
         if (roleGroup === '(admin)') {
           router.push({ pathname: '/(admin)/content-desk', params: { tab: 'marketplace' } } as any);
+        } else if (roleGroup === '(student)') {
+          router.push('/(student)/marketplace' as any);
         } else {
-          router.push(`/${roleGroup}/marketplace` as any);
+          Alert.alert('Student Marketplace', 'The campus marketplace is exclusive to enrolled students.');
         }
         break;
     }
@@ -205,7 +212,7 @@ export function SavedItemsScreen() {
             title={filter === 'all' ? 'Nothing saved yet' : `No saved ${FILTERS.find((f) => f.key === filter)?.label.toLowerCase()}`}
             description="Tap the bookmark icon on any thread, resource, event or opportunity and it will show up here for later."
             actionLabel="Browse the forum"
-            onAction={() => router.push(`/${roleGroup}/feed` as any)}
+            onAction={() => router.push(getFeedRoute(user?.role) as any)}
           />
         ) : (
           <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.sm }}>

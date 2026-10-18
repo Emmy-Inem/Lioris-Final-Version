@@ -88,7 +88,7 @@ export default function StudentDashboard() {
   // 1. Announcements & Important Alerts
   const { data: announcements = [] } = useQuery({
     queryKey: ['announcements', 'dashboard', effectiveCampus],
-    queryFn: listAnnouncements,
+    queryFn: () => listAnnouncements({ campusCode: effectiveCampus }),
     enabled: isFeatureEnabled('campus_announcements'),
   });
 
