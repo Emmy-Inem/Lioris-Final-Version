@@ -99,7 +99,12 @@ Deno.serve(async (req: Request) => {
       if (targetProfile.role === 'admin' || targetProfile.admin_role === 'super_admin' || targetProfile.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') {
         return jsonResponse(req, { error: 'forbidden', message: 'Campus Admins cannot force sign out administrator accounts.' }, 403);
       }
-      if (callerProfile?.campus_code && targetProfile.campus_code && targetProfile.campus_code !== callerProfile.campus_code) {
+      if (
+        !callerProfile?.campus_code ||
+        callerProfile.campus_code === 'GLOBAL' ||
+        !targetProfile.campus_code ||
+        targetProfile.campus_code !== callerProfile.campus_code
+      ) {
         return jsonResponse(req, { error: 'forbidden', message: 'Campus Admins cannot force sign out users outside their campus node.' }, 403);
       }
     }

@@ -105,32 +105,22 @@ export default function StudentMentorshipScreen() {
             <AppTextField label="" placeholder="Search by name, company or skill…" value={query} onChangeText={setQuery} leftIcon="search" />
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-              {campusCode && campusCode !== 'GLOBAL'
-                ? [
-                    { id: 'campus', label: `${campusCode} mentors` },
-                    { id: 'all', label: 'All campuses' },
-                  ].map((f) => {
-                    const selected = campusFilter === f.id;
-                    return (
-                      <Pressable
-                        key={f.id}
-                        onPress={() => setCampusFilter(f.id as 'campus' | 'all')}
-                        style={{
-                          paddingHorizontal: 12,
-                          paddingVertical: 5,
-                          borderRadius: radius.pill,
-                          backgroundColor: selected ? colors.brandPrimary : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                          borderWidth: 1,
-                          borderColor: selected ? colors.brandPrimary : colors.border,
-                        }}
-                      >
-                        <AppText variant="caption" weight={selected ? 'bold' : 'regular'} style={{ fontSize: 11, color: selected ? colors.textInverse : colors.textSecondary }}>
-                          {f.label}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })
-                : null}
+              {campusCode && campusCode !== 'GLOBAL' ? (
+                <View
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
+                    borderRadius: radius.pill,
+                    backgroundColor: colors.brandPrimary,
+                    borderWidth: 1,
+                    borderColor: colors.brandPrimary,
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" style={{ fontSize: 11, color: colors.textInverse }}>
+                    {campusCode} mentors
+                  </AppText>
+                </View>
+              ) : null}
               <Pressable
                 onPress={() => {
                   haptics.light();
@@ -198,12 +188,8 @@ export default function StudentMentorshipScreen() {
                 description={
                   debouncedQuery || expertise !== 'All Fields'
                     ? 'Try a different search or field.'
-                    : campusFilter === 'campus' && campusCode !== 'GLOBAL'
-                    ? 'No alumni from your campus have opened mentoring yet. Try "All campuses".'
-                    : 'Alumni are still setting up their mentor profiles. Check back soon.'
+                    : 'Alumni from your campus are still setting up their mentor profiles. Check back soon.'
                 }
-                actionLabel={campusFilter === 'campus' && campusCode !== 'GLOBAL' ? 'Show all campuses' : undefined}
-                onAction={campusFilter === 'campus' && campusCode !== 'GLOBAL' ? () => setCampusFilter('all') : undefined}
               />
             ) : null}
           </>

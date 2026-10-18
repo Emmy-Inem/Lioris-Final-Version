@@ -31,7 +31,7 @@
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 import { isUuid, requireSuperAdmin } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
-import { createServiceClient } from '../_shared/ratelimit.ts';
+import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 import { eraseUser } from '../_shared/purge.ts';
 
 const MAX_BODY_BYTES = 4096;
@@ -79,6 +79,10 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  const limited = await consumeRateLimit(admin, `admin-delete-user:${callerUser.id}`, 20, 3600);
+  if (limited === 'limited') return jsonResponse(req, { error: 'Too many account deletions. Try again later.' }, 429);
+  if (limited === 'error') return jsonResponse(req, { error: 'Could not verify the request rate. Try again shortly.' }, 503);
+
   try {
     // --- 3. Target checks (service role: bypasses RLS) ----------------------
     const { data: targetProfile, error: profileError } = await admin
@@ -103,6 +107,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const { data: targetAuthUser } = await admin.auth.admin.getUserById(targetUserId);
+    if (!targetProfile && !targetAuthUser?.user) {
+      return jsonResponse(req, { error: 'That user account does not exist.' }, 404);
+    }
     if (targetAuthUser?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') {
       return jsonResponse(
         req,

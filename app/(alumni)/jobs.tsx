@@ -44,6 +44,7 @@ import { JobListing } from '@/api/types';
 import { haptics } from '@/utils/haptics';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { openExternalUrl } from '@/utils/openExternalUrl';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 
 const WORKPLACE_OPTIONS = ['All', 'Remote', 'Hybrid', 'On-site'] as const;
 const JOB_TYPE_OPTIONS = ['All', 'Full-time', 'Contract', 'Internship', 'Part-time'] as const;
@@ -59,6 +60,7 @@ export default function AlumniJobsScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
+  const isUnverified = isUnverifiedPersonalUser(user);
   const toast = useToast();
   const queryClient = useQueryClient();
   const { campusCode } = useCampusScope();
@@ -141,7 +143,6 @@ export default function AlumniJobsScreen() {
       void queryClient.invalidateQueries({ queryKey: SAVED_ITEMS_KEY('job') });
       toast.show({
         message: willBeSaved ? 'Job saved to your bookmarks' : 'Job removed from saved items',
-        tone: 'success',
       });
     } catch {
       // Revert on error
@@ -258,6 +259,17 @@ export default function AlumniJobsScreen() {
               size="sm"
               onPress={() => {
                 haptics.light();
+                if (isUnverified) {
+                  Alert.alert(
+                    'Verification Required',
+                    'Please verify your alumni status on your Profile before posting job opportunities.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Verify Now', onPress: () => router.push('/(alumni)/profile' as any) },
+                    ],
+                  );
+                  return;
+                }
                 setCreateModalOpen(true);
               }}
             />

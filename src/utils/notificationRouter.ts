@@ -18,87 +18,105 @@ export function resolveNotificationRoute(
   if (rawPath && typeof rawPath === 'string' && rawPath.trim().length > 0) {
     const trimmed = rawPath.trim();
 
-    // Notifications written by the database (mentorship + study pod functions) point at one item:
-    //   /mentorship/<id>     -> that mentorship's space
-    //   /study-groups/<id>   -> that pod
-    const item = /^\/(mentorship|study-groups)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(trimmed);
-    if (item) {
-      if (item[1] === 'mentorship') {
-        return role === 'student' || role === 'alumni' ? `/(${role})/mentorship-space/${item[2]}` : `/(${role})/dashboard`;
-      }
-      return role === 'student' ? `/(student)/pod/${item[2]}` : `/(${role})/dashboard`;
+    // Strip any leading /(student|staff|alumni|admin) prefix so both bare and
+    // role-prefixed notification URLs go through the same canonical mapper.
+    const roleMatch = trimmed.match(/^\/\((student|staff|alumni|admin)\)(.*)$/);
+    const subPath = roleMatch ? (roleMatch[2] || '/dashboard') : trimmed;
+
+    // 1. Item-level deep links:
+    //   /mentorship/<id> or /mentorship-space/<id>
+    const mentorshipMatch = /^\/(?:mentorship|mentorship-space)\/([0-9a-f-]{36})$/i.exec(subPath);
+    if (mentorshipMatch) {
+      return role === 'student' || role === 'alumni'
+        ? `/(${role})/mentorship-space/${mentorshipMatch[1]}`
+        : `/(${role})/dashboard`;
     }
 
-    // Check if the path starts with a role group e.g. /(student)/..., /(alumni)/...
-    const roleMatch = trimmed.match(/^\/\((student|staff|alumni|admin)\)(.*)$/);
-    if (roleMatch) {
-      const subPath = roleMatch[2]; // e.g. '/dashboard', '/events/123', '/feed'
+    //   /study-groups/<id> or /pod/<id>
+    const podMatch = /^\/(?:study-groups|pod)\/([0-9a-f-]{36})$/i.exec(subPath);
+    if (podMatch) {
+      return role === 'student' ? `/(student)/pod/${podMatch[1]}` : `/(${role})/dashboard`;
+    }
 
-      // Sub-path specific role adaptations
-      if (subPath === '/feed' || subPath === '/forum') {
-        return role === 'student' ? '/(student)/feed' : `/(${role})/forum`;
-      }
-      if (subPath === '/connection-requests' || subPath === '/connections') {
-        return role === 'alumni' ? '/(alumni)/connection-requests' : `/(${role})/notifications`;
-      }
-      if (subPath === '/resources') {
-        return role === 'student' ? '/(student)/resources' : `/(${role})/dashboard`;
-      }
-      if (subPath === '/study-groups') {
-        return role === 'student' ? '/(student)/study-groups' : `/(${role})/dashboard`;
-      }
-      if (subPath === '/announcements') {
-        return role === 'staff' ? '/(staff)/announcements' : `/(${role})/dashboard`;
-      }
-      if (subPath === '/moderation' || subPath === '/moderation-queue') {
-        if (role === 'staff') return '/(staff)/moderation';
-        if (role === 'admin') return '/(admin)/moderation-queue';
-        return `/(${role})/dashboard`;
-      }
-      if (subPath === '/jobs') {
-        // Jobs/Career is alumni-only (see 20261009000000_role_exclusive_jobs_marketplace.sql) -
-        // a student has no jobs screen to deep-link into.
-        return role === 'alumni' ? '/(alumni)/jobs' : `/(${role})/dashboard`;
-      }
-      if (subPath === '/mentorship') {
-        return (role === 'student' || role === 'alumni') ? `/(${role})/mentorship` : `/(${role})/dashboard`;
-      }
-      if (subPath === '/marketplace') {
-        // Marketplace is student-only (see 20261009000000_role_exclusive_jobs_marketplace.sql) -
-        // an alumni has no marketplace screen to deep-link into.
-        return role === 'student' ? '/(student)/marketplace' : `/(${role})/dashboard`;
-      }
-      if (subPath.startsWith('/events')) {
-        return `/(${role})${subPath}`;
-      }
-      if (subPath === '/profile') {
-        return `/(${role})/profile`;
-      }
-      if (subPath === '/settings') {
-        return `/(${role})/settings`;
-      }
-      if (subPath === '/dashboard') {
-        return `/(${role})/dashboard`;
-      }
+    //   /post/<id>
+    const postMatch = /^\/post\/([^/?#]+)$/i.exec(subPath);
+    if (postMatch) {
+      if (role === 'admin') return `/(student)/post/${postMatch[1]}`;
+      return `/(${role})/post/${postMatch[1]}`;
+    }
 
-      // If user's role matches the origin role prefix, preserve the exact path
-      if (roleMatch[1] === role) {
-        return trimmed;
-      }
+    //   /event/<id> or /events/<id>
+    const eventMatch = /^\/events?\/([^/?#]+)$/i.exec(subPath);
+    if (eventMatch) {
+      if (role === 'admin') return '/(admin)/content-moderation';
+      return `/(${role})/events/${eventMatch[1]}`;
+    }
 
-      // Default replacement of role prefix
+    //   /messages/<id>
+    const msgMatch = /^\/messages\/([^/?#]+)$/i.exec(subPath);
+    if (msgMatch) {
+      return `/(${role})/messages/${msgMatch[1]}`;
+    }
+
+    // 2. Section-level deep links:
+    if (subPath === '/feed' || subPath === '/forum' || subPath === '/forum/explore') {
+      if (subPath === '/forum/explore' && role === 'student') return '/(student)/forum/explore';
+      if (role === 'admin') return '/(admin)/communities';
+      return role === 'student' ? '/(student)/feed' : `/(${role})/forum`;
+    }
+    if (subPath === '/connection-requests' || subPath === '/connections') {
+      return role === 'alumni' ? '/(alumni)/connection-requests' : `/(${role})/notifications`;
+    }
+    if (subPath === '/resources') {
+      if (role === 'student') return '/(student)/resources';
+      if (role === 'staff') return '/(staff)/moderation';
+      if (role === 'admin') return '/(admin)/content-moderation';
+      return `/(${role})/dashboard`;
+    }
+    if (subPath === '/study-groups') {
+      return role === 'student' ? '/(student)/study-groups' : `/(${role})/dashboard`;
+    }
+    if (subPath === '/announcements') {
+      if (role === 'staff') return '/(staff)/announcements';
+      if (role === 'admin') return '/(admin)/broadcast';
+      return `/(${role})/dashboard`;
+    }
+    if (subPath === '/moderation' || subPath === '/moderation-queue') {
+      if (role === 'staff') return '/(staff)/moderation';
+      if (role === 'admin') return '/(admin)/moderation-queue';
+      return `/(${role})/dashboard`;
+    }
+    if (subPath === '/jobs') {
+      if (role === 'alumni') return '/(alumni)/jobs';
+      if (role === 'admin') return '/(admin)/content-moderation';
+      return `/(${role})/dashboard`;
+    }
+    if (subPath === '/mentorship') {
+      return role === 'student' || role === 'alumni' ? `/(${role})/mentorship` : `/(${role})/dashboard`;
+    }
+    if (subPath === '/marketplace') {
+      if (role === 'student') return '/(student)/marketplace';
+      if (role === 'admin') return '/(admin)/content-moderation';
+      return `/(${role})/dashboard`;
+    }
+    if (subPath === '/giving') {
+      if (role === 'alumni') return '/(alumni)/giving';
+      if (role === 'admin') return '/(admin)/content-moderation';
+      return `/(${role})/dashboard`;
+    }
+    if (subPath === '/events' || subPath === '/events-list') {
+      if (role === 'admin') return '/(admin)/content-moderation';
+      return `/(${role})/events-list`;
+    }
+
+    const bareRoleRoutes = new Set(['/profile', '/dashboard', '/messages', '/settings', '/notifications', '/saved', '/search']);
+    if (bareRoleRoutes.has(subPath)) {
       return `/(${role})${subPath}`;
     }
 
-    // Bare, un-prefixed paths written by callers that don't know the
-    // viewer's role (e.g. createNotification({ deepLinkPath: '/profile' })
-    // from moderation.ts, connections.ts, verification.ts, supportTickets.ts).
-    // These map 1:1 onto a route that exists under every role group, so
-    // prepend the viewer's own role prefix instead of falling through to a
-    // route that doesn't exist (bare '/profile', '/dashboard', etc).
-    const bareRoleRoutes = new Set(['/profile', '/dashboard', '/messages', '/settings', '/notifications']);
-    if (bareRoleRoutes.has(trimmed)) {
-      return `/(${role})${trimmed}`;
+    if (roleMatch) {
+      if (roleMatch[1] === role) return trimmed;
+      return `/(${role})${subPath}`;
     }
 
     // Root paths like '/privacy', '/terms', '/(auth)/login'

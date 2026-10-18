@@ -628,14 +628,16 @@ export async function adminDirectVerifyUser(userId: string, isVerified: boolean)
     // 'rejected') - see the explanation above respondToVerificationRequest. Writing it silently
     // fails the UPDATE, leaving the profile's status unchanged while the admin UI reports success.
     const status = isVerified ? 'verified' : 'unverified';
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .update({
         verification_status: status,
       })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select('id');
 
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error('Verification status update was blocked by campus security policies.');
 
     // Evict from local cache so the next getPublicProfile fetches fresh data
     invalidateProfileCache(userId);

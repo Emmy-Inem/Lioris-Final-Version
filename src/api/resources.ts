@@ -379,14 +379,24 @@ export async function listPendingResources(): Promise<Resource[]> {
 }
 
 export async function approveResource(id: string): Promise<Resource> {
- try {
- const { error } = await supabase.from('resources').update({ is_approved: true, approved_at: new Date().toISOString() }).eq('id', id);
- if (error) throw error;
- } catch (err) {
- console.warn('[Resources] Approve error:', err);
- throw new Error('Could not approve this resource. Please try again.');
- }
- return updateResource(id, { approvalStatus: 'approved', rejectionReason: null });
+  const updated = await updateResource(id, { approvalStatus: 'approved', rejectionReason: null });
+  try {
+    await supabase.from('resources').update({ approved_at: new Date().toISOString() }).eq('id', id);
+    const { data: row } = await supabase.from('resources').select('uploader_id, title').eq('id', id).maybeSingle();
+    if (row?.uploader_id) {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        recipientId: row.uploader_id,
+        type: 'system',
+        title: 'Resource upload approved!',
+        body: `Your academic resource "${row.title || updated.title || 'your upload'}" has been approved and is now live in the library.`,
+        deepLinkPath: '/resources',
+      });
+    }
+  } catch (err) {
+    console.warn('[Resources] approveResource notification failed:', err);
+  }
+  return updated;
 }
 
 export async function rejectResource(id: string, reason?: string): Promise<Resource> {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SolidCard } from '@/components/SolidCard';
@@ -89,7 +89,7 @@ export function DonationsModerationTab() {
   });
   const { data: approved = [], isLoading: approvedLoading, refetch: refetchApproved } = useQuery({
     queryKey: ['giving-campaigns', 'admin-approved'],
-    queryFn: listGivingCampaigns,
+    queryFn: () => listGivingCampaigns(),
     enabled: section === 'approved',
   });
 
@@ -145,6 +145,12 @@ export function DonationsModerationTab() {
         setActingId(null);
       }
     };
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.prompt === 'function') {
+      const reason = window.prompt(`Provide a reason for declining "${c.title}":`, 'The giving link does not look legitimate.');
+      if (reason === null) return;
+      void doReject(reason.trim() || 'Did not meet campaign standards.');
+      return;
+    }
     if (Alert.prompt) {
       Alert.prompt(
         'Reject Campaign',
@@ -254,6 +260,12 @@ export function DonationsModerationTab() {
       else haptics.success();
       Alert.alert('Bulk Reject Complete', failed > 0 ? `${succeeded} rejected, ${failed} failed. Retry the failed ones individually.` : `${succeeded} campaign${succeeded === 1 ? '' : 's'} rejected.`);
     };
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.prompt === 'function') {
+      const reason = window.prompt(`Provide a reason for declining ${targets.length} campaign${targets.length === 1 ? '' : 's'}:`, 'The giving link does not look legitimate.');
+      if (reason === null) return;
+      void doReject(reason.trim() || 'Did not meet campaign standards.');
+      return;
+    }
     if (Alert.prompt) {
       Alert.prompt(
         'Reject Campaigns',

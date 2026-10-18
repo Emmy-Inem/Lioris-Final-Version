@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SolidCard } from '@/components/SolidCard';
@@ -77,6 +77,12 @@ export function JobsModerationTab() {
         setActingId(null);
       }
     };
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.prompt === 'function') {
+      const reason = window.prompt(`Provide a reason for declining "${job.title}":`, 'Looks like spam or off-topic for this community.');
+      if (reason === null) return;
+      void doReject(reason.trim() || 'Did not meet posting standards.');
+      return;
+    }
     if (Alert.prompt) {
       Alert.prompt(
         'Reject Posting',
@@ -148,6 +154,12 @@ export function JobsModerationTab() {
       else haptics.success();
       Alert.alert('Bulk Reject Complete', failed > 0 ? `${succeeded} rejected, ${failed} failed. Retry the failed ones individually.` : `${succeeded} posting${succeeded === 1 ? '' : 's'} rejected.`);
     };
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.prompt === 'function') {
+      const reason = window.prompt(`Provide a reason for declining ${targets.length} posting${targets.length === 1 ? '' : 's'}:`, 'Looks like spam or off-topic for this community.');
+      if (reason === null) return;
+      void doReject(reason.trim() || 'Did not meet posting standards.');
+      return;
+    }
     if (Alert.prompt) {
       Alert.prompt(
         'Reject Postings',

@@ -121,6 +121,21 @@ export function ResourcesModerationTab() {
 
  function handleRejectConfirm(resource: Resource) {
  haptics.error();
+ if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.prompt === 'function') {
+ const reason = window.prompt(`Provide a reason for declining "${resource.title}":`, 'Did not meet quality standards.');
+ if (reason === null) return;
+ void (async () => {
+ try {
+ await rejectResource(resource.id, reason.trim() || 'Did not meet quality standards.');
+ await queryClient.invalidateQueries({ queryKey: ['resources'] });
+ await refetch();
+ Alert.alert('Submission Rejected', 'The student has been notified with feedback.');
+ } catch (err: any) {
+ Alert.alert('Rejection Failed', err?.message || 'Could not decline this submission.');
+ }
+ })();
+ return;
+ }
  Alert.prompt
  ? Alert.prompt(
  'Reject Submission',

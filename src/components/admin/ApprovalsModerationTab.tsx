@@ -1,5 +1,5 @@
 import React, { useState } from'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { Alert, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
@@ -64,34 +64,52 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  try {
  await approveResource(resource.id);
  queryClient.invalidateQueries({ queryKey: ['resources'] });
- Alert.alert('Resource Approved & Indexed', `"${resource.title}"has been published to the student catalog.`);
+ Alert.alert('Resource Approved & Indexed', `"${resource.title}" has been published to the student catalog.`);
+ } catch (err: any) {
+ Alert.alert('Approval Failed', err?.message || 'Could not approve this resource.');
  } finally {
  setActingId(null);
  }
  }
 
  async function handleRejectResource(resource: Resource) {
+ let reason = 'File did not meet quality standards.';
+ if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.prompt === 'function') {
+ const input = window.prompt(`Enter rejection reason for "${resource.title}":`, reason);
+ if (input === null) return;
+ if (input.trim()) reason = input.trim();
+ }
  haptics.error();
  setActingId(resource.id);
  try {
- await rejectResource(resource.id, 'File did not meet quality standards.');
+ await rejectResource(resource.id, reason);
  queryClient.invalidateQueries({ queryKey: ['resources'] });
- Alert.alert('Submission Declined', `"${resource.title}"has been returned to the uploader.`);
+ Alert.alert('Submission Declined', `"${resource.title}" has been returned to the uploader.`);
+ } catch (err: any) {
+ Alert.alert('Rejection Failed', err?.message || 'Could not decline this resource.');
  } finally {
  setActingId(null);
  }
  }
 
  async function handleVerificationResponse(id: string, status: 'approved' | 'rejected') {
+ let reason: string | undefined;
+ if (status === 'rejected' && Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.prompt === 'function') {
+ const input = window.prompt('Provide a reason for declining this verification request:', 'Provided document could not be verified.');
+ if (input === null) return;
+ reason = input.trim() || 'Provided document could not be verified.';
+ }
  haptics.medium();
  setActingId(id);
  try {
- await respondToVerificationRequest(id, status);
+ await respondToVerificationRequest(id, status, reason ? { reason } : undefined);
  queryClient.invalidateQueries({ queryKey: ['verification-requests'] });
  Alert.alert(
  status === 'approved' ? 'Credential Verified' : 'Application Rejected',
  `Verification request has been marked as ${status}.`,
  );
+ } catch (err: any) {
+ Alert.alert('Update Failed', err?.message || 'Could not update verification status.');
  } finally {
  setActingId(null);
  }
@@ -107,6 +125,8 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  status === 'approved' ? 'Campus Node Approved' : 'Request Declined',
  `Institution federation request has been ${status}.`,
  );
+ } catch (err: any) {
+ Alert.alert('Action Failed', err?.message || 'Could not update campus node request.');
  } finally {
  setActingId(null);
  }
@@ -275,9 +295,24 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  <Badge label="Pending Review"tone="warning" />
  </View>
 
- <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.md }}>
+ <AppText tone="secondary"variant="bodySmall"style={{ marginBottom: spacing.sm }}>
  Claimed Institution: {v.institutionClaimed}
  </AppText>
+ {v.documentPhotoUri ? (
+ <View style={{ marginBottom: spacing.sm }}>
+ <AppButton
+ label="View Uploaded ID Document"
+ variant="secondary"
+ onPress={() => {
+ if (v.documentPhotoUri) {
+ Linking.openURL(v.documentPhotoUri).catch(() => {
+ Alert.alert('Unable to Open Document', 'Could not open the uploaded ID document URL.');
+ });
+ }
+ }}
+ />
+ </View>
+ ) : null}
 
  <View style={{ flexDirection: 'row', gap: spacing.sm }}>
  <View style={{ flex: 1 }}>
@@ -400,7 +435,20 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
           </ScrollView>
         ) : null}
 
-        <View style={{ marginTop: spacing.md, flexShrink: 0 }}>
+        <View style={{ marginTop: spacing.md, flexShrink: 0, gap: spacing.xs }}>
+          {previewResource?.fileUrl ? (
+            <AppButton
+              label="Open Uploaded File"
+              variant="secondary"
+              onPress={() => {
+                if (previewResource?.fileUrl) {
+                  Linking.openURL(previewResource.fileUrl).catch(() => {
+                    Alert.alert('Unable to Open File', 'Could not open the uploaded resource URL.');
+                  });
+                }
+              }}
+            />
+          ) : null}
           <AppButton label="Close Preview" onPress={() => setPreviewResource(null)} />
         </View>
       </View>

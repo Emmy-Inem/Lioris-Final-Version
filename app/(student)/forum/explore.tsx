@@ -22,6 +22,7 @@ import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModal';
 import { submitVerificationRequest } from '@/api/verification';
+import { usePermissions } from '@/context/RolePermissionsContext';
 
 const CATEGORIES = ['All', 'Academic & Tech', 'Campus Life', 'Union & Polls'] as const;
 type CategoryFilter = typeof CATEGORIES[number];
@@ -29,6 +30,7 @@ type CategoryFilter = typeof CATEGORIES[number];
 export default function ExploreForumsScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const { isDesktop, width } = useResponsive();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -224,11 +226,13 @@ export default function ExploreForumsScreen() {
                 setVerificationModalOpen(true);
                 return;
               }
-              const isAmbassadorOrAdmin = !!(profile?.isCampusAmbassador || user?.actualRole === 'admin' || user?.actualRole === 'staff');
-              if (!isAmbassadorOrAdmin) {
+              const canCreateSpaces =
+                hasPermission('can_create_spaces') ||
+                !!(profile?.isCampusAmbassador || user?.actualRole === 'admin' || user?.actualRole === 'staff');
+              if (!canCreateSpaces) {
                 Alert.alert(
-                  'Campus Ambassador Curation',
-                  'Discussion spaces are curated by official Campus Ambassadors and campus moderators to keep academic communities organized.\n\nWant to curate spaces for your faculty or department? Contact your campus representative or apply to become an ambassador.',
+                  'Campus Space Curation',
+                  'Creating new discussion spaces is currently restricted for your role by campus administration.\n\nWant to curate spaces for your faculty or department? Contact your campus representative or apply to become an ambassador.',
                   [{ text: 'Understood', style: 'default' }]
                 );
                 return;

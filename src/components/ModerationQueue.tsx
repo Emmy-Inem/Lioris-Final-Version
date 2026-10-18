@@ -13,7 +13,7 @@ import { EmptyState } from'./EmptyState';
 import { QueueItemSkeletonList } from './Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { listReports, resolveReport, ReportAlreadyHandledError, getOtherReportCountForAuthor } from '@/api/moderation';
+import { listReports, resolveReport, escalateReport, applyModerationSanction, ReportAlreadyHandledError, getOtherReportCountForAuthor } from '@/api/moderation';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { deletePost } from '@/api/posts';
 import { deletePodPost } from '@/api/studyGroups';
@@ -208,21 +208,23 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  Alert.alert('Bulk Dismiss Complete', parts.join(', ') || 'No reports were processed.');
  }
 
- async function handleConfirmTakedown() {
- if (!actionModalReport) return;
- // Defense in depth: staff must never be able to trigger permaban/shadowban even if
- // punishmentType somehow held a stale privileged value (the UI already hides these options).
- if (!canPermaban && (punishmentType === 'permaban' || punishmentType === 'shadowban')) {
- Alert.alert('Not Permitted', 'Account suspension is an admin-only action. Please escalate this report instead.');
- return;
- }
- haptics.medium();
- const report = actionModalReport;
+  async function handleConfirmTakedown() {
+    if (!actionModalReport) return;
+    // Defense in depth: staff must never be able to trigger permaban/shadowban even if
+    // punishmentType somehow held a stale privileged value (the UI already hides these options).
+    if (!canPermaban && (punishmentType === 'permaban' || punishmentType === 'shadowban')) {
+      Alert.alert('Not Permitted', 'Account suspension is an admin-only action. Please escalate this report instead.');
+      return;
+    }
+    haptics.medium();
+    const report = actionModalReport;
     let actionLabel = 'Content removed and warning issued';
     let targetUserId: string | null = null;
     if (report.targetType === 'user') {
       targetUserId = report.targetId;
     }
+
+    const shouldPurgeContent = punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban';
 
     setApplyingPenalty(true);
     try {
@@ -239,7 +241,6 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        const shouldPurgeContent = punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban';
         if (shouldPurgeContent) {
           await deletePost(report.targetId);
           actionLabel = 'Post purged from campus feed';
@@ -257,7 +258,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        if (punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban') {
+        if (shouldPurgeContent) {
           await deletePodPost(report.targetId);
           actionLabel = 'Study pod post removed';
         }
@@ -274,7 +275,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        if (punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban') {
+        if (shouldPurgeContent) {
           await purgeEvent(report.targetId);
           actionLabel = 'Event purged from campus calendar';
         }
@@ -291,7 +292,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        if (punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban') {
+        if (shouldPurgeContent) {
           await deleteMessageAsAdmin(report.targetId);
           actionLabel = 'Message removed from the conversation';
         }
@@ -308,7 +309,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        if (punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban') {
+        if (shouldPurgeContent) {
           await takedownListing(report.targetId, adminModNote.trim() || `Removed following a user report: ${report.reason}`);
           actionLabel = 'Listing removed from the marketplace';
         }
@@ -325,61 +326,71 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
           // ignore
         }
 
-        if (punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban') {
+        if (shouldPurgeContent) {
           await rejectJob(report.targetId, adminModNote.trim() || `Removed following a user report: ${report.reason}`);
           actionLabel = 'Job posting removed from the career board';
         }
       }
 
-      // If user ban/suspension or reported user target, enforce is_suspended on target user profile via RPC.
-      // Only reachable for admins (staff is blocked above and the UI never offers these options to staff).
-      if (canPermaban && (punishmentType === 'permaban' || punishmentType === 'shadowban' || report.targetType === 'user')) {
-        if (targetUserId && targetUserId !== 'unknown') {
-          await supabase.rpc('suspend_user_account', {
-            p_target_user_id: targetUserId,
-            p_reason: adminModNote.trim() || `Punishment for report: ${report.reason}`,
-          });
+      const sanctionReason = adminModNote.trim() || `Moderation decision on report: ${report.reason}`;
+
+      // Apply account-level sanction via RPC (warn, mute, shadowban, permaban, or user-target takedown)
+      if (targetUserId && targetUserId !== 'unknown') {
+        if (punishmentType === 'warn' || punishmentType === 'mute' || punishmentType === 'shadowban' || punishmentType === 'permaban') {
+          await applyModerationSanction(targetUserId, punishmentType, sanctionReason);
+        } else if (punishmentType === 'takedown' && report.targetType === 'user' && canPermaban) {
+          await applyModerationSanction(targetUserId, 'permaban', sanctionReason);
         }
       }
 
-      if (punishmentType === 'mute') {
+      if (punishmentType === 'warn') {
+        actionLabel = 'Official warning issued to user';
+      } else if (punishmentType === 'mute') {
         actionLabel = 'Content flagged and author temporarily muted for 24 hours';
+      } else if (punishmentType === 'shadowban') {
+        actionLabel = 'Content removed and user account restricted';
+      } else if (punishmentType === 'permaban') {
+        actionLabel = 'Content removed and user account permanently suspended';
       } else if (punishmentType === 'escalate') {
+        await escalateReport(report.id, adminModNote.trim() || undefined);
         actionLabel = 'Report escalated to admin for further review (kept open in admin queue)';
       }
 
       if (punishmentType !== 'escalate') {
-        await resolveReport(report.id, 'resolved');
+        await resolveReport(report.id, 'resolved', adminModNote.trim() || undefined, {
+          contentRemoved: shouldPurgeContent,
+          sanction: punishmentType,
+        });
       }
 
       recordAuditLogEntry({
- action: punishmentType === 'escalate' ? 'item_moderated' : 'report_resolved',
- summary: `Moderation Action on #${report.id.substring(0, 8)} (${report.targetType}): ${actionLabel}`,
- targetType: 'report',
- targetId: report.id,
- institutionCode: report.institutionCode,
- reason: adminModNote.trim() || `Violation of guidelines: ${report.reason}`,
- });
+        action: punishmentType === 'escalate' ? 'item_moderated' : 'report_resolved',
+        summary: `Moderation Action on #${report.id.substring(0, 8)} (${report.targetType}): ${actionLabel}`,
+        targetType: 'report',
+        targetId: report.id,
+        institutionCode: report.institutionCode,
+        reason: adminModNote.trim() || `Violation of guidelines: ${report.reason}`,
+      });
 
- queryClient.invalidateQueries({ queryKey: ['reports'] });
- queryClient.invalidateQueries({ queryKey: ['notifications'] });
- setActionModalReport(null);
- setAdminModNote('');
- Alert.alert('Moderation Action Applied', `${actionLabel}. Decision logged to the public campus audit ledger.`);
- } catch (err) {
- console.warn('[ModerationQueue] Failed to apply enforcement action:', err);
- if (err instanceof ReportAlreadyHandledError) {
- queryClient.invalidateQueries({ queryKey: ['reports'] });
- setActionModalReport(null);
- setAdminModNote('');
- Alert.alert('Already Handled', 'Another admin already made a decision on this report. The list has been refreshed.');
- } else {
- Alert.alert('Action Failed', 'We could not apply this moderation action. Please check your connection and try again.');
- }
- } finally {
- setApplyingPenalty(false);
- }
- }
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      setActionModalReport(null);
+      setAdminModNote('');
+      Alert.alert('Moderation Action Applied', `${actionLabel}. Decision logged to the public campus audit ledger.`);
+    } catch (err) {
+      console.warn('[ModerationQueue] Failed to apply enforcement action:', err);
+      if (err instanceof ReportAlreadyHandledError) {
+        queryClient.invalidateQueries({ queryKey: ['reports'] });
+        setActionModalReport(null);
+        setAdminModNote('');
+        Alert.alert('Already Handled', 'Another admin already made a decision on this report. The list has been refreshed.');
+      } else {
+        Alert.alert('Action Failed', (err as Error)?.message || 'We could not apply this moderation action. Please check your connection and try again.');
+      }
+    } finally {
+      setApplyingPenalty(false);
+    }
+  }
 
   return (
     <>

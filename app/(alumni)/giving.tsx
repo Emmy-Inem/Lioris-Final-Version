@@ -28,6 +28,9 @@ import {
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { haptics } from '@/utils/haptics';
+import { router } from 'expo-router';
+import { useAuth } from '@/auth/AuthContext';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 
 function formatNaira(amount: number): string {
   return `₦${amount.toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
@@ -179,6 +182,8 @@ export default function AlumniGivingScreen() {
   const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const isUnverified = isUnverifiedPersonalUser(user);
   const toast = useToast();
   const queryClient = useQueryClient();
   const { isFeatureEnabled } = useFeatureFlags();
@@ -193,8 +198,8 @@ export default function AlumniGivingScreen() {
   const [tab, setTab] = useState<'browse' | 'mine'>('browse');
 
   const { data: campaigns = [], isLoading } = useQuery({
-    queryKey: ['giving-campaigns', 'approved'],
-    queryFn: listGivingCampaigns,
+    queryKey: ['giving-campaigns', 'approved', user?.campusCode ?? undefined],
+    queryFn: () => listGivingCampaigns(user?.campusCode ?? undefined),
     enabled: isEnabled && tab === 'browse',
   });
 
@@ -290,6 +295,17 @@ export default function AlumniGivingScreen() {
           size="sm"
           onPress={() => {
             haptics.light();
+            if (isUnverified) {
+              Alert.alert(
+                'Verification Required',
+                'Please verify your alumni status on your Profile before starting a giving campaign.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Verify Now', onPress: () => router.push('/(alumni)/profile' as any) },
+                ],
+              );
+              return;
+            }
             setCreateOpen(true);
           }}
         />

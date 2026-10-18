@@ -2,7 +2,7 @@ import React, { useState } from'react';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { useAdminBadges } from '@/components/admin/useAdminBadges';
 import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from'@/components/ScreenContainer';
@@ -81,8 +81,14 @@ export default function UserDirectoryScreen() {
  const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
  const { user: currentUser, beginImpersonation } = useAuth();
+ const params = useLocalSearchParams<{ q?: string }>();
  const [isImpersonating, setIsImpersonating] = useState(false);
- const [query, setQuery] = useState('');
+ const [query, setQuery] = useState(() => (typeof params.q === 'string' ? params.q : ''));
+ React.useEffect(() => {
+   if (typeof params.q === 'string' && params.q.trim()) {
+     setQuery(params.q.trim());
+   }
+ }, [params.q]);
  const [role, setRole] = useState('All Roles');
   const [campus, setCampus] = useState(currentUser?.isCampusAdmin && currentUser?.campusCode ? currentUser.campusCode : ALL_CAMPUSES);
   const [botFilter, setBotFilter] = useState<'all' | 'real_only' | 'bots_only'>('all');
@@ -2020,6 +2026,30 @@ export default function UserDirectoryScreen() {
                       </AppText>
                     </Pressable>
                   </View>
+
+                  {editRole === 'Student' && (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View>
+                        <AppText weight="bold">Campus Ambassador</AppText>
+                        <AppText tone="secondary" variant="caption">Grants ambassador badge & event/space privileges</AppText>
+                      </View>
+                      <Pressable
+                        onPress={() => setEditIsAmbassador(!editIsAmbassador)}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: radius.pill,
+                          backgroundColor: editIsAmbassador ? colors.brandPrimary : colors.surface,
+                          borderWidth: 1,
+                          borderColor: editIsAmbassador ? colors.brandPrimary : colors.border,
+                        }}
+                      >
+                        <AppText weight="bold" style={{ color: editIsAmbassador ? '#FFF' : colors.textSecondary, fontSize: 12 }}>
+                          {editIsAmbassador ? 'AMBASSADOR' : 'STANDARD'}
+                        </AppText>
+                      </Pressable>
+                    </View>
+                  )}
 
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <View>

@@ -74,12 +74,13 @@ export function RolePermissionsProvider({ children }: { children: React.ReactNod
     return map;
   }, [records]);
 
-  // Determine current active system role
+  // Determine current active system role (respecting role-switcher preview mode)
   const currentSystemRole: SystemRole = useMemo(() => {
-    if (user?.actualRole === 'admin' && user?.isSuperAdmin) return 'super_admin';
-    if (user?.isCampusAdmin) return 'campus_admin';
     if (user?.role === 'staff') return 'staff';
     if (user?.role === 'alumni') return 'alumni';
+    if (user?.role === 'student') return 'student';
+    if (user?.actualRole === 'admin' && user?.isSuperAdmin) return 'super_admin';
+    if (user?.isCampusAdmin || user?.role === 'admin') return 'campus_admin';
     return 'student';
   }, [user]);
 

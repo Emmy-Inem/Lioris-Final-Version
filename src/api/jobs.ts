@@ -218,8 +218,6 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
   const { data: authData } = await supabase.auth.getUser();
   let realPosterId = authData?.user?.id;
   const sessionUser = await getSessionUser();
-  const posterName = sessionUser?.fullName || authData?.user?.user_metadata?.full_name || 'Alumni Member';
-  const campusCode = payload.campusCode || (sessionUser as any)?.campusCode || 'GLOBAL';
 
   if (!realPosterId && sessionUser?.id) {
     realPosterId = sessionUser.id;
@@ -228,6 +226,17 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
   if (!realPosterId) {
     throw new Error('You need to be signed in to post an opportunity.');
   }
+
+  let profileRow: { full_name?: string | null; campus_code?: string | null } | null = null;
+  try {
+    const { data } = await supabase.from('profiles').select('full_name, campus_code').eq('id', realPosterId).maybeSingle();
+    profileRow = data;
+  } catch {
+    // ignore
+  }
+
+  const posterName = profileRow?.full_name || sessionUser?.fullName || authData?.user?.user_metadata?.full_name || 'Alumni Member';
+  const campusCode = payload.campusCode || profileRow?.campus_code || (sessionUser as any)?.campusCode || 'GLOBAL';
 
   const isRemote = payload.remote ?? payload.workplaceType === 'Remote';
 
@@ -286,6 +295,7 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
     // listJobs() refetch replaces this local entry with the DB row.
     isApproved: true,
     postedByName: posterName,
+    campusCode,
     createdAt: new Date().toISOString(),
   };
 
@@ -358,7 +368,7 @@ export async function updateJob(jobId: string, payload: UpdateJobPayload): Promi
     throw new Error('Add an external apply link, or turn on in-app applications.');
   }
 
-  const { error } = await supabase.from('jobs').update(patch).eq('id', jobId);
+  const { data, error } = await supabase.from('jobs').update(patch).eq('id', jobId).select('id');
   if (error) {
     if (/jobs_has_an_apply_path/i.test(error.message)) {
       throw new Error('Add an external apply link, or turn on in-app applications.');
@@ -366,33 +376,46 @@ export async function updateJob(jobId: string, payload: UpdateJobPayload): Promi
     console.warn('[Jobs] updateJob error:', error.message);
     throw new Error('Could not update this posting. Please try again.');
   }
+  if (!data || data.length === 0) {
+    throw new Error('Could not update this posting: it was not found, or you do not have permission to edit it.');
+  }
 }
 
 /** Soft-closes a posting: hides it from the browse feed immediately, regardless of expires_at, without deleting its history (applicants, applications_count). */
 export async function closeJob(jobId: string): Promise<void> {
-  const { error } = await supabase.from('jobs').update({ is_closed: true }).eq('id', jobId);
+  const { data, error } = await supabase.from('jobs').update({ is_closed: true }).eq('id', jobId).select('id');
   if (error) {
     console.warn('[Jobs] closeJob error:', error.message);
     throw new Error('Could not close this posting. Please try again.');
+  }
+  if (!data || data.length === 0) {
+    throw new Error('Could not close this posting: it was not found, or you do not have permission to update it.');
   }
 }
 
 /** Reopens a previously closed posting (does not touch expires_at). */
 export async function reopenJob(jobId: string): Promise<void> {
-  const { error } = await supabase.from('jobs').update({ is_closed: false }).eq('id', jobId);
+  const { data, error } = await supabase.from('jobs').update({ is_closed: false }).eq('id', jobId).select('id');
   if (error) {
     console.warn('[Jobs] reopenJob error:', error.message);
     throw new Error('Could not reopen this posting. Please try again.');
+  }
+  if (!data || data.length === 0) {
+    throw new Error('Could not reopen this posting: it was not found, or you do not have permission to update it.');
   }
 }
 
 /** Permanently deletes a posting (and, via ON DELETE CASCADE, its questions and applications). RLS-enforced to the poster (and staff/admin). */
 export async function deleteJob(jobId: string): Promise<void> {
-  const { error } = await supabase.from('jobs').delete().eq('id', jobId);
+  const { data, error } = await supabase.from('jobs').delete().eq('id', jobId).select('id');
   if (error) {
     console.warn('[Jobs] deleteJob error:', error.message);
     throw new Error('Could not delete this posting. Please try again.');
   }
+  if (!data || data.length === 0) {
+    throw new Error('Could not delete this posting: it was not found, or you do not have permission to delete it.');
+  }
+  locallyCreatedJobs = locallyCreatedJobs.filter((j) => j.id !== jobId);
 }
 
 // --- Admin moderation ---
@@ -417,13 +440,32 @@ export async function listPendingJobs(): Promise<JobListing[]> {
 
 export async function approveJob(id: string): Promise<void> {
   const { data: authData } = await supabase.auth.getUser();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('jobs')
     .update({ is_approved: true, approved_by: authData?.user?.id ?? null, approved_at: new Date().toISOString(), rejection_reason: null })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id, poster_id, title')
+    .maybeSingle();
   if (error) {
     console.warn('[Jobs] approveJob error:', error.message);
     throw new Error('Could not approve this posting. Please try again.');
+  }
+  if (!data) {
+    throw new Error('Could not approve this posting: it was not found, or you do not have permission to moderate it.');
+  }
+  if (data.poster_id) {
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        recipientId: data.poster_id,
+        type: 'system',
+        title: 'Job posting approved!',
+        body: `Your opportunity "${data.title || 'your job listing'}" has been approved and is now live on the career board.`,
+        deepLinkPath: '/jobs',
+      });
+    } catch (err) {
+      console.warn('[Jobs] approveJob notification failed:', err);
+    }
   }
 }
 
@@ -433,11 +475,14 @@ export async function rejectJob(id: string, reason?: string): Promise<void> {
     .from('jobs')
     .update({ is_approved: false, rejection_reason: cleanReason })
     .eq('id', id)
-    .select('poster_id, title')
+    .select('id, poster_id, title')
     .maybeSingle();
   if (error) {
     console.warn('[Jobs] rejectJob error:', error.message);
     throw new Error('Could not reject this posting. Please try again.');
+  }
+  if (!data) {
+    throw new Error('Could not reject this posting: it was not found, or you do not have permission to moderate it.');
   }
 
   // Tell the poster why - a bare "not approved" with no reason and no

@@ -688,35 +688,81 @@ export async function setEventSpotlight(id: string, isSpotlight: boolean) {
 
 export async function approveEvent(id: string) {
   const target = locallyCreatedEvents.find((e) => e.id === id);
- locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, approvalStatus: 'approved' } : e));
- try {
- await supabase.from('events').update({ status: 'upcoming' }).eq('id', id);
- } catch (err) {
- console.warn('[Events] Supabase approveEvent error:', err);
- }
- await recordAuditLogEntry({
- action: 'event_approved',
- summary: `Approved and published event listing: "${target?.title ?? id}"`,
- targetType: 'event',
- targetId: id,
- });
+  const { data, error } = await supabase
+    .from('events')
+    .update({ status: 'upcoming' })
+    .eq('id', id)
+    .select('id, creator_id, title')
+    .maybeSingle();
+  if (error) {
+    console.warn('[Events] Supabase approveEvent error:', error.message);
+    throw new Error('Could not approve this event. Please try again.');
+  }
+  if (!data) {
+    throw new Error('Could not approve this event: it was not found, or you do not have permission to moderate it.');
+  }
+  locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, approvalStatus: 'approved' } : e));
+  if (data.creator_id) {
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        recipientId: data.creator_id,
+        type: 'event',
+        title: 'Event approved & live!',
+        body: `Your event "${data.title || target?.title || 'your event'}" has been approved and is now live on the campus calendar.`,
+        deepLinkPath: `/event/${id}`,
+      });
+    } catch (err) {
+      console.warn('[Events] approveEvent notification failed:', err);
+    }
+  }
+  await recordAuditLogEntry({
+    action: 'event_approved',
+    summary: `Approved and published event listing: "${data.title ?? target?.title ?? id}"`,
+    targetType: 'event',
+    targetId: id,
+  });
 }
 
 // Admin moderation actions - backs the Events tab in the Admin Workdesk.
-export async function revokeEventApproval(id: string) {
- const target = locallyCreatedEvents.find((e) => e.id === id);
- locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, approvalStatus: 'rejected' } : e));
- try {
- await supabase.from('events').update({ status: 'cancelled' }).eq('id', id);
- } catch (err) {
- console.warn('[Events] Supabase revokeEventApproval error:', err);
- }
- await recordAuditLogEntry({
- action: 'event_approval_revoked',
- summary: `Revoked approval on event "${target?.title ?? id}"`,
- targetType: 'event',
- targetId: id,
- });
+export async function revokeEventApproval(id: string, reason?: string) {
+  const target = locallyCreatedEvents.find((e) => e.id === id);
+  const cleanReason = reason?.trim() || 'Did not meet campus event guidelines.';
+  const { data, error } = await supabase
+    .from('events')
+    .update({ status: 'cancelled', cancellation_reason: cleanReason })
+    .eq('id', id)
+    .select('id, creator_id, title')
+    .maybeSingle();
+  if (error) {
+    console.warn('[Events] Supabase revokeEventApproval error:', error.message);
+    throw new Error('Could not reject or unpublish this event. Please try again.');
+  }
+  if (!data) {
+    throw new Error('Could not update this event: it was not found, or you do not have permission to moderate it.');
+  }
+  locallyCreatedEvents = locallyCreatedEvents.map((e) => (e.id === id ? { ...e, approvalStatus: 'rejected' } : e));
+  if (data.creator_id) {
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        recipientId: data.creator_id,
+        type: 'moderation',
+        title: 'Event not approved',
+        body: `Your event "${data.title || target?.title || 'your event'}" was not approved or was unpublished. Reason: ${cleanReason}`,
+        deepLinkPath: `/event/${id}`,
+      });
+    } catch (err) {
+      console.warn('[Events] revokeEventApproval notification failed:', err);
+    }
+  }
+  await recordAuditLogEntry({
+    action: 'event_approval_revoked',
+    summary: `Revoked approval on event "${data.title ?? target?.title ?? id}"`,
+    targetType: 'event',
+    targetId: id,
+    reason: cleanReason,
+  });
 }
 
 /**
@@ -726,36 +772,39 @@ export async function revokeEventApproval(id: string) {
  * event; the per-column status trigger reverts anyone else's attempt (admins/campus staff excepted).
  */
 export async function cancelEvent(id: string, reason?: string) {
- const target = locallyCreatedEvents.find((e) => e.id === id);
- const { data, error } = await supabase
- .from('events')
- .update({ status: 'cancelled', cancellation_reason: reason?.trim() || null })
- .eq('id', id)
- .select('id, status')
- .maybeSingle();
- if (error) throwReadable(error, 'Could not cancel this event. Please try again.');
- if (!data || data.status !== 'cancelled') {
- throw new Error('You do not have permission to cancel this event.');
- }
- locallyCreatedEvents = locallyCreatedEvents.map((e) =>
- e.id === id ? { ...e, approvalStatus: 'rejected', isCancelled: true, cancellationReason: reason?.trim() || null } : e,
- );
- await recordAuditLogEntry({
- action: 'event_cancelled',
- summary: `Cancelled event "${target?.title ?? id}"${reason ? `: ${reason}` : ''}`,
- targetType: 'event',
- targetId: id,
- });
+  const target = locallyCreatedEvents.find((e) => e.id === id);
+  const { data, error } = await supabase
+    .from('events')
+    .update({ status: 'cancelled', cancellation_reason: reason?.trim() || null })
+    .eq('id', id)
+    .select('id, status')
+    .maybeSingle();
+  if (error) throwReadable(error, 'Could not cancel this event. Please try again.');
+  if (!data || data.status !== 'cancelled') {
+    throw new Error('You do not have permission to cancel this event.');
+  }
+  locallyCreatedEvents = locallyCreatedEvents.map((e) =>
+    e.id === id ? { ...e, approvalStatus: 'rejected', isCancelled: true, cancellationReason: reason?.trim() || null } : e,
+  );
+  await recordAuditLogEntry({
+    action: 'event_cancelled',
+    summary: `Cancelled event "${target?.title ?? id}"${reason ? `: ${reason}` : ''}`,
+    targetType: 'event',
+    targetId: id,
+  });
 }
 
 export async function purgeEvent(id: string) {
   const target = locallyCreatedEvents.find((e) => e.id === id);
-  locallyCreatedEvents = locallyCreatedEvents.filter((e) => e.id !== id);
-  try {
-    await supabase.from('events').delete().eq('id', id);
-  } catch (err) {
-    console.warn('[Events] Supabase purgeEvent error:', err);
+  const { data, error } = await supabase.from('events').delete().eq('id', id).select('id');
+  if (error) {
+    console.warn('[Events] Supabase purgeEvent error:', error.message);
+    throwReadable(error, 'Could not delete this event. Please try again.');
   }
+  if (!data || data.length === 0) {
+    throw new Error('Could not delete this event: it was not found, or you do not have permission to delete it.');
+  }
+  locallyCreatedEvents = locallyCreatedEvents.filter((e) => e.id !== id);
   await recordAuditLogEntry({
     action: 'event_purged',
     summary: `Purged event "${target?.title ?? id}"`,

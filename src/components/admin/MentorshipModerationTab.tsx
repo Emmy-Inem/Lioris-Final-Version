@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SolidCard } from '@/components/SolidCard';
 import { AppText } from '@/components/AppText';
@@ -50,6 +50,12 @@ export function MentorshipModerationTab() {
         setActingId(null);
       }
     };
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.prompt === 'function') {
+      const reason = window.prompt(`Give a reason for ending the pairing between ${m.studentName} and ${m.mentorName}:`, 'Violation of community guidelines reported by a participant.');
+      if (reason === null) return;
+      void doEnd(reason.trim() || 'Ended by campus staff');
+      return;
+    }
     if (Alert.prompt) {
       Alert.prompt(
         'End this mentorship?',

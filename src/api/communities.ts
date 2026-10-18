@@ -146,8 +146,9 @@ function slugify(label: string): string {
 }
 
 /**
- * Proposes a new campus discussion space. Gated to verified Campus Ambassadors
- * and university administrators. Saves the community with the proposer's campus_code.
+ * Proposes a new campus discussion space. Gated to verified accounts with the
+ * `can_create_spaces` role permission (or Campus Ambassadors / University Administrators).
+ * Saves the community with the proposer's campus_code.
  */
 export async function proposeCommunity(payload: ProposeCommunityPayload): Promise<ForumCommunityRecord> {
   const { data: authData } = await supabase.auth.getUser();
@@ -165,15 +166,15 @@ export async function proposeCommunity(payload: ProposeCommunityPayload): Promis
   const isMasterAdmin =
     profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
     authData?.user?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com';
-  const isVerified = profile?.role === 'admin' || profile?.role === 'staff' || isMasterAdmin || profile?.verification_status === 'verified' || profile?.is_campus_ambassador;
-  const isAmbassadorOrAdmin = profile?.is_campus_ambassador || profile?.role === 'admin' || profile?.role === 'staff' || isMasterAdmin;
+  const isVerified =
+    profile?.role === 'admin' ||
+    profile?.role === 'staff' ||
+    isMasterAdmin ||
+    profile?.verification_status === 'verified' ||
+    profile?.is_campus_ambassador;
 
   if (!isVerified) {
-    throw new Error('You need a verified student account to propose a discussion space.');
-  }
-
-  if (!isAmbassadorOrAdmin) {
-    throw new Error('Campus discussion spaces are curated by campus moderators and leads. Contact moderation to create new spaces.');
+    throw new Error('You need a verified campus account to propose a discussion space.');
   }
 
   const effectiveCampus = (payload.campusCode && payload.campusCode !== 'GLOBAL' && payload.campusCode !== 'ALL')
@@ -197,30 +198,72 @@ export async function proposeCommunity(payload: ProposeCommunityPayload): Promis
   const { data, error } = await supabase.from('forum_communities').insert(row).select('*').maybeSingle();
   if (error) {
     console.warn('[Communities] proposeCommunity error:', error.message);
+    if (/permission|policy|row-level security/i.test(error.message)) {
+      throw new Error('Creating new spaces is currently restricted for your role by campus administration.');
+    }
     throw new Error('Could not submit this community. Please try again.');
   }
   return data ? mapRow(data) : { ...mapRow(row), id: generateUUID() };
 }
 
 export async function approveCommunity(id: string): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('forum_communities')
     .update({ approval_status: 'approved', rejection_reason: null })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id, created_by, label')
+    .maybeSingle();
   if (error) {
     console.warn('[Communities] approveCommunity error:', error.message);
     throw new Error('Could not approve this community. Please try again.');
   }
+  if (!data) {
+    throw new Error('Could not approve this community: it was not found, or you do not have permission to moderate it.');
+  }
+  if (data.created_by) {
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        recipientId: data.created_by,
+        type: 'system',
+        title: 'Community space approved!',
+        body: `Your proposed community "${data.label || 'discussion space'}" has been approved and is now live.`,
+        deepLinkPath: '/forum/explore',
+      });
+    } catch {
+      // ignore
+    }
+  }
 }
 
 export async function rejectCommunity(id: string, reason?: string): Promise<void> {
-  const { error } = await supabase
+  const cleanReason = reason || 'Did not meet community guidelines.';
+  const { data, error } = await supabase
     .from('forum_communities')
-    .update({ approval_status: 'rejected', rejection_reason: reason || 'Did not meet community guidelines.' })
-    .eq('id', id);
+    .update({ approval_status: 'rejected', rejection_reason: cleanReason })
+    .eq('id', id)
+    .select('id, created_by, label')
+    .maybeSingle();
   if (error) {
     console.warn('[Communities] rejectCommunity error:', error.message);
     throw new Error('Could not reject this community. Please try again.');
+  }
+  if (!data) {
+    throw new Error('Could not reject this community: it was not found, or you do not have permission to moderate it.');
+  }
+  if (data.created_by) {
+    try {
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        recipientId: data.created_by,
+        type: 'moderation',
+        title: 'Community proposal not approved',
+        body: `Your proposed community "${data.label || 'discussion space'}" was not approved. Reason: ${cleanReason}`,
+        deepLinkPath: '/forum/explore',
+      });
+    } catch {
+      // ignore
+    }
   }
 }
 

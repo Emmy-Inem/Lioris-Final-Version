@@ -225,15 +225,16 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     activeSubForum.id !== 'all' &&
     (isAdmin || activeSubForum.createdBy === user?.id || myManagedCategories.has(activeSubForum.category));
 
+  const canCreateSpaces = hasPermission('can_create_spaces') || !!((user as any)?.isCampusAmbassador || isAdmin || user?.role === 'staff');
+
   async function handleProposeCommunity() {
     if (!newCommunityName.trim()) return;
     if (isRestrictedGuest) {
       setVerificationModalOpen(true);
       return;
     }
-    const isAmbassadorOrAdmin = !!(profile?.isCampusAmbassador || isAdmin || user?.role === 'staff');
-    if (!isAmbassadorOrAdmin) {
-      toast.info('Discussion spaces are curated by campus moderators.');
+    if (!canCreateSpaces) {
+      toast.info('Creating new discussion spaces is currently restricted for your role.');
       return;
     }
     haptics.medium();
@@ -752,7 +753,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             Discussion Spaces
           </AppText>
         </View>
-        <Pressable onPress={() => router.push('/(student)/forum/explore' as any)} hitSlop={8}>
+        <Pressable
+          onPress={() => {
+            if (roleGroup === '(student)') router.push('/(student)/forum/explore' as any);
+            else setSubForumsDirectoryOpen(true);
+          }}
+          hitSlop={8}
+        >
           <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 11 }}>
             Explore All →
           </AppText>
@@ -860,7 +867,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         <Pressable
           onPress={() => {
             haptics.light();
-            router.push('/(student)/forum/explore' as any);
+            if (roleGroup === '(student)') router.push('/(student)/forum/explore' as any);
+            else setSubForumsDirectoryOpen(true);
           }}
           accessibilityRole="button"
           accessibilityLabel="Explore all discussion spaces"
@@ -1622,7 +1630,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   <AppText variant="h3" weight="bold">
                     Communities
                   </AppText>
-                  <Pressable onPress={() => router.push('/(student)/forum/explore' as any)}>
+                  <Pressable
+                    onPress={() => {
+                      if (roleGroup === '(student)') router.push('/(student)/forum/explore' as any);
+                      else setSubForumsDirectoryOpen(true);
+                    }}
+                  >
                     <AppText variant="caption" weight="bold" tone="brand">Explore All →</AppText>
                   </Pressable>
                 </View>
@@ -1977,11 +1990,15 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             <Pressable
               onPress={() => {
                 haptics.light();
-                const isAmbassadorOrAdmin = !!(profile?.isCampusAmbassador || isAdmin || user?.role === 'staff');
-                if (!isAmbassadorOrAdmin) {
+                if (isRestrictedGuest) {
+                  setSubForumsDirectoryOpen(false);
+                  setVerificationModalOpen(true);
+                  return;
+                }
+                if (!canCreateSpaces) {
                   Alert.alert(
-                    'Campus Ambassador Curation',
-                    'Discussion spaces are curated by official Campus Ambassadors and campus moderators to keep student forums organized.\n\nWant to curate spaces for your faculty or department? Contact your campus representative or apply to become an ambassador.',
+                    'Campus Space Curation',
+                    'Creating new discussion spaces is currently restricted for your role by campus administration.\n\nWant to curate spaces for your faculty or department? Contact your campus representative or apply to become an ambassador.',
                     [{ text: 'Understood', style: 'default' }]
                   );
                   return;

@@ -39,14 +39,39 @@ function mapCampaign(row: any): GivingCampaign {
   };
 }
 
-/** Approved, open campaigns anyone can browse and give to. */
-export async function listGivingCampaigns(): Promise<GivingCampaign[]> {
-  const { data, error } = await supabase
+/** Approved, open campaigns anyone can browse and give to (scoped to caller's campus or GLOBAL). */
+export async function listGivingCampaigns(campusCode?: string): Promise<GivingCampaign[]> {
+  let targetCampus = campusCode?.trim().toUpperCase();
+  if (!targetCampus) {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user?.id) {
+        const { data: prof } = await supabase.from('profiles').select('campus_code, role, admin_role').eq('id', authData.user.id).maybeSingle();
+        if (prof?.admin_role === 'super_admin') {
+          targetCampus = 'ALL';
+        } else if (prof?.campus_code) {
+          targetCampus = prof.campus_code.toUpperCase();
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  let req = supabase
     .from('giving_campaigns')
     .select('*, creator:profiles(full_name)')
     .eq('review_status', 'approved')
     .eq('is_closed', false)
     .order('created_at', { ascending: false });
+
+  if (targetCampus && targetCampus !== 'ALL') {
+    req = targetCampus === 'GLOBAL'
+      ? req.eq('campus_code', 'GLOBAL')
+      : req.in('campus_code', [targetCampus, 'GLOBAL']);
+  }
+
+  const { data, error } = await req;
   if (error) {
     console.warn('[Donations] listGivingCampaigns error:', error.message);
     return [];
@@ -74,6 +99,7 @@ export interface CreateGivingCampaignPayload {
   goalAmount?: number;
   givingUrl: string;
   coverImageUrl?: string;
+  campusCode?: string;
 }
 
 export async function createGivingCampaign(payload: CreateGivingCampaignPayload): Promise<GivingCampaign> {
@@ -81,10 +107,17 @@ export async function createGivingCampaign(payload: CreateGivingCampaignPayload)
   const uid = authData?.user?.id;
   if (!uid) throw new Error('You need to be signed in to start a campaign.');
 
+  let campusCode = payload.campusCode?.trim().toUpperCase();
+  if (!campusCode) {
+    const { data: prof } = await supabase.from('profiles').select('campus_code').eq('id', uid).maybeSingle();
+    campusCode = prof?.campus_code?.toUpperCase() || 'GLOBAL';
+  }
+
   const { data, error } = await supabase
     .from('giving_campaigns')
     .insert({
       creator_id: uid,
+      campus_code: campusCode,
       title: payload.title.trim(),
       description: payload.description?.trim() || null,
       goal_amount: payload.goalAmount || null,
@@ -144,23 +177,31 @@ export async function updateGivingCampaignTotal(campaignId: string, confirmedTot
 
 /** The signed-in owner updates their own campaign's manually-confirmed total. */
 export async function updateMyCampaignTotal(campaignId: string, confirmedTotal: number): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('giving_campaigns')
     .update({ confirmed_total: confirmedTotal })
-    .eq('id', campaignId);
+    .eq('id', campaignId)
+    .select('id');
   if (error) {
     throw new Error(getFriendlyErrorMessage(error, 'Could not update your confirmed total. Please try again.'));
+  }
+  if (!data || data.length === 0) {
+    throw new Error('Could not update your confirmed total: campaign was not found or you do not have permission.');
   }
 }
 
 /** The signed-in owner closes their own campaign (stops accepting gifts). */
 export async function closeMyCampaign(campaignId: string): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('giving_campaigns')
     .update({ is_closed: true })
-    .eq('id', campaignId);
+    .eq('id', campaignId)
+    .select('id');
   if (error) {
     throw new Error(getFriendlyErrorMessage(error, 'Could not close this campaign. Please try again.'));
+  }
+  if (!data || data.length === 0) {
+    throw new Error('Could not close this campaign: it was not found or you do not have permission.');
   }
 }
 

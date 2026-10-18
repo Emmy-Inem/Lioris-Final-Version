@@ -296,7 +296,13 @@ export function EventsModerationTab() {
  const isApproved = event.approvalStatus !== 'rejected' && event.approvalStatus !== 'pending';
  try {
  if (isApproved) {
- await revokeEventApproval(event.id);
+ let revokeReason = 'Administrative takedown from Event Moderation';
+ if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.prompt === 'function') {
+ const input = window.prompt(`Provide a reason for taking down "${event.title}":`, revokeReason);
+ if (input === null) return;
+ if (input.trim()) revokeReason = input.trim();
+ }
+ await revokeEventApproval(event.id, revokeReason);
  Alert.alert('Approval Revoked', `"${event.title}"has been taken down from public event listings.`);
  } else {
  await approveEvent(event.id);

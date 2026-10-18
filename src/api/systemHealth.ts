@@ -155,7 +155,7 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
       const { data: existingPosts } = await supabase
         .from('posts')
         .select('id')
-        .in('id', postIds.slice(0, 50));
+        .in('id', postIds);
       const existingSet = new Set((existingPosts || []).map((p) => p.id));
       const orphans = orphanedComments.filter((c) => !existingSet.has(c.post_id));
       if (orphans.length > 0) {
@@ -192,7 +192,32 @@ export async function cleanupOrphanedRecords(): Promise<{ success: boolean; prun
   try {
     let pruned = 0;
 
-    // Prune soft-deleted moderation items older than 90 days
+    // 1. Prune orphaned post_comments referencing deleted posts
+    const { data: recentComments } = await supabase
+      .from('post_comments')
+      .select('id, post_id')
+      .limit(200);
+    if (recentComments && recentComments.length > 0) {
+      const postIds = Array.from(new Set(recentComments.map((c) => c.post_id)));
+      const { data: existingPosts } = await supabase
+        .from('posts')
+        .select('id')
+        .in('id', postIds);
+      const existingSet = new Set((existingPosts || []).map((p) => p.id));
+      const orphanCommentIds = recentComments.filter((c) => !existingSet.has(c.post_id)).map((c) => c.id);
+      if (orphanCommentIds.length > 0) {
+        const { data: deletedComments } = await supabase
+          .from('post_comments')
+          .delete()
+          .in('id', orphanCommentIds)
+          .select('id');
+        if (deletedComments) {
+          pruned += deletedComments.length;
+        }
+      }
+    }
+
+    // 2. Prune closed support tickets older than 90 days
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
     const { data: oldClosedTickets } = await supabase
       .from('support_tickets')

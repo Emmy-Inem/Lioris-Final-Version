@@ -308,9 +308,12 @@ export async function listWaitlist(): Promise<WaitlistEntry[]> {
 
 export async function respondToWaitlistEntry(id: string, status: 'approved' | 'rejected'): Promise<void> {
  try {
- await supabase.from('waitlist_entries').update({ status }).eq('id', id);
+ const { data, error } = await supabase.from('waitlist_entries').update({ status }).eq('id', id).select('id');
+ if (error) throw error;
+ if (!data || data.length === 0) throw new Error('Waitlist entry not found or permission denied.');
  } catch (err) {
  console.warn('[Waitlist] Update status error:', err);
+ throw err;
  }
  waitlistState = waitlistState.map((w) => (w.id === id ? { ...w, status } : w));
 }

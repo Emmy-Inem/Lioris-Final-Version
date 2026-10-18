@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, Switch, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, Switch, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +34,7 @@ import { describeAvailability, mentorshipSortRank } from '@/utils/mentorship';
 import { formatWhen } from '@/utils/dateTime';
 import { parseRpcError } from '@/utils/rpcErrors';
 import { haptics } from '@/utils/haptics';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 
 type Tab = 'requests' | 'active' | 'history' | 'reviews';
 
@@ -61,6 +62,7 @@ export default function AlumniMentorshipScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
+  const isUnverified = isUnverifiedPersonalUser(user);
   const toast = useToast();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('requests');
@@ -190,7 +192,24 @@ export default function AlumniMentorshipScreen() {
             <AppText variant="bodySmall" tone="secondary" style={{ lineHeight: 19 }}>
               Students can only find and ask you once you set up a mentor profile: a headline, what you can help with, when you are free and how many mentees you can take. You stay in control - pause requests any time.
             </AppText>
-            <AppButton label="Set up my mentor profile" icon="person-add-outline" onPress={() => setEditorOpen(true)} />
+            <AppButton
+              label="Set up my mentor profile"
+              icon="person-add-outline"
+              onPress={() => {
+                if (isUnverified) {
+                  Alert.alert(
+                    'Verification Required',
+                    'Please verify your alumni status on your Profile before setting up your mentor profile.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Verify Now', onPress: () => router.push('/(alumni)/profile' as any) },
+                    ],
+                  );
+                  return;
+                }
+                setEditorOpen(true);
+              }}
+            />
           </SolidCard>
         ) : (
           <SolidCard radius={20} style={{ gap: spacing.sm }}>

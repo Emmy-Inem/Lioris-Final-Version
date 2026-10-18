@@ -199,56 +199,100 @@ export class ReportAlreadyHandledError extends Error {
  }
 }
 
+export interface ResolveReportOptions {
+  contentRemoved?: boolean;
+  sanction?: 'warn' | 'takedown' | 'mute' | 'escalate' | 'shadowban' | 'permaban';
+}
+
+export async function applyModerationSanction(
+  targetUserId: string,
+  sanction: 'warn' | 'mute' | 'shadowban' | 'permaban',
+  reason: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_apply_moderation_sanction', {
+    p_target_user_id: targetUserId,
+    p_sanction: sanction,
+    p_reason: reason,
+  });
+  if (error) {
+    console.warn('[Moderation] admin_apply_moderation_sanction failed:', error.message);
+    throw new Error(error.message || 'Could not apply moderation sanction.');
+  }
+}
+
+export async function escalateReport(id: string, notes?: string): Promise<void> {
+  const { error } = await supabase.rpc('escalate_moderation_report', {
+    p_report_id: id,
+    p_note: notes || null,
+  });
+  if (error) {
+    if (/already been resolved/i.test(error.message)) {
+      throw new ReportAlreadyHandledError();
+    }
+    console.warn('[Moderation] escalate_moderation_report failed:', error.message);
+    throw new Error(error.message || 'Could not escalate this report.');
+  }
+}
+
 // PATCH /reports/{id}
 export async function resolveReport(
- id: string,
- action: 'resolved' | 'dismissed',
- notes?: string,
+  id: string,
+  action: 'resolved' | 'dismissed',
+  notes?: string,
+  options?: ResolveReportOptions,
 ): Promise<Report> {
- async function logDecision(target: Report) {
- await recordAuditLogEntry({
- action: action === 'resolved' ? 'report_resolved' : 'report_dismissed',
- summary: `${action === 'resolved' ? 'Resolved' : 'Dismissed'} a report on a ${target.targetType} (${target.reason})`,
- targetType: 'report',
- targetId: target.id,
- reason: notes,
- institutionCode: target.institutionCode,
- });
- createNotification({
- recipientId: target.reporterId,
- type: 'moderation',
- title: action === 'resolved' ? 'Your report was actioned' : 'Your report was reviewed',
- body:
- action === 'resolved'
- ? `Thanks for the report - we took action on the ${target.targetType} you flagged.`
- : `We reviewed the ${target.targetType} you reported and didn't find a policy violation this time.`,
- deepLinkPath: '/dashboard',
- });
+  async function logDecision(target: Report) {
+    await recordAuditLogEntry({
+      action: action === 'resolved' ? 'report_resolved' : 'report_dismissed',
+      summary: `${action === 'resolved' ? 'Resolved' : 'Dismissed'} a report on a ${target.targetType} (${target.reason})`,
+      targetType: 'report',
+      targetId: target.id,
+      reason: notes,
+      institutionCode: target.institutionCode,
+    });
+    createNotification({
+      recipientId: target.reporterId,
+      type: 'moderation',
+      title: action === 'resolved' ? 'Your report was actioned' : 'Your report was reviewed',
+      body:
+        action === 'resolved'
+          ? `Thanks for the report - we took action on the ${target.targetType} you flagged.`
+          : `We reviewed the ${target.targetType} you reported and didn't find a policy violation this time.`,
+      deepLinkPath: '/dashboard',
+    });
 
- // Fairness/transparency: also tell the person the decision actually
- // landed on that something changed, so content disappearing or an
- // account changing doesn't come out of nowhere. Reports stay anonymous -
- // this never mentions the reporter, only the outcome + reason category.
- if (action === 'resolved') {
- const actionedUserId = await resolveActionedUserId(target);
- if (actionedUserId && actionedUserId !== target.reporterId) {
- const label = TARGET_TYPE_LABEL[target.targetType] ?? target.targetType;
- createNotification({
- recipientId: actionedUserId,
- type: 'moderation',
- title:
- target.targetType === 'user'
- ? 'Your account has been actioned by campus moderation'
- : `Your ${label} was removed`,
- body:
- target.targetType === 'user'
- ? `Campus moderation has taken action on your account for violating community guidelines (reason: ${target.reason}). Contact support if you believe this is an error.`
- : `Your ${label} was removed for violating community guidelines (reason: ${target.reason}). If you believe this was a mistake, contact support.`,
- deepLinkPath: '/settings',
- });
- }
- }
- }
+    // Fairness/transparency: also tell the person the decision actually
+    // landed on that something changed, so content disappearing or an
+    // account changing doesn't come out of nowhere. Reports stay anonymous -
+    // this never mentions the reporter, only the outcome + reason category.
+    // Note: if applyModerationSanction was already called for warn/mute/shadowban/permaban,
+    // the RPC itself notified the user of the account sanction; here we only notify about
+    // content removal when contentRemoved !== false and no duplicate account-only notification is needed.
+    if (action === 'resolved') {
+      const actionedUserId = await resolveActionedUserId(target);
+      if (actionedUserId && actionedUserId !== target.reporterId) {
+        const label = TARGET_TYPE_LABEL[target.targetType] ?? target.targetType;
+        const removedContent = options?.contentRemoved ?? (options?.sanction !== 'warn' && options?.sanction !== 'mute');
+        if (target.targetType !== 'user' && removedContent) {
+          createNotification({
+            recipientId: actionedUserId,
+            type: 'moderation',
+            title: `Your ${label} was removed`,
+            body: `Your ${label} was removed for violating community guidelines (reason: ${target.reason}). If you believe this was a mistake, contact support.`,
+            deepLinkPath: '/settings',
+          });
+        } else if (target.targetType === 'user' && !options?.sanction) {
+          createNotification({
+            recipientId: actionedUserId,
+            type: 'moderation',
+            title: 'Your account has been actioned by campus moderation',
+            body: `Campus moderation has taken action on your account for violating community guidelines (reason: ${target.reason}). Contact support if you believe this is an error.`,
+            deepLinkPath: '/settings',
+          });
+        }
+      }
+    }
+  }
 
  // Fetch the full row up front - update() below only echoes back the
  // columns it writes, and the vast majority of reports resolved through

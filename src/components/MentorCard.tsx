@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SolidCard } from './SolidCard';
 import { AppText } from './AppText';
@@ -10,6 +11,8 @@ import { StarRating } from './common/StarRating';
 import { MentorDetailSheet } from './mentorship/MentorDetailSheet';
 import { RequestMentorshipModal } from './RequestMentorshipModal';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { MentorProfile } from '@/api/types';
 import { SESSION_MODES, describeAvailability, matchLabel } from '@/utils/mentorship';
 
@@ -24,6 +27,8 @@ export function mentorRequestBlock(mentor: MentorProfile): string | null {
 
 export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onRequested?: () => void }) {
   const { colors, spacing, radius } = useTheme();
+  const { user } = useAuth();
+  const isUnverified = isUnverifiedPersonalUser(user);
   const [detailOpen, setDetailOpen] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
 
@@ -31,6 +36,21 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
   const availability = describeAvailability(mentor.availability);
   const match = matchLabel(mentor.matchScore);
   const role = [mentor.jobTitle, mentor.company].filter(Boolean).join(' at ');
+
+  function handlePressRequest() {
+    if (isUnverified) {
+      Alert.alert(
+        'Verification Required',
+        'Please verify your student status on your Profile before requesting alumni mentorship.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Verify Now', onPress: () => router.push('/(student)/profile' as any) },
+        ],
+      );
+      return;
+    }
+    setRequestOpen(true);
+  }
 
   return (
     <SolidCard style={{ marginBottom: spacing.md }}>
@@ -145,7 +165,7 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
             label={block ?? 'Request mentorship'}
             size="sm"
             disabled={!!block}
-            onPress={() => setRequestOpen(true)}
+            onPress={handlePressRequest}
           />
         </View>
       </View>
@@ -157,7 +177,7 @@ export function MentorCard({ mentor, onRequested }: { mentor: MentorProfile; onR
         blockedReason={block}
         onRequest={() => {
           setDetailOpen(false);
-          setRequestOpen(true);
+          handlePressRequest();
         }}
       />
       <RequestMentorshipModal

@@ -14,6 +14,7 @@ import { EventDoorDesk } from '../events/EventDoorDesk';
 import { MfaStepUpModal } from './MfaStepUpModal';
 import { PaymentReviewSheet } from './PaymentReviewSheet';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useAuth } from '@/auth/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { MFA_REQUIRED_CODE } from '@/api/auth';
@@ -174,6 +175,8 @@ function PartnershipSheet({ row, onClose }: { row: PaidEventOverview | null; onC
  */
 export function PaidEventsDesk({ focusEventId, onFocusHandled }: { focusEventId?: string | null; onFocusHandled?: () => void }) {
   const { colors, spacing } = useTheme();
+  const { user } = useAuth();
+  const isSuperAdmin = !!(user?.actualRole === 'admin' && user?.isSuperAdmin);
   const toast = useToast();
   const { isFeatureEnabled, setFeature } = useFeatureFlags();
   const enabled = isFeatureEnabled('paid_events');
@@ -209,6 +212,7 @@ export function PaidEventsDesk({ focusEventId, onFocusHandled }: { focusEventId?
   );
 
   async function toggleFlag(next: boolean) {
+    if (!isSuperAdmin) return;
     haptics.medium();
     setTogglingFlag(true);
     try {
@@ -232,7 +236,11 @@ export function PaidEventsDesk({ focusEventId, onFocusHandled }: { focusEventId?
               create paid events, and existing ones show no payment page and take no bookings.
             </AppText>
           </View>
-          <Switch value={enabled} onValueChange={toggleFlag} disabled={togglingFlag} accessibilityLabel="Paid events master switch" />
+          {isSuperAdmin ? (
+            <Switch value={enabled} onValueChange={toggleFlag} disabled={togglingFlag} accessibilityLabel="Paid events master switch" />
+          ) : (
+            <Badge label={enabled ? 'Enabled' : 'Paused'} tone={enabled ? 'success' : 'warning'} />
+          )}
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.md }}>
           {[

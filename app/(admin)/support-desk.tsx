@@ -38,6 +38,7 @@ import { supabase } from '@/api/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { haptics } from '@/utils/haptics';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/auth/AuthContext';
 
 interface UserErrorReport {
   id: string;
@@ -86,6 +87,7 @@ export default function SupportDeskScreen() {
   const adminBadges = useAdminBadges();
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { user } = useAuth();
   const toast = useToast();
   const queryClient = useQueryClient();
 
@@ -310,7 +312,7 @@ export default function SupportDeskScreen() {
 
       {/* Filter Tabs */}
       <View style={{ flexDirection: 'row', gap: spacing.xs, marginVertical: spacing.sm, flexWrap: 'wrap' }}>
-        {(['all', 'open', 'in_progress', 'resolved'] as const).map((st) => (
+        {(['all', 'open', 'in_progress', 'resolved', 'closed'] as const).map((st) => (
           <Pressable
             key={st}
             onPress={() => setStatusFilter(st)}
@@ -604,35 +606,37 @@ export default function SupportDeskScreen() {
                     </View>
                   </View>
 
-                  {/* Remediation 2: Campus Transfer */}
-                  <View style={{ marginBottom: 10 }}>
-                    <AppText variant="caption" weight="bold" tone="secondary">Transfer Campus Affiliation:</AppText>
-                    <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
-                      <TextInput
-                        value={newCampusInput}
-                        onChangeText={setNewCampusInput}
-                        placeholder="Campus Code (UNILAG, UI, CU, OAU, FUNAAB, UNN)..."
-                        placeholderTextColor={colors.textSecondary}
-                        style={{
-                          flex: 1,
-                          backgroundColor: colors.surface,
-                          borderWidth: 1,
-                          borderColor: colors.border,
-                          borderRadius: radius.sm,
-                          paddingHorizontal: 8,
-                          paddingVertical: 6,
-                          fontSize: 13,
-                          color: colors.textPrimary,
-                        }}
-                      />
-                      <AppButton
-                        label="Transfer"
-                        size="sm"
-                        onPress={handleTransferCampus}
-                        loading={actionLoading}
-                      />
+                  {/* Remediation 2: Campus Transfer (Super Admin only) */}
+                  {user?.isSuperAdmin ? (
+                    <View style={{ marginBottom: 10 }}>
+                      <AppText variant="caption" weight="bold" tone="secondary">Transfer Campus Affiliation:</AppText>
+                      <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
+                        <TextInput
+                          value={newCampusInput}
+                          onChangeText={setNewCampusInput}
+                          placeholder="Campus Code (UNILAG, UI, CU, OAU, FUNAAB, UNN)..."
+                          placeholderTextColor={colors.textSecondary}
+                          style={{
+                            flex: 1,
+                            backgroundColor: colors.surface,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                            borderRadius: radius.sm,
+                            paddingHorizontal: 8,
+                            paddingVertical: 6,
+                            fontSize: 13,
+                            color: colors.textPrimary,
+                          }}
+                        />
+                        <AppButton
+                          label="Transfer"
+                          size="sm"
+                          onPress={handleTransferCampus}
+                          loading={actionLoading}
+                        />
+                      </View>
                     </View>
-                  </View>
+                  ) : null}
 
                   {/* Remediation 3 & 4: Quick Action Buttons */}
                   <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
@@ -695,6 +699,15 @@ export default function SupportDeskScreen() {
                       variant="secondary"
                       size="sm"
                       onPress={() => handleUpdateStatus('in_progress')}
+                      loading={actionLoading}
+                    />
+                  )}
+                  {selectedTicket.status !== 'closed' && (
+                    <AppButton
+                      label="Close Ticket"
+                      variant="secondary"
+                      size="sm"
+                      onPress={() => handleUpdateStatus('closed')}
                       loading={actionLoading}
                     />
                   )}

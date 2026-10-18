@@ -75,6 +75,15 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, { error: 'Server misconfiguration.' }, 500);
   }
 
+  const { data: callerProfile } = await admin
+    .from('profiles')
+    .select('is_suspended')
+    .eq('id', uid)
+    .maybeSingle();
+  if (callerProfile?.is_suspended) {
+    return jsonResponse(req, { error: 'account_suspended', message: 'Account is suspended.' }, 403);
+  }
+
   const verdict = await consumeRateLimit(admin, `turn-credentials:${uid}`, RATE_LIMIT, RATE_WINDOW_SECONDS);
   if (verdict === 'error') return jsonResponse(req, { error: 'Service temporarily unavailable.' }, 503);
   if (verdict === 'limited') {

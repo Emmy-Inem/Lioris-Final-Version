@@ -1031,15 +1031,17 @@ export async function adminUpdateUserProfile(
   updates: Record<string, any>,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .update({
         ...updates,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select('id');
 
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error('Profile update was rejected by campus security policies.');
 
     await recordAuditLogEntry({
       action: 'profile_updated',

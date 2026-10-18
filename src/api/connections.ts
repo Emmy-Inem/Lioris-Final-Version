@@ -6,17 +6,18 @@ import { assertUuid, escapePostgrestLike } from '../utils/postgrest';
 
 
 export interface DirectorySearchQuery {
- q?: string;
- graduationYear?: number;
- department?: string;
- industry?: string;
- company?: string;
- /**
-  * Which roles to include. Defaults to alumni only, which is what the
-  * alumni directory wants. Onboarding's "connect with peers and alumni"
-  * step passes the wider set so students actually see their classmates.
-  */
- roles?: Array<'student' | 'alumni' | 'staff' | 'admin'>;
+  q?: string;
+  graduationYear?: number;
+  department?: string;
+  industry?: string;
+  company?: string;
+  campusCode?: string;
+  /**
+   * Which roles to include. Defaults to alumni only, which is what the
+   * alumni directory wants. Onboarding's "connect with peers and alumni"
+   * step passes the wider set so students actually see their classmates.
+   */
+  roles?: Array<'student' | 'alumni' | 'staff' | 'admin'>;
 }
 
 
@@ -29,7 +30,7 @@ export async function searchAlumniDirectory(
   try {
     let q = supabase
       .from('profiles')
-      .select('id, full_name, department, bio, avatar_url, role, graduation_year, industry, company, directory_hide_company')
+      .select('id, full_name, department, bio, avatar_url, role, graduation_year, industry, company, directory_hide_company, campus_code')
       .eq('directory_discoverable', true);
 
     if (query.roles && query.roles.length > 0) {
@@ -48,6 +49,9 @@ export async function searchAlumniDirectory(
       q = q.neq('id', currentUserId);
     }
 
+    if (query.campusCode && query.campusCode !== 'ALL' && query.campusCode !== 'GLOBAL') {
+      q = q.eq('campus_code', query.campusCode);
+    }
     if (query.q) {
       q = q.ilike('full_name', `%${escapePostgrestLike(query.q)}%`);
     }
@@ -67,6 +71,37 @@ export async function searchAlumniDirectory(
     const { data, error } = await q.limit(20);
     if (error || !data) return [];
 
+    const statusByUser = new Map<string, 'none' | 'pending' | 'accepted'>();
+    if (currentUserId && data.length > 0) {
+      try {
+        const ids = data.map((p: any) => p.id);
+        const [outgoing, incoming] = await Promise.all([
+          supabase
+            .from('connections')
+            .select('recipient_id, status')
+            .eq('requester_id', currentUserId)
+            .in('recipient_id', ids),
+          supabase
+            .from('connections')
+            .select('requester_id, status')
+            .eq('recipient_id', currentUserId)
+            .in('requester_id', ids),
+        ]);
+        for (const row of outgoing.data ?? []) {
+          if (row.status === 'accepted') statusByUser.set(row.recipient_id, 'accepted');
+          else if (row.status === 'pending') statusByUser.set(row.recipient_id, 'pending');
+        }
+        for (const row of incoming.data ?? []) {
+          if (row.status === 'accepted') statusByUser.set(row.requester_id, 'accepted');
+          else if (row.status === 'pending' && statusByUser.get(row.requester_id) !== 'accepted') {
+            statusByUser.set(row.requester_id, 'pending');
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     return data.map((p: any) => ({
       id: p.id,
       fullName: p.full_name || 'Alumni Member',
@@ -76,7 +111,7 @@ export async function searchAlumniDirectory(
       industry: p.industry ?? null,
       company: p.directory_hide_company ? null : (p.company ?? null),
       avatarUrl: p.avatar_url || null,
-      connectionStatus: 'none' as const,
+      connectionStatus: statusByUser.get(p.id) ?? ('none' as const),
     }));
   } catch {
     return [];
