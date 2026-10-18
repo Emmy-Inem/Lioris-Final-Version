@@ -23,6 +23,7 @@ import { getOrCreateConversationWithUser, sendMessage } from '@/api/messaging';
 import { useAuth } from '@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { formatConvertedPrice } from '@/api/currency';
+import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { haptics } from '@/utils/haptics';
 
 interface MarketplaceItemOverrides {
@@ -151,8 +152,15 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  }
 
  async function handleMessageSeller() {
- haptics.light();
- setMessaging(true);
+  if (isUnverifiedPersonalUser(user)) {
+    Alert.alert(
+      'Verification Required',
+      'Please verify your campus student status before messaging sellers on the campus marketplace.',
+    );
+    return;
+  }
+  haptics.light();
+  setMessaging(true);
  try {
  const conversation = await getOrCreateConversationWithUser(item.sellerId, item.sellerName, item.sellerAvatarUrl);
  router.push(`/${roleGroup}/messages/${conversation.id}` as any);
@@ -164,7 +172,14 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  }
 
  async function handleSendMeetupRequest() {
- setProcessingOrder(true);
+  if (isUnverifiedPersonalUser(user)) {
+    Alert.alert(
+      'Verification Required',
+      'Please verify your campus student status before reserving marketplace items.',
+    );
+    return;
+  }
+  setProcessingOrder(true);
  try {
  const conversation = await getOrCreateConversationWithUser(item.sellerId, item.sellerName, item.sellerAvatarUrl);
  await sendMessage(
@@ -386,7 +401,16 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  ) : (
  <View style={{ flexDirection: 'row', gap: 4, marginTop: spacing.xs }}>
  <Pressable
- onPress={() => setCheckoutModalOpen(true)}
+ onPress={() => {
+   if (isUnverifiedPersonalUser(user)) {
+     Alert.alert(
+       'Verification Required',
+       'Please verify your campus student status before reserving marketplace items.',
+     );
+     return;
+   }
+   setCheckoutModalOpen(true);
+ }}
  accessibilityRole="button"accessibilityLabel={`Request a meetup for ${displayTitle}`}
  style={{
  flex: 1,

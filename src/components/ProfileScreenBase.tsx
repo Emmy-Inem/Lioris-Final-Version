@@ -182,8 +182,8 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     if (signedCoverUrl) {
       return { uri: signedCoverUrl };
     }
-    if (rawCover) {
-      const cleanPath = rawCover.replace(/^\/+/, '');
+    if (rawCover && (rawCover.startsWith('avatars/') || rawCover.startsWith('/avatars/'))) {
+      const cleanPath = rawCover.replace(/^\/?avatars\//, '');
       return { uri: `${SUPABASE_URL}/storage/v1/object/public/avatars/${cleanPath}` };
     }
     return null;

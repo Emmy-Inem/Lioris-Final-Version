@@ -253,6 +253,38 @@ export default function MarketplaceScreen() {
                   );
                 })}
               </View>
+
+              {/* Condition Pills */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center', width: '100%', paddingTop: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border }}>
+                <AppText variant="caption" weight="bold" tone="secondary" style={{ marginRight: 4 }}>
+                  Condition:
+                </AppText>
+                {CONDITIONS.map((cond) => {
+                  const isSelected = condition === cond;
+                  return (
+                    <Pressable
+                      key={cond}
+                      onPress={() => setCondition(cond)}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 5,
+                        borderRadius: radius.pill,
+                        backgroundColor: isSelected ? `${colors.brandPrimary}22` : colors.background,
+                        borderWidth: 1,
+                        borderColor: isSelected ? colors.brandPrimary : colors.border,
+                      }}
+                    >
+                      <AppText
+                        variant="caption"
+                        weight={isSelected ? 'bold' : 'medium'}
+                        style={{ color: isSelected ? colors.brandPrimary : colors.textSecondary, fontSize: 11.5 }}
+                      >
+                        {cond}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
           </SolidCard>
 
