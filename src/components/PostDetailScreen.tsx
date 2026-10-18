@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, findNodeHandle, Keyboard, Modal, Platform, Pressable, ScrollView, TextInput, UIManager, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, findNodeHandle, Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, UIManager, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from'expo-image';
 import * as Clipboard from 'expo-clipboard';
@@ -28,6 +28,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost, updatePostComment, deletePostComment, extractMentionHandles, resolvePostMentions, buildPostShareUrl, PostComment } from '@/api/posts';
 import { toggleSavedItem, SAVED_ITEMS_KEY, isItemSavedSync, subscribeSavedItems } from '@/api/bookmarks';
 import { canManageCommunityCategory } from '@/api/communities';
+import { useSignedUrl } from '@/api/signedUrls';
 import { getMyProfile } from '@/api/profile';
 import { submitReport } from '@/api/moderation';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
@@ -43,6 +44,41 @@ const STOCK_IMAGES: Record<string, any> = {
   student_rep_group: require('../../assets/images/student_rep_group.jpg'),
   hero_student_3d: require('../../assets/images/hero_student_3d.jpg'),
 };
+
+function PostImageItem({
+  path,
+  style,
+  onPress,
+  children,
+}: {
+  path: string;
+  style?: any;
+  onPress?: () => void;
+  children?: React.ReactNode;
+}) {
+  const stockSource = STOCK_IMAGES[path];
+  const { url, loading } = useSignedUrl('campus-media', stockSource ? null : path);
+  const source = stockSource || (url ? { uri: url } : null);
+
+  if (!source && !loading) return null;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={[{ position: 'relative', overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.05)' }, style]}
+    >
+      {source ? (
+        <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+      ) : loading ? (
+        <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="small" color="#999999" />
+        </View>
+      ) : null}
+      {children}
+    </Pressable>
+  );
+}
 
 const COMMENT_MEDIA_PRESETS = [
   { id: 'campus_library_study', label: 'Study Notes', src: require('../../assets/images/campus_library_study.jpg') },
@@ -469,12 +505,9 @@ export function PostDetailScreen() {
     Alert.alert('Link Copied', 'Thread URL copied to clipboard.');
   }
 
-  const postImageSource = post?.imageUrl
- ? STOCK_IMAGES[post.imageUrl] ?? (post.imageUrl.startsWith('http') ? { uri: post.imageUrl } : null)
- : null;
-  // A stock-art key never belongs in a multi-image gallery (it isn't a real
-  // uploaded URL) - only resolvable http(s) images render there.
-  const galleryUrls = (post?.imageUrls ?? []).filter((u) => u.startsWith('http'));
+  const mediaList = (post?.imageUrls && post.imageUrls.length > 0)
+    ? post.imageUrls.filter(Boolean)
+    : (post?.imageUrl ? [post.imageUrl] : []);
 
   if (postLoading) {
     return (
@@ -579,41 +612,35 @@ export function PostDetailScreen() {
  {renderContent(post.content)}
  </AppText>
 
- {/* High-Res Media Photo / Video */}
- {galleryUrls.length > 1 ? (
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: spacing.md, borderRadius: 20, overflow: 'hidden' }}>
- {galleryUrls.slice(0, 4).map((url, index) => (
- <Pressable
- key={url + index}
- onPress={() => {
- haptics.light();
- setLightboxMedia(url);
- setLightboxCaption(post.title);
- setLightboxOpen(true);
- }}
- accessibilityRole="button"
- accessibilityLabel={`Enlarge post image ${index + 1}`}
- style={{ width: '49.5%', height: galleryUrls.length <= 2 ? 240 : 119 }}
- >
- <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
- </Pressable>
- ))}
- </View>
- ) : postImageSource ? (
- <Pressable
- onPress={() => {
- haptics.light();
- setLightboxMedia(post.imageUrl ?? null);
- setLightboxCaption(post.title);
- setLightboxOpen(true);
- }}
- accessibilityRole="button"
- accessibilityLabel="Enlarge post image"
- style={{ width: '100%', height: 240, borderRadius: 20, overflow: 'hidden', marginBottom: spacing.md, position: 'relative' }}
- >
- <Image source={postImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" />
- </Pressable>
- ) : null}
+  {/* High-Res Media Photo / Video */}
+  {mediaList.length > 1 ? (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: spacing.md, borderRadius: 20, overflow: 'hidden' }}>
+      {mediaList.slice(0, 4).map((url, index) => (
+        <PostImageItem
+          key={url + index}
+          path={url}
+          style={{ width: '49.5%', height: mediaList.length <= 2 ? 240 : 119 }}
+          onPress={() => {
+            haptics.light();
+            setLightboxMedia(url);
+            setLightboxCaption(post.title);
+            setLightboxOpen(true);
+          }}
+        />
+      ))}
+    </View>
+  ) : mediaList.length === 1 ? (
+    <PostImageItem
+      path={mediaList[0]}
+      style={{ width: '100%', height: 240, borderRadius: 20, marginBottom: spacing.md }}
+      onPress={() => {
+        haptics.light();
+        setLightboxMedia(mediaList[0]);
+        setLightboxCaption(post.title);
+        setLightboxOpen(true);
+      }}
+    />
+  ) : null}
 
  {/* Interactive Poll */}
  {poll ? (
@@ -778,7 +805,6 @@ export function PostDetailScreen() {
  {comments.map((c, index) => {
  const isCommentLiked = commentLikedByMe[c.id] ?? !!c.isLikedByMe;
  const cLikes = commentLikes[c.id] ?? c.likesCount;
- const commentImage = c.imageUrl ? (STOCK_IMAGES[c.imageUrl] ?? { uri: c.imageUrl }) : null;
  const isOwnComment = c.authorId === user?.id || canModerate;
  const isEditing = editingCommentId === c.id;
  const parentComment = c.parentCommentId ? commentById.get(c.parentCommentId) : undefined;
@@ -920,19 +946,18 @@ export function PostDetailScreen() {
  </AppText>
  )}
 
- {commentImage ? (
- <Pressable accessibilityRole="button" accessibilityLabel="View attached image full screen"
- onPress={() => {
- haptics.light();
- setLightboxMedia(c.imageUrl ?? null);
- setLightboxCaption(`Shared by ${c.authorName}`);
- setLightboxOpen(true);
- }}
- style={{ marginTop: spacing.xs, height: 140, borderRadius: 12, overflow: 'hidden' }}
- >
- <Image source={commentImage} style={{ width: '100%', height: '100%' }} contentFit="cover" />
- </Pressable>
- ) : null}
+  {c.imageUrl ? (
+    <PostImageItem
+      path={c.imageUrl}
+      style={{ marginTop: spacing.xs, height: 140, borderRadius: 12 }}
+      onPress={() => {
+        haptics.light();
+        setLightboxMedia(c.imageUrl ?? null);
+        setLightboxCaption(`Shared by ${c.authorName}`);
+        setLightboxOpen(true);
+      }}
+    />
+  ) : null}
 
  {/* Helpful & Reply action footer */}
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm }}>

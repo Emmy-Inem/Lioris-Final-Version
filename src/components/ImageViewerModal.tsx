@@ -1,9 +1,10 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, View, Share, useWindowDimensions } from 'react-native';
+import { Modal, Pressable, StyleSheet, View, Share, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image, ImageSource } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
+import { useSignedUrl } from '@/api/signedUrls';
 
 interface ImageViewerModalProps {
   visible: boolean;
@@ -11,6 +12,15 @@ interface ImageViewerModalProps {
   imageSource: ImageSource | string | null;
   caption?: string;
 }
+
+const STOCK_IMAGES: Record<string, any> = {
+  event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
+  event_academic_symposium: require('../../assets/images/event_academic_symposium.jpg'),
+  campus_students_photo: require('../../assets/images/campus_students_photo.jpg'),
+  campus_library_study: require('../../assets/images/campus_library_study.jpg'),
+  student_rep_group: require('../../assets/images/student_rep_group.jpg'),
+  hero_student_3d: require('../../assets/images/hero_student_3d.jpg'),
+};
 
 export function ImageViewerModal({
   visible,
@@ -21,7 +31,14 @@ export function ImageViewerModal({
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  if (!imageSource) return null;
+  const isString = typeof imageSource === 'string';
+  const stockSource = isString ? STOCK_IMAGES[imageSource] : null;
+  const isFileUri = isString && imageSource.startsWith('file');
+
+  const mediaPath = isString && !stockSource && !isFileUri ? imageSource : null;
+  const { url: signedUrl, loading } = useSignedUrl('campus-media', visible ? mediaPath : null);
+
+  if (!visible || !imageSource) return null;
 
   async function handleShare() {
     try {
@@ -31,22 +48,17 @@ export function ImageViewerModal({
     } catch {}
   }
 
-  const resolvedSource =
-    typeof imageSource === 'string'
-      ? imageSource.startsWith('http') || imageSource.startsWith('file')
-        ? { uri: imageSource }
-        : imageSource === 'event_tech_hackathon'
-        ? require('../../assets/images/event_tech_hackathon.jpg')
-        : imageSource === 'event_academic_symposium'
-        ? require('../../assets/images/event_academic_symposium.jpg')
-        : imageSource === 'campus_students_photo'
-        ? require('../../assets/images/campus_students_photo.jpg')
-        : imageSource === 'campus_library_study'
-        ? require('../../assets/images/campus_library_study.jpg')
-        : imageSource === 'student_rep_group'
-        ? require('../../assets/images/student_rep_group.jpg')
-        : { uri: imageSource }
-      : imageSource;
+  const resolvedSource = stockSource
+    ? stockSource
+    : isFileUri
+    ? { uri: imageSource as string }
+    : signedUrl
+    ? { uri: signedUrl }
+    : isString && imageSource.startsWith('http')
+    ? { uri: imageSource }
+    : !isString
+    ? imageSource
+    : null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -66,12 +78,16 @@ export function ImageViewerModal({
 
         {/* Main Centered Full-Screen Image */}
         <Pressable accessibilityRole="button" accessibilityLabel="Close image viewer" style={[styles.imageWrapper, { width, height: height * 0.82 }]} onPress={onClose}>
-          <Image
-            source={resolvedSource}
-            style={styles.fullImage}
-            contentFit="contain"
-            transition={300}
-          />
+          {loading && !resolvedSource ? (
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          ) : resolvedSource ? (
+            <Image
+              source={resolvedSource}
+              style={styles.fullImage}
+              contentFit="contain"
+              transition={300}
+            />
+          ) : null}
         </Pressable>
 
         {/* Caption Bar */}

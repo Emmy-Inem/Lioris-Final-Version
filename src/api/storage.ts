@@ -142,14 +142,28 @@ export async function uploadMediaFile(
  throw new Error('You must be signed in to upload files.');
  }
 
- let blob: Blob;
- if (typeof fileUriOrBlob === 'string') {
- const response = await fetch(fileUriOrBlob);
- if (!response.ok) throw new Error('Could not read the selected file.');
- blob = await response.blob();
- } else {
- blob = fileUriOrBlob;
- }
+  let blob: Blob;
+  if (typeof fileUriOrBlob === 'string') {
+    if (fileUriOrBlob.startsWith('data:')) {
+      const parts = fileUriOrBlob.split(',');
+      const mimeMatch = parts[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+      const b64 = parts[1] || '';
+      const binaryString = atob(b64);
+      const len = binaryString.length;
+      const u8 = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        u8[i] = binaryString.charCodeAt(i);
+      }
+      blob = new Blob([u8], { type: mime });
+    } else {
+      const response = await fetch(fileUriOrBlob);
+      if (!response.ok) throw new Error('Could not read the selected file.');
+      blob = await response.blob();
+    }
+  } else {
+    blob = fileUriOrBlob;
+  }
 
  // Enforce client-side file size limits before uploading
  const limit = BUCKET_LIMITS[bucket];

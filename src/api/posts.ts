@@ -16,6 +16,7 @@ import { isBotPost, isBotVisibilityEnabled } from '../utils/botVisibility';
 import { isSuperAdminIdentity, resolveCampusReadScope } from '../utils/campusAccess';
 import { getOwnProfileRow } from './profile';
 import { isPermissionRefusal, refusalMessage } from '../utils/permissionErrors';
+import { primeSignedUrls } from './signedUrls';
 
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
@@ -437,7 +438,16 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     // Drafts/scheduled rows are dropped by filterPosts (the author's own come
     // back from the database; everyone else's are already hidden by RLS).
     const visible = filterPosts(merged, { ...query, viewerInstitutionCode, includeAllCampuses, viewerId });
-    return await decorateViewerState(visible, viewerId);
+    const decorated = await decorateViewerState(visible, viewerId);
+    const mediaToPrime: string[] = [];
+    for (const p of decorated) {
+      if (p.imageUrl) mediaToPrime.push(p.imageUrl);
+      if (p.imageUrls) mediaToPrime.push(...p.imageUrls);
+    }
+    if (mediaToPrime.length > 0) {
+      void primeSignedUrls('campus-media', mediaToPrime);
+    }
+    return decorated;
   } catch (err) {
     console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
     const isFirstPage = (query.page ?? 0) === 0;
@@ -525,7 +535,16 @@ export async function listMyPosts(userId?: string): Promise<Post[]> {
           new Date(a.repostOf?.repostedAt || a.createdAt).getTime(),
       );
 
-      return await decorateViewerState(merged, viewerId);
+      const decorated = await decorateViewerState(merged, viewerId);
+      const mediaToPrime: string[] = [];
+      for (const p of decorated) {
+        if (p.imageUrl) mediaToPrime.push(p.imageUrl);
+        if (p.imageUrls) mediaToPrime.push(...p.imageUrls);
+      }
+      if (mediaToPrime.length > 0) {
+        void primeSignedUrls('campus-media', mediaToPrime);
+      }
+      return decorated;
     }
   } catch (err) {
     console.warn('[Posts] listMyPosts error:', err);
@@ -645,7 +664,14 @@ export async function getPost(id: string): Promise<Post | null> {
     // Unpublished rows are author-only. RLS already refuses them to everyone
     // else, but a deep link to your OWN draft must not pretend it is live.
     const [decorated] = await decorateViewerState([post], viewerId);
-    return decorated ?? post;
+    const result = decorated ?? post;
+    const mediaToPrime: string[] = [];
+    if (result.imageUrl) mediaToPrime.push(result.imageUrl);
+    if (result.imageUrls) mediaToPrime.push(...result.imageUrls);
+    if (mediaToPrime.length > 0) {
+      void primeSignedUrls('campus-media', mediaToPrime);
+    }
+    return result;
   } catch (err) {
     console.warn('[Posts] getPost error:', err);
     return local || null;

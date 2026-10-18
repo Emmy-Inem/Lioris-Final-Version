@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Image } from'expo-image';
+import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
-import { router, useSegments } from'expo-router';
+import { router, useSegments } from 'expo-router';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
 import { SolidCard } from'./SolidCard';
@@ -25,7 +25,8 @@ import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { Post } from'@/api/types';
 import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost, extractMentionHandles, resolvePostMentions, buildPostShareUrl } from'@/api/posts';
 import { toggleSavedItem, SAVED_ITEMS_KEY, isItemSavedSync, subscribeSavedItems } from '@/api/bookmarks';
-import { submitReport } from'@/api/moderation';
+import { useSignedUrl } from '@/api/signedUrls';
+import { submitReport } from '@/api/moderation';
 import { haptics } from'@/utils/haptics';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 
@@ -70,6 +71,41 @@ const STOCK_IMAGES: Record<string, any> = {
  student_rep_group: require('../../assets/images/student_rep_group.jpg'),
  hero_student_3d: require('../../assets/images/hero_student_3d.jpg'),
 };
+
+function PostImageItem({
+  path,
+  style,
+  onPress,
+  children,
+}: {
+  path: string;
+  style?: any;
+  onPress?: () => void;
+  children?: React.ReactNode;
+}) {
+  const stockSource = STOCK_IMAGES[path];
+  const { url, loading } = useSignedUrl('campus-media', stockSource ? null : path);
+  const source = stockSource || (url ? { uri: url } : null);
+
+  if (!source && !loading) return null;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={[{ position: 'relative', overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.05)' }, style]}
+    >
+      {source ? (
+        <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+      ) : loading ? (
+        <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="small" color="#999999" />
+        </View>
+      ) : null}
+      {children}
+    </Pressable>
+  );
+}
 
 function timeAgo(iso: string) {
  const diffMs = Date.now() - new Date(iso).getTime();
@@ -375,14 +411,11 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  Alert.alert('Link Copied', 'Thread URL copied to clipboard.');
  }
 
- const postImageSource = post.imageUrl
- ? STOCK_IMAGES[post.imageUrl] ?? (post.imageUrl.startsWith('http') ? { uri: post.imageUrl } : null)
- : null;
- // A stock-art key never belongs in a multi-image gallery (it isn't a real
- // uploaded URL) - only resolvable http(s) images render there.
- const galleryUrls = (post.imageUrls ?? []).filter((u) => u.startsWith('http'));
+  const mediaList = (post.imageUrls && post.imageUrls.length > 0)
+    ? post.imageUrls.filter(Boolean)
+    : (post.imageUrl ? [post.imageUrl] : []);
 
- const isVideoPost = !!post.videoUrl;
+  const isVideoPost = !!post.videoUrl;
 
  return (
  <SolidCard frosted radius={20} style={{ marginBottom: spacing.md }}>
@@ -460,50 +493,48 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  </AppText>
  </Pressable>
 
- {/* Attached Media / Image / Video (Tap to Expand in Fullscreen Lightbox) */}
- {galleryUrls.length > 1 ? (
- <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: spacing.sm, borderRadius: 16, overflow: 'hidden' }}>
- {galleryUrls.slice(0, 4).map((url, index) => (
- <Pressable
- key={url + index}
- onPress={() => {
- haptics.light();
- setLightboxMedia(url);
- setLightboxCaption(post.title);
- setLightboxOpen(true);
- }}
- style={{ width: '49.5%', height: galleryUrls.length <= 2 ? 200 : 99 }}
- >
- <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
- </Pressable>
- ))}
- </View>
- ) : postImageSource ? (
- <Pressable
- onPress={() => {
- haptics.light();
- setLightboxMedia(post.imageUrl ?? null);
- setLightboxCaption(post.title);
- setLightboxOpen(true);
- }}
- style={{ width: '100%', height: 200, borderRadius: 16, overflow: 'hidden', marginBottom: spacing.sm, position: 'relative' }}
- >
- <Image source={postImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-
- {/* Video Play Overlay */}
- {isVideoPost ? (
- <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center' }}>
- <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' }}>
- <Ionicons name="play"size={24} color="#FFFFFF"style={{ marginLeft: 3 }} />
- </View>
- <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
- <Ionicons name="videocam"size={12} color="#FFFFFF" />
- <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 11 }}>Video</AppText>
- </View>
- </View>
- ) : null}
- </Pressable>
- ) : null}
+  {/* Attached Media / Image / Video (Tap to Expand in Fullscreen Lightbox) */}
+  {mediaList.length > 1 ? (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: spacing.sm, borderRadius: 16, overflow: 'hidden' }}>
+      {mediaList.slice(0, 4).map((url, index) => (
+        <PostImageItem
+          key={url + index}
+          path={url}
+          style={{ width: '49.5%', height: mediaList.length <= 2 ? 200 : 99 }}
+          onPress={() => {
+            haptics.light();
+            setLightboxMedia(url);
+            setLightboxCaption(post.title);
+            setLightboxOpen(true);
+          }}
+        />
+      ))}
+    </View>
+  ) : mediaList.length === 1 ? (
+    <PostImageItem
+      path={mediaList[0]}
+      style={{ width: '100%', height: 200, borderRadius: 16, marginBottom: spacing.sm }}
+      onPress={() => {
+        haptics.light();
+        setLightboxMedia(mediaList[0]);
+        setLightboxCaption(post.title);
+        setLightboxOpen(true);
+      }}
+    >
+      {/* Video Play Overlay */}
+      {isVideoPost ? (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' }}>
+            <Ionicons name="play" size={24} color="#FFFFFF" style={{ marginLeft: 3 }} />
+          </View>
+          <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="videocam" size={12} color="#FFFFFF" />
+            <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11 }}>Video</AppText>
+          </View>
+        </View>
+      ) : null}
+    </PostImageItem>
+  ) : null}
 
  {/* Interactive Poll Section */}
  {poll ? (
