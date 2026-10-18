@@ -45,6 +45,7 @@ import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { isItemSaved, toggleSavedItem, SAVED_ITEMS_KEY } from '@/api/bookmarks';
 import { CAMPUS_LANDMARKS, CAMPUS_CENTERS, CampusLandmark } from '@/api/campusMap';
 import { EventCategory, EventAgendaItem } from '@/api/types';
+import { useSignedUrl } from '@/api/signedUrls';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { submitVerificationRequest } from '@/api/verification';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
@@ -114,6 +115,10 @@ export function EventDetailScreen() {
   useEffect(() => {
     if (isEventBookmarked !== undefined) setBookmarked(isEventBookmarked);
   }, [isEventBookmarked]);
+
+  const isCoverDataUri = event?.coverImageUrl?.startsWith('data:');
+  const { url: signedCoverUrl } = useSignedUrl('campus-media', isCoverDataUri ? null : (event?.coverImageUrl ?? null));
+  const effectiveCoverUrl = isCoverDataUri ? event?.coverImageUrl : signedCoverUrl;
 
   async function handleToggleBookmark() {
     if (!event || savingBookmark) return;
@@ -657,8 +662,8 @@ export function EventDetailScreen() {
     );
   }
 
-  const hasValidCover = !!event.coverImageUrl && (event.coverImageUrl.startsWith('http://') || event.coverImageUrl.startsWith('https://') || event.coverImageUrl.startsWith('data:'));
-  const heroImageSource: { uri: string } | null = hasValidCover && event.coverImageUrl ? { uri: event.coverImageUrl } : null;
+  const hasValidCover = !!effectiveCoverUrl;
+  const heroImageSource: { uri: string } | null = effectiveCoverUrl ? { uri: effectiveCoverUrl } : null;
 
   const reviewLabel =
     event.paymentReviewStatus === 'approved'

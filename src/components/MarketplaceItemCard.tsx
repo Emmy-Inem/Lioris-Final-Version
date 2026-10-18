@@ -66,6 +66,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
   const [togglingSold, setTogglingSold] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const [cardImageWidth, setCardImageWidth] = useState(0);
 
   // Sync wishlist state reactively across cards and tabs
   useEffect(() => {
@@ -246,20 +247,30 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
 
   return (
     <SolidCard radius={18} padded={false} style={{ flex: 1 }}>
-      <View style={{ height: 100, backgroundColor: colors.divider, borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden', opacity: isSold ? 0.5 : 1 }}>
+      <View
+        onLayout={(e) => setCardImageWidth(e.nativeEvent.layout.width)}
+        style={{ height: 100, backgroundColor: colors.divider, borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden', opacity: isSold ? 0.5 : 1 }}
+      >
         {item.imageUrls && item.imageUrls.length > 1 ? (
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            style={StyleSheet.absoluteFill}
-          >
-            {item.imageUrls.map((imgPath, idx) => (
-              <View key={`${imgPath}-${idx}`} style={{ width: 180, height: 100 }}>
-                <MarketplaceImageItem path={imgPath} style={StyleSheet.absoluteFill} />
-              </View>
-            ))}
-          </ScrollView>
+          <>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              style={StyleSheet.absoluteFill}
+            >
+              {item.imageUrls.map((imgPath, idx) => (
+                <View key={`${imgPath}-${idx}`} style={{ width: cardImageWidth || 180, height: 100 }}>
+                  <MarketplaceImageItem path={imgPath} style={StyleSheet.absoluteFill} />
+                </View>
+              ))}
+            </ScrollView>
+            <View style={{ position: 'absolute', bottom: 4, right: 6, zIndex: 2, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.pill }}>
+              <AppText variant="caption" style={{ fontSize: 9.5, color: '#FFFFFF', fontWeight: 'bold' }}>
+                📷 {item.imageUrls.length}
+              </AppText>
+            </View>
+          </>
         ) : resolvedImageUrl ? (
           <Image
             source={{ uri: resolvedImageUrl }}

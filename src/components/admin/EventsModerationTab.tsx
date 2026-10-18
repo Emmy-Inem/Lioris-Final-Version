@@ -22,6 +22,56 @@ import { EMPTY_TICKET_FORM, TicketFormValues, paidLabel, parsePrice, validateTic
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
+import { useSignedUrl } from '@/api/signedUrls';
+
+function EventModerationThumbnail({
+  coverImageUrl,
+  category,
+  colors,
+  radius,
+  spacing,
+}: {
+  coverImageUrl?: string | null;
+  category?: string;
+  colors: any;
+  radius: any;
+  spacing: any;
+}) {
+  const isDataUri = coverImageUrl?.startsWith('data:');
+  const { url: signedUrl } = useSignedUrl('campus-media', isDataUri ? null : coverImageUrl);
+  const effectiveUrl = isDataUri ? coverImageUrl : signedUrl;
+
+  if (effectiveUrl) {
+    return (
+      <Image
+        source={{ uri: effectiveUrl }}
+        style={{ width: 85, height: 85, borderRadius: radius.md }}
+        contentFit="cover"
+      />
+    );
+  }
+
+  return (
+    <View
+      style={{
+        width: 85,
+        height: 85,
+        borderRadius: radius.md,
+        backgroundColor: colors.pastelPrimaryBg,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: `${colors.brandPrimary}25`,
+        padding: spacing.xs,
+      }}
+    >
+      <Ionicons name="calendar-outline" size={28} color={colors.brandPrimary} />
+      <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10, marginTop: 4, textTransform: 'uppercase' }}>
+        {category}
+      </AppText>
+    </View>
+  );
+}
 
 function toLocalInputValue(iso?: string | null) {
   if (!iso) return '';
@@ -597,7 +647,6 @@ export function EventsModerationTab() {
  {displayedEvents.map((event) => {
  const isPending = section === 'pending';
  const isApproved = section === 'approved';
- const hasValidImage = !!event.coverImageUrl && (event.coverImageUrl.startsWith('http://') || event.coverImageUrl.startsWith('https://') || event.coverImageUrl.startsWith('data:'));
 
  return (
  <SolidCard
@@ -611,32 +660,14 @@ export function EventsModerationTab() {
  }}
  >
  <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm }}>
- {hasValidImage ? (
- <Image
- source={{ uri: event.coverImageUrl! }}
- style={{ width: 85, height: 85, borderRadius: radius.md }}
- contentFit="cover"
+ <EventModerationThumbnail
+ coverImageUrl={event.coverImageUrl}
+ category={event.category}
+ colors={colors}
+ radius={radius}
+ spacing={spacing}
  />
- ) : (
- <View
- style={{
- width: 85,
- height: 85,
- borderRadius: radius.md,
- backgroundColor: colors.pastelPrimaryBg,
- alignItems: 'center',
- justifyContent: 'center',
- borderWidth: 1,
- borderColor: `${colors.brandPrimary}25`,
- padding: spacing.xs,
- }}
- >
- <Ionicons name="calendar-outline" size={28} color={colors.brandPrimary} />
- <AppText variant="caption" weight="bold" tone="brand" style={{ fontSize: 10, marginTop: 4, textTransform: 'uppercase' }}>
- {event.category}
- </AppText>
- </View>
- )}
+
  <View style={{ flex: 1 }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, flex: 1, marginRight: 6 }}>

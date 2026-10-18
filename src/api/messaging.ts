@@ -305,6 +305,10 @@ export async function getOrCreateConversationWithUser(
   userName: string,
   avatarUrl?: string | null,
 ): Promise<Conversation> {
+  if (userId && isUserBlocked(userId)) {
+    throw new Error("You can't message a user you've blocked.");
+  }
+
   // Check in-memory cache first
   const existing = localConversations.find(
     (c) => c.participantId === userId || (c.id === userId && c.participantName === userName),
@@ -316,6 +320,18 @@ export async function getOrCreateConversationWithUser(
   if (!currentUserId) {
     const stored = await getSessionUser();
     if (stored?.id) currentUserId = stored.id;
+  }
+
+  // Ensure neither user has blocked the other
+  if (currentUserId && userId && currentUserId !== userId) {
+    try {
+      const { data: hasBlock } = await supabase.rpc('users_have_block', { p_user_a: currentUserId, p_user_b: userId });
+      if (hasBlock) {
+        throw new Error('Messaging is unavailable between these accounts.');
+      }
+    } catch (blockErr: any) {
+      if (blockErr.message?.includes('Messaging is unavailable')) throw blockErr;
+    }
   }
 
   // If signed in, query Supabase for an existing direct channel between both users

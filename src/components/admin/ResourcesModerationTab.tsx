@@ -13,6 +13,8 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listResources, createResource, updateResource, approveResource, rejectResource, deleteResource } from '@/api/resources';
 import { Resource } from '@/api/types';
+import { resolveMediaUrl } from '@/api/signedUrls';
+import { openExternalUrl } from '@/utils/openExternalUrl';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { useAuth } from '@/auth/AuthContext';
 import { haptics } from '@/utils/haptics';
@@ -854,9 +856,16 @@ export function ResourcesModerationTab() {
               <AppButton
                 label="Open Document"
                 variant="secondary"
-                onPress={() => {
-                  if (previewModalResource?.fileUrl) {
-                    Linking.openURL(previewModalResource.fileUrl).catch(() => {});
+                onPress={async () => {
+                  try {
+                    const resolved = await resolveMediaUrl('resources', previewModalResource?.fileUrl);
+                    if (resolved) {
+                      await openExternalUrl(resolved);
+                    } else {
+                      Alert.alert('Unable to Open Document', 'Could not generate a secure link to the uploaded resource.');
+                    }
+                  } catch (err: any) {
+                    Alert.alert('Unable to Open Document', err?.message || 'Could not open the uploaded resource URL.');
                   }
                 }}
               />

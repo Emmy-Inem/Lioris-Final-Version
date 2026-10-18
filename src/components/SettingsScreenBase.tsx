@@ -1088,7 +1088,14 @@ export function SettingsScreen() {
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 1 }}>
                       {profile?.email ?? user?.email ?? ''}
                     </AppText>
-                    {!isUnverifiedPersonalUser(profile) && (
+                    {isUnverifiedPersonalUser(profile) ? (
+                      <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
+                        <Badge
+                          label={profile?.verificationStatus === 'pending' ? 'Verification Pending' : 'Unverified'}
+                          tone={profile?.verificationStatus === 'pending' ? 'warning' : 'neutral'}
+                        />
+                      </View>
+                    ) : (
                       <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
                         <Badge label="Verified Academic" tone="success" />
                       </View>

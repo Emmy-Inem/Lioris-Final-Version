@@ -17,6 +17,7 @@ import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { CampusEvent } from'@/api/types';
 import { rsvpToEvent } from'@/api/events';
 import { submitReport } from'@/api/moderation';
+import { useSignedUrl } from '@/api/signedUrls';
 import { haptics } from'@/utils/haptics';
 import { formatNaira } from '@/utils/paidEvents';
 import { useEventReminder } from '@/utils/eventReminders';
@@ -52,8 +53,10 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
 
   const { month, day, time } = parseEventDate(event.startAt);
   const isFull = !!event.capacity && rsvpCount >= event.capacity && !rsvpd;
-
-  const hasRealImage = !!event.coverImageUrl && (event.coverImageUrl.startsWith('http') || event.coverImageUrl.startsWith('data:'));
+  const isDataUri = event.coverImageUrl?.startsWith('data:');
+  const { url: signedCoverUrl } = useSignedUrl('campus-media', isDataUri ? null : event.coverImageUrl);
+  const effectiveCoverUrl = isDataUri ? event.coverImageUrl : signedCoverUrl;
+  const hasRealImage = !!effectiveCoverUrl;
 
   function handleOpenEvent() {
     haptics.light();
@@ -167,7 +170,7 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  style={{ width: '100%', height: 130, position: 'relative', overflow: 'hidden' }}
  >
         {hasRealImage ? (
-          <Image source={{ uri: event.coverImageUrl! }} style={{ width: '100%', height: 130 }} contentFit="cover" />
+          <Image source={{ uri: effectiveCoverUrl! }} style={{ width: '100%', height: 130 }} contentFit="cover" />
         ) : (
           <View
             style={{

@@ -8,9 +8,16 @@ import { Badge } from'./Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { CampusEvent } from '@/api/types';
+import { useSignedUrl } from '@/api/signedUrls';
 import { haptics } from '@/utils/haptics';
 
-
+function EventCoverImage({ coverImageUrl, style }: { coverImageUrl?: string | null; style?: any }) {
+  const isDataUri = coverImageUrl?.startsWith('data:');
+  const { url: signedCoverUrl } = useSignedUrl('campus-media', isDataUri ? null : coverImageUrl);
+  const effectiveUrl = isDataUri ? coverImageUrl : signedCoverUrl;
+  if (!effectiveUrl) return null;
+  return <Image source={{ uri: effectiveUrl }} style={style} contentFit="cover" />;
+}
 
 interface SpotlightEventsCarouselProps {
  events: CampusEvent[];
@@ -164,29 +171,25 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  contentContainerStyle={{ paddingRight: 16 }}
  {...({ 'data-horizontal-scroll': 'true' } as any)}
  >
- {displayEvents.map((item) => {
- const hasValidCover = !!item.coverImageUrl && (item.coverImageUrl.startsWith('http://') || item.coverImageUrl.startsWith('https://') || item.coverImageUrl.startsWith('data:'));
-
- return (
- <Pressable
- key={item.id}
- onPress={() => handleOpenEvent(item.id)}
- style={{
- width: cardWidth,
- marginRight: cardGap,
- borderRadius: 18,
- overflow: 'hidden',
- height: 180,
- backgroundColor: colors.surface,
- borderWidth: 1,
- borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
- position: 'relative',
- }}
- >
- {/* Cover Image if valid */}
- {hasValidCover ? (
- <Image source={{ uri: item.coverImageUrl! }} style={{ width: '100%', height: '100%', position: 'absolute' }} contentFit="cover" />
- ) : null}
+  {displayEvents.map((item) => {
+    return (
+      <Pressable
+        key={item.id}
+        onPress={() => handleOpenEvent(item.id)}
+        style={{
+          width: cardWidth,
+          marginRight: cardGap,
+          borderRadius: 18,
+          overflow: 'hidden',
+          height: 180,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+          position: 'relative',
+        }}
+      >
+        {/* Cover Image */}
+        <EventCoverImage coverImageUrl={item.coverImageUrl} style={{ width: '100%', height: '100%', position: 'absolute' }} />
 
  {/* Dark Overlay */}
  <View

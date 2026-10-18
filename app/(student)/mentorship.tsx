@@ -106,19 +106,61 @@ export default function StudentMentorshipScreen() {
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
               {campusCode && campusCode !== 'GLOBAL' ? (
-                <View
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 5,
-                    borderRadius: radius.pill,
-                    backgroundColor: colors.brandPrimary,
-                    borderWidth: 1,
-                    borderColor: colors.brandPrimary,
-                  }}
-                >
-                  <AppText variant="caption" weight="bold" style={{ fontSize: 11, color: colors.textInverse }}>
-                    {campusCode} mentors
-                  </AppText>
+                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                  <Pressable
+                    onPress={() => {
+                      haptics.light();
+                      setCampusFilter('campus');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Show ${campusCode} mentors only`}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 5,
+                      borderRadius: radius.pill,
+                      backgroundColor: campusFilter === 'campus' ? colors.brandPrimary : 'transparent',
+                      borderWidth: 1,
+                      borderColor: campusFilter === 'campus' ? colors.brandPrimary : colors.border,
+                    }}
+                  >
+                    <AppText
+                      variant="caption"
+                      weight="bold"
+                      style={{
+                        fontSize: 11,
+                        color: campusFilter === 'campus' ? colors.textInverse : colors.textSecondary,
+                      }}
+                    >
+                      {campusCode} mentors
+                    </AppText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      haptics.light();
+                      setCampusFilter('all');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Show all alumni mentors"
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 5,
+                      borderRadius: radius.pill,
+                      backgroundColor: campusFilter === 'all' ? colors.brandPrimary : 'transparent',
+                      borderWidth: 1,
+                      borderColor: campusFilter === 'all' ? colors.brandPrimary : colors.border,
+                    }}
+                  >
+                    <AppText
+                      variant="caption"
+                      weight="bold"
+                      style={{
+                        fontSize: 11,
+                        color: campusFilter === 'all' ? colors.textInverse : colors.textSecondary,
+                      }}
+                    >
+                      All alumni
+                    </AppText>
+                  </Pressable>
                 </View>
               ) : null}
               <Pressable

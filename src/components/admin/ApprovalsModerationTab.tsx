@@ -8,13 +8,15 @@ import { AppText } from'@/components/AppText';
 import { Badge } from'@/components/Badge';
 import { AppButton } from'@/components/AppButton';
 import { EmptyState } from'@/components/EmptyState';
-import { useTheme } from'@/theme/ThemeProvider';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { listVerificationRequests, respondToVerificationRequest } from'@/api/verification';
-import { listWaitlist, respondToWaitlistEntry } from'@/api/institutions';
-import { listResources, approveResource, rejectResource } from'@/api/resources';
-import { Resource } from'@/api/types';
-import { haptics } from'@/utils/haptics';
+import { listVerificationRequests, respondToVerificationRequest, getVerificationDocumentUrl } from '@/api/verification';
+import { listWaitlist, respondToWaitlistEntry } from '@/api/institutions';
+import { listResources, approveResource, rejectResource } from '@/api/resources';
+import { resolveMediaUrl } from '@/api/signedUrls';
+import { openExternalUrl } from '@/utils/openExternalUrl';
+import { Resource } from '@/api/types';
+import { haptics } from '@/utils/haptics';
 
 interface ApprovalsModerationTabProps {
  /** 'admin' (default) sees every campus and the platform-governance campus-node federation queue. 'staff' is scoped to their own campus and never sees federation approvals. */
@@ -303,11 +305,16 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  <AppButton
  label="View Uploaded ID Document"
  variant="secondary"
- onPress={() => {
- if (v.documentPhotoUri) {
- Linking.openURL(v.documentPhotoUri).catch(() => {
- Alert.alert('Unable to Open Document', 'Could not open the uploaded ID document URL.');
- });
+ onPress={async () => {
+ try {
+ const doc = await getVerificationDocumentUrl(v);
+ if (doc?.signedUrl) {
+ await openExternalUrl(doc.signedUrl);
+ } else {
+ Alert.alert('Unable to Open Document', 'Could not generate a secure link to the uploaded ID document.');
+ }
+ } catch (err: any) {
+ Alert.alert('Unable to Open Document', err?.message || 'Could not open the uploaded ID document.');
  }
  }}
  />
@@ -440,11 +447,16 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
             <AppButton
               label="Open Uploaded File"
               variant="secondary"
-              onPress={() => {
-                if (previewResource?.fileUrl) {
-                  Linking.openURL(previewResource.fileUrl).catch(() => {
-                    Alert.alert('Unable to Open File', 'Could not open the uploaded resource URL.');
-                  });
+              onPress={async () => {
+                try {
+                  const resolved = await resolveMediaUrl('resources', previewResource?.fileUrl);
+                  if (resolved) {
+                    await openExternalUrl(resolved);
+                  } else {
+                    Alert.alert('Unable to Open File', 'Could not generate a secure link to the uploaded resource.');
+                  }
+                } catch (err: any) {
+                  Alert.alert('Unable to Open File', err?.message || 'Could not open the uploaded resource URL.');
                 }
               }}
             />
