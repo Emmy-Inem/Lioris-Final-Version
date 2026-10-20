@@ -15,16 +15,18 @@
 // Guard rails:
 //   * caller must be a non-suspended admin (AAL2 step-up when they enrolled a factor - see _shared/auth.ts)
 //   * 30 changes per admin per hour
-//   * every successful change is written to audit_logs with the acting admin
+//   * every successful change is written to audit_logs with the acting admin; a permanent delete also
+//     writes an intent row (institution_delete_started) BEFORE it runs, and a failure row after
+//   * delete: `memberMode` defaults to 'block' (refuse while members remain); 'reassign' must be explicit
 //
-// Request:  POST { action: 'create' | 'update' | 'set_active', code, ... }   (see `Body` below)
+// Request:  POST { action: 'create' | 'update' | 'set_active' | 'delete_impact' | 'delete', code, ... }   (see `Body` below)
 // Response: { success: true, campus, warnings?: string[] }  or  { error, message, ...details }
 //
 // Deployment (verify_jwt ON):  supabase functions deploy admin-manage-institution
 // SUPABASE_URL / SUPABASE_ANON_KEY are provided at runtime; SUPABASE_SERVICE_ROLE_KEY is a secret.
 
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
-import { isUuid, requireSuperAdmin } from '../_shared/auth.ts';
+import { isCallerSuperAdmin, isUuid, requireSuperAdmin } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
 import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 
@@ -119,7 +121,8 @@ async function domainResolves(domain: string): Promise<boolean | null> {
 /** Map a Postgres error raised by campuses_guard() (message starts with its code) to an HTTP failure. */
 function mapDbError(message: string): Fail {
   const m = /^(invalid_code|invalid_name|invalid_domain|public_domain_blocked|domain_taken):\s*(.*)$/s.exec(message);
-  if (m) return new Fail(m[1] === 'domain_taken' ? 409 : 400, m[1], m[2]);
+  if (m) return new Fail(m[1] === 'domain_taken' ? 409 : 400, m[1], m[2].slice(0, 300));
+  console.error('[admin-manage-institution] database error:', message.slice(0, 300));
   if (/campuses_code_key|duplicate key/i.test(message)) return new Fail(409, 'code_taken', 'A campus with this code already exists.');
   if (/campuses_details_chk/i.test(message)) return new Fail(400, 'invalid_details', 'Check the colour (#RRGGBB) and website (https://...).');
   return new Fail(500, 'db_error', 'The database rejected this change.');
@@ -171,7 +174,10 @@ Deno.serve(async (req: Request) => {
     if (action === 'delete_impact' || action === 'delete') {
       if (!existing) throw new Fail(404, 'not_found', 'That campus does not exist.');
       const { data: impact, error: impactError } = await admin.rpc('campus_delete_impact', { p_code: code });
-      if (impactError) throw new Fail(500, 'db_error', 'Could not work out what deleting this campus would remove. Has the 20261027010000 migration been applied?');
+      if (impactError) {
+        console.error('[admin-manage-institution] campus_delete_impact failed:', impactError.message);
+        throw new Fail(500, 'db_error', 'Could not work out what deleting this campus would remove. Nothing was changed.');
+      }
       const counts = (impact ?? {}) as Record<string, number>;
       if (action === 'delete_impact') {
         return jsonResponse(req, { success: true, campus: existing, impact: counts, memberCount: counts.profiles ?? 0 }, 200);
@@ -182,16 +188,29 @@ Deno.serve(async (req: Request) => {
       if (confirmCode !== code) {
         throw new Fail(409, 'confirm_required', `Type ${code} to confirm that you want to permanently delete ${existing.name}.`, { impact: counts });
       }
-      const memberMode = b.memberMode === 'block' ? 'block' : 'reassign';
+      // Safe default: refuse to delete a campus that still has members unless the caller explicitly
+      // asks to reassign them (memberMode: 'reassign').
+      const memberMode = b.memberMode === 'reassign' ? 'reassign' : 'block';
+      const callerTier = isCallerSuperAdmin(auth.caller) ? 'super_admin' : 'admin';
+      // Audit the INTENT first (audit_logs is append-only, so the outcome is a second row).
+      const intentOk = await audit(admin, caller.id, 'institution_delete_started', existing.id, code,
+        `Started permanent deletion of campus ${existing.name} (${code}), members: ${memberMode}`,
+        { status: 'started', name: existing.name, memberMode, impact: counts, actorTier: callerTier });
+      if (!intentOk) throw new Fail(500, 'server_error', 'Could not record this action, so nothing was changed. Try again shortly.');
+
       const { data: result, error: deleteError } = await admin.rpc('admin_delete_campus', { p_code: code, p_members: memberMode });
       if (deleteError) {
+        await audit(admin, caller.id, 'institution_delete_failed', existing.id, code,
+          `Deletion of campus ${existing.name} (${code}) did not complete`,
+          { status: 'failed', memberMode, actorTier: callerTier });
         const m = /^(protected_campus|not_found|has_members|cleanup_failed|bad_request):\s*(.*)$/s.exec(deleteError.message ?? '');
-        if (m) throw new Fail(m[1] === 'not_found' ? 404 : 409, m[1], m[2]);
+        if (m) throw new Fail(m[1] === 'not_found' ? 404 : 409, m[1], m[2].slice(0, 200));
         console.error('[admin-manage-institution] delete failed:', deleteError.message);
         throw new Fail(500, 'db_error', 'The campus could not be deleted. Nothing was changed.');
       }
       await audit(admin, caller.id, 'institution_deleted', existing.id, code,
-        `Permanently deleted campus ${existing.name} (${code})`, { name: existing.name, domains: existing.email_domains, result });
+        `Permanently deleted campus ${existing.name} (${code})`,
+        { status: 'completed', name: existing.name, domains: existing.email_domains, memberMode, result, actorTier: callerTier });
       return jsonResponse(req, { success: true, deleted: true, code, result }, 200);
     }
 
@@ -369,7 +388,7 @@ async function audit(
   code: string,
   summary: string,
   extra: Record<string, unknown> = {},
-) {
+): Promise<boolean> {
   const { error } = await admin.from('audit_logs').insert({
     actor_id: actorId,
     action,
@@ -379,4 +398,5 @@ async function audit(
     created_at: new Date().toISOString(),
   });
   if (error) console.error('[admin-manage-institution] Failed to write audit log entry:', error.message);
+  return !error;
 }

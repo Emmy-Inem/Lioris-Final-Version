@@ -18,7 +18,11 @@
 // Behaviour:
 //   * fails closed when PUSH_WEBHOOK_SECRET is missing/too short (500) or wrong (401)
 //   * skips (200, sent: 0) suspended recipients, recipients who blocked the sender,
-//     and rows older than 10 minutes (webhook replays / retries never spam old pushes)
+//     and rows older than 10 minutes or with no parsable created_at (webhook replays / retries
+//     never spam old pushes)
+//   * de-duplicates by notification id (1 push per id per 10 minutes) and caps pushes at 60/hour
+//     per sender and 30/hour per recipient (critical system types exempt), so peer-inserted
+//     notifications cannot be used to spam a device
 //   * sends to Expo in batches of <= 100 with data.deepLinkPath (the app reads
 //     response.notification.request.content.data.deepLinkPath)
 //   * Android channelId: 'critical' for system_announcement / emergency, else 'default'
@@ -34,7 +38,7 @@
 
 import { timingSafeEqual } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
-import { createServiceClient } from '../_shared/ratelimit.ts';
+import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const MAX_BODY_BYTES = 64 * 1024;
@@ -44,6 +48,10 @@ const MAX_RECORD_AGE_MS = 10 * 60 * 1000;
 const MAX_TITLE_LENGTH = 100;
 const MAX_BODY_LENGTH = 178;
 const EXPO_TIMEOUT_MS = 10_000;
+const DEDUPE_WINDOW_SECONDS = 10 * 60; // one push per notification id per 10 minutes
+const SENDER_LIMIT = 60; // pushes per sender per hour (peers can insert notifications for each other)
+const RECIPIENT_LIMIT = 30; // pushes per recipient per hour
+const LIMIT_WINDOW_SECONDS = 60 * 60;
 const CRITICAL_TYPES = new Set(['system_announcement', 'emergency']);
 const EXPO_TOKEN_RE = /^(?:Expo|Exponent)PushToken\[[^\]\s]+\]$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -171,11 +179,14 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Invalid record.' }, 400);
   }
 
-  // Idempotent-ish: never push for stale rows (webhook replays, manual re-sends).
+  // Never push for stale rows (webhook replays, manual re-sends). A missing or unparsable
+  // created_at is treated as stale too: a genuine webhook row always carries a timestamp.
   const createdAt = typeof record.created_at === 'string' ? Date.parse(record.created_at) : Number.NaN;
-  if (Number.isFinite(createdAt) && Date.now() - createdAt > MAX_RECORD_AGE_MS) {
+  if (!Number.isFinite(createdAt) || Date.now() - createdAt > MAX_RECORD_AGE_MS) {
     return json({ success: true, sent: 0, removed: 0, skipped: 'stale' }, 200);
   }
+  const notificationId = typeof record.id === 'string' && UUID_RE.test(record.id) ? record.id : null;
+  if (!notificationId) return json({ success: true, sent: 0, removed: 0, skipped: 'invalid_id' }, 200);
 
   const title = truncate(record.title, MAX_TITLE_LENGTH);
   const body = truncate(record.body, MAX_BODY_LENGTH);
@@ -242,6 +253,23 @@ Deno.serve(async (req: Request) => {
     if (tokens.length === 0) return json({ success: true, sent: 0, removed: 0, skipped: 'no_tokens' }, 200);
 
     const critical = CRITICAL_TYPES.has(notificationType);
+
+    // Spam controls, applied last so skipped rows (blocked, muted, no token) spend nothing. A limiter
+    // outage fails OPEN here: dropping a real notification is worse than a rare duplicate.
+    // (1) De-duplicate by notification id: webhook retries / replays push at most once per 10 minutes.
+    const dedupe = await consumeRateLimit(admin, `push:${notificationId}`, 1, DEDUPE_WINDOW_SECONDS, { audit: false });
+    if (dedupe === 'limited') return json({ success: true, sent: 0, removed: 0, skipped: 'duplicate' }, 200);
+    // (2) Per-sender and per-recipient hourly caps, so peer-inserted notifications cannot be used to
+    //     spam a device. Critical system notifications (admin-only types) are exempt.
+    if (!critical) {
+      if (senderId && senderId !== recipientId) {
+        const bySender = await consumeRateLimit(admin, `push-sender:${senderId}`, SENDER_LIMIT, LIMIT_WINDOW_SECONDS);
+        if (bySender === 'limited') return json({ success: true, sent: 0, removed: 0, skipped: 'sender_limited' }, 200);
+      }
+      const byRecipient = await consumeRateLimit(admin, `push-recipient:${recipientId}`, RECIPIENT_LIMIT, LIMIT_WINDOW_SECONDS);
+      if (byRecipient === 'limited') return json({ success: true, sent: 0, removed: 0, skipped: 'recipient_limited' }, 200);
+    }
+
     const deepLinkPath = safeDeepLink(record.action_url);
     const data: Record<string, string> = {};
     if (deepLinkPath) data.deepLinkPath = deepLinkPath;

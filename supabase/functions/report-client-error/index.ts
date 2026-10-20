@@ -5,7 +5,9 @@
 // src/monitoring/errorReporter.ts; admins read the rows in `public.client_errors`
 // (Admin > System Health > Client errors).
 //
-// Request:  POST { message, stack?, fingerprint?, url?, release?, session_id?, level?, context? }
+// Request:  POST { message, stack?, url?, release?, session_id?, level?, context? }
+//           (a client-supplied `fingerprint` is accepted for backward compatibility but IGNORED:
+//           the grouping key is always computed server-side from message + first stack frame)
 // Response: 204 stored | 202 dropped (limiter/storage unavailable) | 4xx invalid request
 //
 // Design notes:
@@ -17,8 +19,10 @@
 //     rate-limit RPC failing, a database error) FAIL OPEN, meaning the request still gets
 //     a success-class status, and the report is simply dropped.
 //   * Abuse controls: 16 KB body cap, every field validated and truncated, per-IP
-//     30 reports / 10 minutes, per-user 60 reports / hour, and repeats of one fingerprint
-//     within an hour bump `occurrences` on a single row instead of inserting more rows.
+//     30 reports / 10 minutes, per-user 60 reports / hour, a GLOBAL cap of 600 stored reports /
+//     hour across all callers (so rotating IPs cannot flood the table), and repeats of one
+//     fingerprint within an hour bump `occurrences` atomically (public.bump_client_error) on a
+//     single row instead of inserting more rows.
 //   * PII: emails, bearer tokens, JWTs and URL query strings are scrubbed again here
 //     (the client already scrubs; this is defence in depth against modified clients).
 //   * Internals are never echoed back.
@@ -44,6 +48,8 @@ const IP_LIMIT = 30;
 const IP_WINDOW_SECONDS = 10 * 60;
 const USER_LIMIT = 60;
 const USER_WINDOW_SECONDS = 60 * 60;
+const GLOBAL_LIMIT = 600;
+const GLOBAL_WINDOW_SECONDS = 60 * 60;
 const DEDUPE_WINDOW_MS = 60 * 60 * 1000;
 
 const LEVELS = new Set(['error', 'warning', 'info']);
@@ -100,10 +106,8 @@ async function sha256Hex(input: string): Promise<string> {
     .join('');
 }
 
-async function resolveFingerprint(raw: unknown, message: string, stack: string | null): Promise<string> {
-  // Clients send a short hex hash; anything else is replaced by a server-side hash so a
-  // caller cannot smuggle arbitrary text into the grouping column.
-  if (typeof raw === 'string' && /^[a-f0-9]{8,64}$/.test(raw)) return raw;
+/** Grouping key, always derived server-side so a caller cannot choose (or collide with) one. */
+async function computeFingerprint(message: string, stack: string | null): Promise<string> {
   const firstFrame = (stack ?? '').split('\n').find((l) => /^\s*(at\s|.*@)/.test(l)) ?? '';
   return (await sha256Hex(`${message}|${firstFrame.trim()}`)).slice(0, 16);
 }
@@ -165,7 +169,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const stack = cleanString(body.stack, MAX_STACK);
-    const fingerprint = await resolveFingerprint(body.fingerprint, message, stack);
+    const fingerprint = await computeFingerprint(message, stack);
     const level = typeof body.level === 'string' && LEVELS.has(body.level) ? body.level : 'error';
     const release =
       typeof body.release === 'string' && /^[\w.@+-]{1,64}$/.test(body.release) ? body.release : null;
@@ -174,31 +178,51 @@ Deno.serve(async (req: Request) => {
     const userAgent = truncate((req.headers.get('user-agent') ?? '').trim(), MAX_USER_AGENT) || null;
     const now = new Date();
 
-    // Repeat of a recent fingerprint: bump the counter on the existing row.
-    const since = new Date(now.getTime() - DEDUPE_WINDOW_MS).toISOString();
-    const { data: existing, error: lookupError } = await admin
-      .from('client_errors')
-      .select('id, occurrences')
-      .eq('fingerprint', fingerprint)
-      .gte('last_seen_at', since)
-      .order('last_seen_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (lookupError) {
-      console.error('[report-client-error] lookup failed:', lookupError.message);
+    // Global cap on stored reports (fixed key, all callers). Over the cap the report is dropped
+    // silently (202), never surfaced as an error.
+    const globalVerdict = await consumeRateLimit(admin, 'client-error-global', GLOBAL_LIMIT, GLOBAL_WINDOW_SECONDS);
+    if (globalVerdict !== 'allowed') return dropped();
+
+    // Repeat of a recent fingerprint: bump the counter on the existing row, atomically in SQL.
+    let bumped = false;
+    const bump = await admin.rpc('bump_client_error', {
+      p_fingerprint: fingerprint,
+      p_window_seconds: DEDUPE_WINDOW_MS / 1000,
+    });
+    if (!bump.error) {
+      bumped = bump.data === true;
+    } else if (bump.error.code === 'PGRST202' || bump.error.code === '42883') {
+      // RPC not deployed yet (migration 20261108000000_edge_support.sql): legacy, non-atomic path.
+      const since = new Date(now.getTime() - DEDUPE_WINDOW_MS).toISOString();
+      const { data: existing, error: lookupError } = await admin
+        .from('client_errors')
+        .select('id, occurrences')
+        .eq('fingerprint', fingerprint)
+        .gte('last_seen_at', since)
+        .order('last_seen_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lookupError) {
+        console.error('[report-client-error] lookup failed:', lookupError.message);
+        return dropped();
+      }
+      if (existing) {
+        const { error: updateError } = await admin
+          .from('client_errors')
+          .update({ occurrences: (existing.occurrences ?? 1) + 1, last_seen_at: now.toISOString() })
+          .eq('id', existing.id);
+        if (updateError) {
+          console.error('[report-client-error] update failed:', updateError.message);
+          return dropped();
+        }
+        bumped = true;
+      }
+    } else {
+      console.error('[report-client-error] bump failed:', bump.error.message);
       return dropped();
     }
 
-    if (existing) {
-      const { error: updateError } = await admin
-        .from('client_errors')
-        .update({ occurrences: (existing.occurrences ?? 1) + 1, last_seen_at: now.toISOString() })
-        .eq('id', existing.id);
-      if (updateError) {
-        console.error('[report-client-error] update failed:', updateError.message);
-        return dropped();
-      }
-    } else {
+    if (!bumped) {
       const { error: insertError } = await admin.from('client_errors').insert({
         user_id: userId,
         session_id: sessionId,

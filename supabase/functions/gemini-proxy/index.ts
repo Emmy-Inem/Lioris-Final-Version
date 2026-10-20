@@ -16,6 +16,11 @@
 //   * The system prompt is owned by this function (callers cannot swap it), `mode` is an
 //     allow-list, and the total request body, prompt and image sizes are capped before
 //     anything is parsed or forwarded. Image base64 charset and mime type are validated.
+//   * Kill switch: AI_DISABLED=true secret, or platform_settings key 'ai_disabled' (value true or
+//     {"disabled": true}) answers 503 { error: "not_configured" } at once. A global daily request cap
+//     (AI_DAILY_CAP, default 3000, shared with support-ai-chat) bounds the worst-case bill.
+//   * The system prompt is sent in Gemini's `systemInstruction` field, not mixed into user text.
+//   * One 40 s overall deadline; each model attempt gets an equal share of the time left.
 //   * Prompts are never logged.
 //
 // Behaviour without a key: responds 503 { error: "not_configured" } and the client
@@ -30,7 +35,8 @@
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 import { requireUser } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
-import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
+import { consumeRateLimit, createServiceClient, peekRateLimit } from '../_shared/ratelimit.ts';
+import { consumeGlobalAiBudget, isAiDisabled } from '../_shared/aiguard.ts';
 
 const MODES = ['explain', 'past_question', 'quiz', 'schedule', 'math_solve', 'flashcards'];
 const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
@@ -45,6 +51,7 @@ const HOURLY_LIMIT = 30;
 const HOURLY_WINDOW_SECONDS = 60 * 60;
 const BURST_LIMIT = 5;
 const BURST_WINDOW_SECONDS = 60;
+const OVERALL_DEADLINE_MS = 40_000;
 
 const SYSTEM_PROMPT = `You are Lioris Academic AI, an elite university tutor and researcher powered by Google Gemini.
 Your job is to provide clear, high-yield academic explanations, step-by-step past question breakdowns, handwritten chalkboard and equation solutions in standard LaTeX notation, and active-recall study aids.
@@ -118,6 +125,19 @@ Deno.serve(async (req: Request) => {
     console.error('[gemini-proxy] SUPABASE_SERVICE_ROLE_KEY missing; refusing to run unmetered.');
     return jsonResponse(req, { error: 'Service temporarily unavailable.' }, 503);
   }
+
+  // Kill switch (AI_DISABLED secret or platform_settings 'ai_disabled'): checked before anything is
+  // consumed. 'not_configured' makes the client fall back to its offline study templates.
+  if (await isAiDisabled(admin)) return jsonResponse(req, { error: 'not_configured' }, 503);
+
+  // Hourly quota first (read-only peek), so a request refused for the hourly limit never touches the
+  // burst counter, and one refused for bursting never burns hourly quota.
+  const used = await peekRateLimit(admin, `gemini:${user.id}`, HOURLY_WINDOW_SECONDS);
+  if (used !== null && used >= HOURLY_LIMIT) {
+    return jsonResponse(req, { error: 'Rate limit reached. Please try again later.' }, 429, {
+      'Retry-After': '3600',
+    });
+  }
   const burst = await consumeRateLimit(admin, `gemini-burst:${user.id}`, BURST_LIMIT, BURST_WINDOW_SECONDS);
   if (burst === 'error') return jsonResponse(req, { error: 'Service temporarily unavailable.' }, 503);
   if (burst === 'limited') {
@@ -130,13 +150,26 @@ Deno.serve(async (req: Request) => {
       'Retry-After': '3600',
     });
   }
+  // Global daily budget across all users and both Gemini functions (spent last).
+  const budget = await consumeGlobalAiBudget(admin);
+  if (budget !== 'ok') {
+    return jsonResponse(req, { error: 'service_unavailable', message: 'The AI service is at capacity. Please try again later.' }, 503);
+  }
 
   // --- 5. Call Gemini -------------------------------------------------------
+  // The system prompt travels in Gemini's dedicated `systemInstruction` field, never concatenated
+  // with user text, so user input cannot masquerade as instructions.
   const parts: Record<string, unknown>[] = [];
   if (imagePart) parts.push(imagePart);
-  parts.push({ text: `${SYSTEM_PROMPT}\n\nTask Mode: ${mode}\n\nStudent Prompt:\n${prompt}` });
+  parts.push({ text: `Task Mode: ${mode}\n\nStudent Prompt:\n${prompt}` });
 
-  for (const model of MODELS) {
+  // One overall deadline for the whole request; each model attempt gets an equal share of what is left.
+  const deadline = Date.now() + OVERALL_DEADLINE_MS;
+  for (let i = 0; i < MODELS.length; i++) {
+    const model = MODELS[i];
+    const remaining = deadline - Date.now();
+    if (remaining < 2000) break;
+    const timeoutMs = Math.floor(remaining / (MODELS.length - i));
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -145,9 +178,10 @@ Deno.serve(async (req: Request) => {
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
           body: JSON.stringify({
             contents: [{ role: 'user', parts }],
+            systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
             generationConfig: { temperature: 0.3, maxOutputTokens: 1500 },
           }),
-          signal: AbortSignal.timeout(45000),
+          signal: AbortSignal.timeout(timeoutMs),
         },
       );
       if (!res.ok) {
