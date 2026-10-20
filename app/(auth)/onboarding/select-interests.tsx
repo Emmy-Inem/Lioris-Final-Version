@@ -27,7 +27,7 @@ export default function JoinDiscussionSpacesScreen() {
 
   const spacesQuery = useQuery({
     queryKey: ['onboarding', 'discussion-spaces', user?.campusCode || 'GLOBAL'],
-    queryFn: () => listCommunities(user?.campusCode ?? undefined),
+    queryFn: () => listCommunities(user?.campusCode ?? undefined, { allowOffline: true }),
     enabled: !!user,
   });
   const joinedQuery = useQuery({
