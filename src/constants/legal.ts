@@ -18,6 +18,42 @@ export const PRIVACY_VERSION = '2026-09-24';
 export const COMMUNITY_RULES_VERSION = '2026-09-24';
 export const COPYRIGHT_POLICY_VERSION = '2026-09-24';
 
+export interface LegalVersions {
+  terms: string;
+  privacy: string;
+  communityRules: string;
+  copyright: string;
+}
+
+const CURRENT_LEGAL_VERSIONS: LegalVersions = {
+  terms: TERMS_VERSION,
+  privacy: PRIVACY_VERSION,
+  communityRules: COMMUNITY_RULES_VERSION,
+  copyright: COPYRIGHT_POLICY_VERSION,
+};
+
+/** The single string recorded as the consent version: bumping ANY of the four documents changes it. */
+export function buildConsentVersion(v: LegalVersions = CURRENT_LEGAL_VERSIONS): string {
+  return [v.terms, v.privacy, v.communityRules, v.copyright].join('|');
+}
+
+/**
+ * Terms + Privacy + Community Rules + Copyright versions joined with "|" (43 characters, inside the
+ * 64-character column the sign-up trigger writes). Recorded at sign-up and by the re-consent prompt.
+ */
+export const CONSENT_VERSION = buildConsentVersion();
+
+/**
+ * Whether a recorded consent still covers the documents in force. Older accounts recorded the plain
+ * TERMS_VERSION: that stays valid only while none of the other documents has moved past it, so a later
+ * Privacy / Rules / Copyright bump re-prompts them once.
+ */
+export function isConsentCurrent(recorded: unknown, v: LegalVersions = CURRENT_LEGAL_VERSIONS): boolean {
+  if (typeof recorded !== 'string' || !recorded) return false;
+  if (recorded === buildConsentVersion(v)) return true;
+  return recorded === v.terms && v.privacy === v.terms && v.communityRules === v.terms && v.copyright === v.terms;
+}
+
 /**
  * Copyright notice-and-takedown (app/copyright.tsx, the in-app "Report" on resources).
  * `email` is deliberately empty: add the operator's real copyright/legal address here once it

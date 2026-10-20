@@ -6,7 +6,7 @@ import { router, useSegments } from 'expo-router';
 import { supabase } from '@/api/supabase';
 import { useAuth } from '@/auth/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
-import { INDEPENDENT_AGE, MIN_AGE, TERMS_VERSION } from '@/constants/legal';
+import { CONSENT_VERSION, INDEPENDENT_AGE, MIN_AGE, TERMS_VERSION, isConsentCurrent } from '@/constants/legal';
 import { AppText } from './AppText';
 import { AppButton } from './AppButton';
 
@@ -17,7 +17,7 @@ const CONSENT_TYPE = 'terms_and_privacy';
 
 /**
  * Blocking re-consent prompt shown when the user's newest recorded consent is not
- * for the current TERMS_VERSION (or there is none). Mounted once in
+ * for the current CONSENT_VERSION (or there is none). Mounted once in
  * app/_layout.tsx inside the providers so it applies to every role.
  *
  * Fail-open by design: a network / RPC error (including the RPC not existing yet)
@@ -51,7 +51,9 @@ export function ReConsentGate() {
       try {
         const { data, error: rpcError } = await supabase.rpc('latest_consent', { p_type: CONSENT_TYPE });
         if (cancelled || rpcError) return; // fail open on any error
-        if (data !== TERMS_VERSION) setNeedsConsent(true);
+        // Compared against the combined Terms + Privacy + Rules + Copyright version, so a bump of any of
+        // the four re-prompts. An older plain TERMS_VERSION record is accepted only while the others have not moved.
+        if (!isConsentCurrent(data)) setNeedsConsent(true);
       } catch {
         // fail open
       }
@@ -67,7 +69,7 @@ export function ReConsentGate() {
     setError(null);
     try {
       const { error: rpcError } = await supabase.rpc('record_consent', {
-        p_version: TERMS_VERSION,
+        p_version: CONSENT_VERSION,
         p_age_confirmed: true,
       });
       if (rpcError) throw rpcError;

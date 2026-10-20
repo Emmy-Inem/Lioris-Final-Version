@@ -5,9 +5,8 @@ import { router } from 'expo-router';
 import * as authApi from'@/api/auth';
 import { UserRole, AdminRoleType } from'@/api/types';
 import {
- setTokens,
  clearTokens,
- getAccessToken,
+ purgeLegacyTokenCopies,
  setSessionUser,
  getSessionUser,
  StoredSessionUser,
@@ -40,6 +39,15 @@ import { clearLocalNotificationsCache } from '@/api/notifications';
 import { resetToDefaultCampusScope, persistCampus } from '@/hooks/useViewScope';
 import { clearSavedItemsMemoryCache } from '@/api/bookmarks';
 import { clearPortalVisitsMemoryCache } from '@/utils/portalVisits';
+import { recordAuditLogEntry } from '@/api/auditLog';
+import {
+  clampImpersonationExpiry,
+  decideStartupImpersonation,
+  isImpersonationExpired,
+  parsePersistedImpersonation,
+  serializeImpersonation,
+  type PersistedImpersonation,
+} from '@/utils/impersonationState';
 
 // ---------------------------------------------------------------------------
 // Admin "View As / Support Mode" impersonation - session backup helpers.
@@ -105,6 +113,57 @@ async function clearImpersonationAdminBackup(): Promise<void> {
  await SecureStore.deleteItemAsync(IMPERSONATION_ADMIN_BACKUP_KEY);
 }
 
+// The View As record itself (ids + expiry, no secrets). Native: secure storage. Web: sessionStorage, plus a
+// copy in localStorage so that a NEW tab - which inherits the impersonated Supabase session from
+// localStorage but not the admin's backup from sessionStorage - still knows it must show the banner,
+// enforce the limit and end (sign out) instead of silently running as the member.
+const IMPERSONATION_STATE_KEY = 'lioris_impersonation_state';
+
+async function persistImpersonation(p: PersistedImpersonation): Promise<void> {
+  const value = serializeImpersonation(p);
+  if (isWebPlatform) {
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(IMPERSONATION_STATE_KEY, value);
+      if (typeof localStorage !== 'undefined') localStorage.setItem(IMPERSONATION_STATE_KEY, value);
+    } catch {
+      // best effort
+    }
+    return;
+  }
+  await SecureStore.setItemAsync(IMPERSONATION_STATE_KEY, value);
+}
+
+async function readPersistedImpersonation(): Promise<PersistedImpersonation | null> {
+  if (isWebPlatform) {
+    try {
+      const raw =
+        (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(IMPERSONATION_STATE_KEY) : null) ??
+        (typeof localStorage !== 'undefined' ? localStorage.getItem(IMPERSONATION_STATE_KEY) : null);
+      return parsePersistedImpersonation(raw);
+    } catch {
+      return null;
+    }
+  }
+  try {
+    return parsePersistedImpersonation(await SecureStore.getItemAsync(IMPERSONATION_STATE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+async function clearPersistedImpersonation(): Promise<void> {
+  if (isWebPlatform) {
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(IMPERSONATION_STATE_KEY);
+      if (typeof localStorage !== 'undefined') localStorage.removeItem(IMPERSONATION_STATE_KEY);
+    } catch {
+      // no-op
+    }
+    return;
+  }
+  await SecureStore.deleteItemAsync(IMPERSONATION_STATE_KEY).catch(() => {});
+}
+
 /** Mirrors platform-config's own `/(role)/dashboard` convention (see the Preview Workspace switcher in SettingsScreenBase.tsx) - admin has a dedicated landing screen instead of a generic dashboard route. */
 function dashboardPathForRole(role: UserRole): string {
  return role === 'admin' ? '/(admin)/dashboard' : `/(${role})/dashboard`;
@@ -137,6 +196,8 @@ export interface ImpersonationState {
  targetName: string | null;
  /** ISO timestamp - when the impersonation grant auto-expires. */
  expiresAt: string | null;
+ /** The admin who started it (needed to verify the backed-up session on restore). */
+ adminId?: string | null;
 }
 
 const DEFAULT_IMPERSONATION: ImpersonationState = {
@@ -144,6 +205,12 @@ const DEFAULT_IMPERSONATION: ImpersonationState = {
  targetUserId: null,
  targetName: null,
  expiresAt: null,
+};
+
+export type EndImpersonationOptions = {
+  reason?: 'manual' | 'expired' | 'expired_on_start' | 'begin_failed';
+  targetId?: string | null;
+  adminId?: string | null;
 };
 
 interface AuthContextValue {
@@ -225,25 +292,13 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
   const userEmail = (session.user.email ?? '').toLowerCase().trim();
   const isMasterAdminEmail = userEmail === 'inememmanuel@gmail.com';
 
-  let profile: any = null;
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('role, full_name, admin_role, campus_code, department, onboarding_complete, onboarding_step, avatar_url, banner_url')
-      .eq('id', session.user.id)
-      .maybeSingle();
-    if (!error && data) {
-      profile = data;
-    } else if (error) {
-      const { data: fallbackData } = await supabase
-        .from('profiles')
-        .select('role, full_name, campus_code, department, onboarding_complete, onboarding_step, avatar_url, banner_url')
-        .eq('id', session.user.id)
-        .maybeSingle();
-      if (fallbackData) profile = fallbackData;
-    }
-  } catch (err) {
-    console.warn('[AuthContext] fetchSessionUserForSession profile query failed:', err);
+  // Own row through get_my_profile() (the same read initAuth uses). The table's SELECT grant was narrowed to a
+  // column list that omits onboarding_step, so a direct select failed and silently produced a 'student'.
+  // For a View As swap this must be the TARGET's row (setSession has already run) and, on restore, the
+  // admin's: if it cannot be read, fail instead of guessing a role.
+  const profile: any = await fetchOwnProfile(session.user.id, 8000);
+  if (!profile && !isMasterAdminEmail) {
+    throw new Error('Could not load the account profile for this session.');
   }
 
   const role = isMasterAdminEmail ? 'admin' : ((profile?.role || 'student') as UserRole);
@@ -337,16 +392,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // listener must ignore the SIGNED_IN those swaps emit - it would otherwise write the previous
   // account's role onto the account that was just switched to.
   const isSwappingSession = React.useRef(false);
+  // Mirrors the impersonation state for code that runs outside a render (start-up, timers).
+  const impersonationRef = React.useRef<ImpersonationState>(DEFAULT_IMPERSONATION);
+  const endingImpersonation = React.useRef(false);
+  const endImpersonationRef = React.useRef<((opts?: EndImpersonationOptions) => Promise<void>) | null>(null);
+  const applyImpersonationState = (next: ImpersonationState) => {
+    impersonationRef.current = next;
+    setImpersonation(next);
+  };
 
   useEffect(() => {
     let mounted = true;
 
     async function initAuth() {
       const epoch = authEpoch.current;
-      // 1. Check local session tokens
-      const token = await getAccessToken();
-      if (token) {
+      void purgeLegacyTokenCopies();
+      // 1. Paint the cached account instantly. supabase.auth.getSession() below confirms it, or clears it
+      //    when the session is gone (the raw tokens are no longer duplicated outside the Supabase client).
+      {
         const stored = await getSessionUser();
+        // A View As that survived a reload: show the banner immediately, before the network answers.
+        const persistedImp = await readPersistedImpersonation();
+        if (mounted && persistedImp && stored?.id === persistedImp.targetId && !isImpersonationExpired(persistedImp)) {
+          applyImpersonationState({
+            active: true,
+            targetUserId: persistedImp.targetId,
+            targetName: persistedImp.targetName ?? null,
+            expiresAt: persistedImp.expiresAt,
+            adminId: persistedImp.adminId,
+          });
+        }
         if (mounted && stored) {
           const isComplete = Boolean(stored.onboardingComplete);
           const role = stored.role as UserRole;
@@ -356,6 +431,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const isCampusAdmin = actualRole === 'admin' && !isSuperAdmin;
           const initialUser: SessionUser = {
             ...stored,
+            // Web keeps the name out of persistent storage: a new tab shows a placeholder until the profile loads.
+            fullName: stored.fullName || 'Campus Member',
             role,
             actualRole,
             adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
@@ -390,6 +467,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const timedOut = 'timedOut' in outcome;
         const session = timedOut ? null : outcome.data.session;
         if (session?.user && mounted) {
+          // A persisted View As: resume it, end it (expired), or forget it (does not match the live session).
+          const persistedImp = await readPersistedImpersonation();
+          const impDecision = decideStartupImpersonation(persistedImp, session.user.id);
+          if (impDecision === 'end' && persistedImp) {
+            // Restores the admin session (or signs out cleanly) and writes the end audit entry.
+            await endImpersonationRef.current?.({
+              reason: 'expired_on_start',
+              targetId: persistedImp.targetId,
+              adminId: persistedImp.adminId,
+            });
+            return;
+          }
+          if (impDecision === 'discard') {
+            await clearPersistedImpersonation();
+            await clearImpersonationAdminBackup().catch(() => {});
+            applyImpersonationState(DEFAULT_IMPERSONATION);
+          } else if (impDecision === 'resume' && persistedImp) {
+            applyImpersonationState({
+              active: true,
+              targetUserId: persistedImp.targetId,
+              targetName: persistedImp.targetName ?? null,
+              expiresAt: persistedImp.expiresAt,
+              adminId: persistedImp.adminId,
+            });
+          }
+
           const userEmail = (session.user.email ?? '').toLowerCase().trim();
           const isMasterAdminEmail = userEmail === 'inememmanuel@gmail.com';
 
@@ -447,7 +550,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           // A failed profile read must not overwrite a good cached projection with guesses.
           if (profile || !storedUser) await persist(nextUser);
-          await setTokens(session.access_token, session.refresh_token ?? session.access_token);
           userRef.current = nextUser;
           setUser(nextUser);
           loadBlockedUserIds().catch(() => {});
@@ -458,6 +560,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           await clearTokens().catch(() => {});
           await setSessionUser(null as any).catch(() => {});
+          // No session left also means no View As to resume.
+          applyImpersonationState(DEFAULT_IMPERSONATION);
+          await clearPersistedImpersonation();
+          await clearImpersonationAdminBackup().catch(() => {});
         }
         // timedOut: keep whatever the cache restored; onAuthStateChange completes the picture.
       } catch {
@@ -504,9 +610,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Handle password recovery flow (e.g. magic link clicked or OTP recovery session initiated)
       if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordRecovery(true);
-        if (session) {
-          await setTokens(session.access_token, session.refresh_token ?? session.access_token);
-        }
         router.replace('/(auth)/reset-password' as any);
         return;
       }
@@ -518,7 +621,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Crucial: on screen unlock or background token refresh, DO NOT overwrite active role or profile!
       if (event === 'TOKEN_REFRESHED' && session) {
-        await setTokens(session.access_token, session.refresh_token ?? session.access_token);
         return;
       }
       if (event === 'SIGNED_OUT') {
@@ -530,11 +632,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const { data: recheck } = await supabase.auth.getSession();
           if (recheck?.session) {
             // Session is still alive — this was a phantom SIGNED_OUT event.
-            // Quietly refresh tokens and carry on without logging the user out.
-            await setTokens(
-              recheck.session.access_token,
-              recheck.session.refresh_token ?? recheck.session.access_token,
-            );
+            // Carry on without logging the user out.
             return;
           }
         }
@@ -551,6 +649,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // dashboard and the name/e-mail/avatar would stay on the device.
         await clearTokens().catch(() => {});
         await setSessionUser(null as any).catch(() => {});
+        // A View As cannot outlive its session either.
+        applyImpersonationState(DEFAULT_IMPERSONATION);
+        await clearPersistedImpersonation();
+        await clearImpersonationAdminBackup().catch(() => {});
         clearAccountSessionCaches();
         // A device/session that signs a second account in without a full
         // reload (notably on web) must never see the previous user's
@@ -649,7 +751,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           current.onboardingComplete === nextUser.onboardingComplete &&
           current.mfaVerified === nextUser.mfaVerified
         ) {
-          await setTokens(session.access_token, session.refresh_token ?? session.access_token);
           return;
         }
         if (epoch !== authEpoch.current) return;
@@ -664,7 +765,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (profile || !storedUser) await persist(nextUser);
         if (epoch !== authEpoch.current) return;
-        await setTokens(session.access_token, session.refresh_token ?? session.access_token);
         userRef.current = nextUser;
         setUser(nextUser);
         loadBlockedUserIds().catch(() => {});
@@ -873,7 +973,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async login(email, password, captchaToken) {
         isExplicitLogout.current = false;
         const session = await authApi.login({ email, password, captchaToken });
-        await setTokens(session.accessToken, session.refreshToken);
 
         // `email` may be an @handle; the real address is the one on the session.
         const userEmail = (session.user.email || email || '').toLowerCase().trim();
@@ -952,7 +1051,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           persistCampus(payload.campusCode);
         }
         const session = await authApi.register(payload);
-        await setTokens(session.accessToken, session.refreshToken);
         const nextUser: SessionUser = {
           ...session.user,
           actualRole: session.user.role,
@@ -1032,7 +1130,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (err: any) {
           if (err?.message === 'ACADEMIC_PROFILE_INCOMPLETE') throw err;
           // Database not migrated yet (no complete_my_onboarding function): legacy direct write, still checked.
-          if (!/Could not find the function|PGRST202|does not exist/i.test(String(err?.message ?? ''))) throw err;
+          // Only PostgREST's "function not in the schema cache" signal counts: a runtime SQL error whose text
+          // happens to say "does not exist" must NOT fall back to a direct write that skips the server check.
+          if (!(err?.code === 'PGRST202' || /Could not find the function/i.test(String(err?.message ?? '')))) throw err;
           const payload: Record<string, any> = { onboarding_complete: true, onboarding_step: null };
           const { data: wrote, error } = await supabase.from('profiles').update(payload).eq('id', current.id).select('onboarding_complete');
           if (error || !wrote?.length || wrote[0]?.onboarding_complete !== true) {
@@ -1110,6 +1210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       impersonation,
       async beginImpersonation(targetUserId: string, reason: string) {
+        if (endingImpersonation.current) throw new Error('Please wait a moment and try again.');
         isSwappingSession.current = true;
         try {
           await runBeginImpersonation(targetUserId, reason);
@@ -1120,14 +1221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       },
       async endImpersonation() {
-        isSwappingSession.current = true;
-        try {
-          await runEndImpersonation();
-        } finally {
-          setTimeout(() => {
-            isSwappingSession.current = false;
-          }, 800);
-        }
+        await endImpersonationGuarded();
       },
       isPasswordRecovery,
       clearPasswordRecovery() {
@@ -1145,11 +1239,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const current = userRef.current;
         if (!current?.id) return null;
         try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role, full_name, admin_role, campus_code, department, onboarding_complete, onboarding_step, avatar_url, banner_url')
-            .eq('id', current.id)
-            .maybeSingle();
+          // get_my_profile() (own row); a direct select of onboarding_step is no longer granted.
+          const profile = await fetchOwnProfile(current.id);
           if (profile) {
             const isMaster = (current.email ?? '').toLowerCase().trim() === 'inememmanuel@gmail.com';
             const resolvedRole = isMaster ? 'admin' : ((profile.role || current.actualRole) as UserRole);
@@ -1183,14 +1274,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user, isLoading, impersonation, isPasswordRecovery],
   );
 
-  // The actual session swaps. Kept out of the memoised value (see the wrappers above) so the
-  // isSwappingSession flag brackets the whole operation.
+  // ---------------------------------------------------------------------------
+  // View As (impersonation) session swaps.
+  //
+  // The live state is persisted (see persistImpersonation) so a reload keeps the banner and the 15-minute
+  // limit; every swap, in either direction, starts the new identity from a clean slate exactly like login().
+  // ---------------------------------------------------------------------------
+  /** Everything account-bound that must not leak from the identity being left to the one being entered. */
+  function resetAccountScopeForSwap() {
+    try {
+      queryClient.clear();
+    } catch {
+      // Non-blocking
+    }
+    clearAccountSessionCaches();
+    clearLocalNotificationsCache();
+    clearSavedItemsMemoryCache();
+    clearPortalVisitsMemoryCache();
+    resetToDefaultCampusScope();
+  }
+
+  function reloadBlockLists() {
+    loadBlockedUserIds().catch(() => {});
+    loadMutedUserIds().catch(() => {});
+  }
+
+  // Brackets the whole swap so the auth listener ignores the SIGNED_IN / SIGNED_OUT events it emits.
+  async function endImpersonationGuarded(opts?: EndImpersonationOptions) {
+    if (endingImpersonation.current) return;
+    endingImpersonation.current = true;
+    isSwappingSession.current = true;
+    try {
+      await runEndImpersonation(opts);
+    } finally {
+      endingImpersonation.current = false;
+      setTimeout(() => {
+        isSwappingSession.current = false;
+      }, 800);
+    }
+  }
+  endImpersonationRef.current = endImpersonationGuarded;
+
   async function runBeginImpersonation(targetUserId: string, reason: string) {
         // Gated on actualRole, same rationale as switchRole above - never
         // trust the currently-*displayed* role for a privileged action.
         if (!user || user.actualRole !== 'admin' || !user.isSuperAdmin) {
           throw new Error('Impersonation is only available to Super Administrators.');
         }
+        if (impersonationRef.current.active) {
+          throw new Error('You are already viewing as another user. Return to admin first.');
+        }
+        const adminId = user.id;
 
         const { data: { session: adminSession } } = await supabase.auth.getSession();
         if (!adminSession?.access_token || !adminSession?.refresh_token) {
@@ -1201,18 +1335,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // out, so endImpersonation (or the fail-safe paths further down) can
         // always get back to a real admin session.
         await setImpersonationAdminBackup(adminSession.access_token, adminSession.refresh_token);
+        // Persist the intent before the swap (startImpersonation's verifyOtp replaces the live session), with a
+        // provisional 15-minute expiry, so even a crash mid-swap leaves a record the next start can clean up.
+        try {
+          await persistImpersonation({
+            targetId: targetUserId,
+            adminId,
+            expiresAt: clampImpersonationExpiry(null),
+            targetName: null,
+          });
+        } catch {
+          await clearImpersonationAdminBackup().catch(() => {});
+          throw new Error('Could not start View As on this device. Please try again.');
+        }
+
+        const abortBegin = async () => {
+          await clearImpersonationAdminBackup().catch(() => {});
+          await clearPersistedImpersonation().catch(() => {});
+        };
 
         let result: Awaited<ReturnType<typeof authApi.startImpersonation>>;
         try {
           result = await authApi.startImpersonation(targetUserId, reason);
         } catch (err) {
-          await clearImpersonationAdminBackup();
+          await abortBegin();
           throw err;
         }
 
         const { targetSession, targetName, expiresAt } = result;
         if (!targetSession?.access_token || !targetSession?.refresh_token) {
-          await clearImpersonationAdminBackup();
+          await abortBegin();
           throw new Error('Impersonation session could not be established.');
         }
 
@@ -1221,56 +1373,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           refresh_token: targetSession.refresh_token,
         });
         if (setSessionError) {
-          await clearImpersonationAdminBackup();
+          await abortBegin();
           throw new Error(setSessionError.message || 'Could not switch to the target user session.');
         }
 
-        // Re-run the same profile-fetch logic that normally runs on auth
-        // state change, so `user`/`role` in context correctly reflect the
-        // impersonated user (never the admin's previously-previewed role).
-        const nextUser = await fetchSessionUserForSession(targetSession);
-        await persist(nextUser);
-        await setTokens(targetSession.access_token, targetSession.refresh_token);
-        setUser(nextUser);
+        // Re-run the same profile-fetch logic that normally runs on auth state change, so `user`/`role` in
+        // context reflect the impersonated user (never the admin's previously-previewed role). The row is
+        // read through get_my_profile(), which now returns the TARGET's row.
+        let nextUser: SessionUser;
+        try {
+          nextUser = await fetchSessionUserForSession(targetSession);
+        } catch {
+          // The swap already happened: go back to the admin rather than sit in a half-loaded identity.
+          endingImpersonation.current = true;
+          try {
+            await runEndImpersonation({ reason: 'begin_failed', targetId: targetUserId, adminId });
+          } finally {
+            endingImpersonation.current = false;
+          }
+          throw new Error('Could not load that account. You are back in your own session.');
+        }
 
-        setImpersonation({
+        const expiresIso = clampImpersonationExpiry(expiresAt);
+        const resolvedName = targetName || nextUser.fullName;
+        await persistImpersonation({ targetId: targetUserId, adminId, expiresAt: expiresIso, targetName: resolvedName });
+
+        resetAccountScopeForSwap();
+        await persist(nextUser);
+        userRef.current = nextUser;
+        setUser(nextUser);
+        applyImpersonationState({
           active: true,
           targetUserId,
-          targetName: targetName || nextUser.fullName,
-          expiresAt,
+          targetName: resolvedName,
+          expiresAt: expiresIso,
+          adminId,
         });
-
-        try {
-          queryClient.clear();
-        } catch {
-          // Non-blocking
-        }
+        reloadBlockLists();
 
         router.replace(dashboardPathForRole(nextUser.role) as any);
   }
 
-  async function runEndImpersonation() {
+  async function runEndImpersonation(opts?: EndImpersonationOptions) {
+        const reason = opts?.reason ?? 'manual';
+        const endedTargetId = opts?.targetId ?? impersonationRef.current.targetUserId;
+        const expectedAdminId = opts?.adminId ?? impersonationRef.current.adminId ?? null;
         const backup = await getImpersonationAdminBackup();
 
-        if (!backup?.accessToken || !backup?.refreshToken) {
-          // Fail-safe: backup missing or corrupt - never leave the app
-          // stuck half-authenticated as the impersonated user. Sign out
-          // entirely and send them to login with a clear state.
-          await clearImpersonationAdminBackup();
-          await clearTokens();
-          await supabase.auth.signOut().catch(() => {});
+        // Fail-safe: never leave the app authenticated as the impersonated user. Signs out THIS DEVICE only
+        // ('local'): a global sign-out would revoke every real session the impersonated person has.
+        const failSafeSignOut = async () => {
+          await clearImpersonationAdminBackup().catch(() => {});
+          await clearPersistedImpersonation().catch(() => {});
+          await clearTokens().catch(() => {});
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+          authEpoch.current += 1;
+          userRef.current = null;
           setUser(null);
-          setImpersonation(DEFAULT_IMPERSONATION);
+          applyImpersonationState(DEFAULT_IMPERSONATION);
+          resetAccountScopeForSwap();
           try {
-            queryClient.clear();
+            router.replace('/(auth)/login');
           } catch {
-            // Non-blocking
+            // Router not ready yet (start-up): the route guard sends a signed-out user to login.
           }
-          router.replace('/(auth)/login');
+        };
+
+        if (!backup?.accessToken || !backup?.refreshToken) {
+          // Backup missing or corrupt (e.g. the tab that started this was closed).
+          await failSafeSignOut();
           return;
         }
-
-        const endedTargetId = impersonation.targetUserId;
 
         try {
           const { error: setSessionError } = await supabase.auth.setSession({
@@ -1281,14 +1454,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           const { data: { session: adminSession } } = await supabase.auth.getSession();
           if (!adminSession) throw new Error('Could not restore admin session.');
+          if (expectedAdminId && adminSession.user.id !== expectedAdminId) {
+            throw new Error('The backed-up session does not belong to the admin who started this.');
+          }
 
           const restoredUser = await fetchSessionUserForSession(adminSession);
-          await persist(restoredUser);
-          await setTokens(adminSession.access_token, adminSession.refresh_token ?? adminSession.access_token);
-          setUser(restoredUser);
 
           await clearImpersonationAdminBackup();
-          setImpersonation(DEFAULT_IMPERSONATION);
+          await clearPersistedImpersonation();
+          resetAccountScopeForSwap();
+          // Persist first: recordAuditLogEntry below reads the actor from the stored session user.
+          await persist(restoredUser);
+          userRef.current = restoredUser;
+          setUser(restoredUser);
+          applyImpersonationState(DEFAULT_IMPERSONATION);
+          reloadBlockLists();
 
           // The live session is now restored to the real admin, so ask the
           // edge function to write the authoritative `impersonation_ended`
@@ -1296,47 +1476,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // never trap the admin mid-restore.
           if (endedTargetId) {
             void authApi.endImpersonationAudit(endedTargetId);
+            if (reason !== 'manual') {
+              // An automatic end (time limit, reload after expiry, aborted start) is recorded explicitly too.
+              void recordAuditLogEntry({
+                action: 'impersonation_ended',
+                summary: `View As session ended automatically (${reason.replace(/_/g, ' ')}) for user ${endedTargetId}`,
+                targetType: 'user',
+                targetId: endedTargetId,
+                reason,
+              }).catch(() => {});
+            }
           }
 
           try {
-            queryClient.clear();
+            router.replace(dashboardPathForRole(restoredUser.role) as any);
           } catch {
-            // Non-blocking
+            // Router not ready yet (start-up): the role gate routes from the restored user.
           }
-
-          router.replace(dashboardPathForRole(restoredUser.role) as any);
         } catch {
-          // Fail-safe: restoring the admin session failed for some reason -
-          // never leave the app silently authenticated as the impersonated
-          // user. Sign out entirely rather than guess.
-          await clearImpersonationAdminBackup();
-          await clearTokens();
-          await supabase.auth.signOut().catch(() => {});
-          setUser(null);
-          setImpersonation(DEFAULT_IMPERSONATION);
-          try {
-            queryClient.clear();
-          } catch {
-            // Non-blocking
-          }
-          router.replace('/(auth)/login');
+          await failSafeSignOut();
         }
   }
 
-  // Auto-expiry: while impersonating, end the session automatically once
-  // expiresAt is reached, so a forgotten "View As" session can't run
-  // indefinitely. Cleaned up whenever impersonation state changes/unmounts.
+  // Auto-expiry: while impersonating, end the session automatically once expiresAt is reached, so a forgotten
+  // "View As" session can't run indefinitely. Timers are suspended while the app is backgrounded, so the
+  // limit is also re-checked whenever it returns to the foreground.
   useEffect(() => {
     if (!impersonation.active || !impersonation.expiresAt) return undefined;
-    const msRemaining = new Date(impersonation.expiresAt).getTime() - Date.now();
-    if (msRemaining <= 0) {
-      value.endImpersonation().catch(() => {});
+    const expiresAtMs = new Date(impersonation.expiresAt).getTime();
+    const endNow = () => {
+      endImpersonationRef.current?.({ reason: 'expired' }).catch(() => {});
+    };
+    if (expiresAtMs - Date.now() <= 0) {
+      endNow();
       return undefined;
     }
-    const timer = setTimeout(() => {
-      value.endImpersonation().catch(() => {});
-    }, msRemaining);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(endNow, expiresAtMs - Date.now());
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && Date.now() >= expiresAtMs) endNow();
+    });
+    return () => {
+      clearTimeout(timer);
+      sub.remove();
+    };
   }, [impersonation.active, impersonation.expiresAt]);
 
  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

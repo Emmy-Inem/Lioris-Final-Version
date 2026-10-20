@@ -21,7 +21,7 @@ import { useCampusRegistry } from '@/hooks/useCampusRegistry';
 import { institutionThemeOverrides } from '@/theme/colors';
 import { Image } from 'expo-image';
 import { LiorisLogo } from '@/components/LiorisLogo';
-import { INDEPENDENT_AGE, MIN_AGE, TERMS_VERSION } from '@/constants/legal';
+import { CONSENT_VERSION, INDEPENDENT_AGE, MIN_AGE } from '@/constants/legal';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
 import { captchaRequired } from '@/utils/captcha';
 import { persistCampus } from '@/hooks/useViewScope';
@@ -154,7 +154,7 @@ export default function RegisterScreen() {
       userType: portal,
       campusCode: effectiveCampusCode,
       botField,
-      acceptedTermsVersion: TERMS_VERSION,
+      acceptedTermsVersion: CONSENT_VERSION,
       confirmedAgeEligible: true,
       captchaToken: captchaToken || undefined,
     });

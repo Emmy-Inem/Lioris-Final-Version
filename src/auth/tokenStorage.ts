@@ -1,41 +1,45 @@
 import { Platform } from'react-native';
 import * as SecureStore from'expo-secure-store';
 
-const ACCESS_TOKEN_KEY = 'lioris.accessToken';
-const REFRESH_TOKEN_KEY = 'lioris.refreshToken';
+// This module no longer stores access / refresh tokens. The Supabase client (src/api/supabase.ts) is the
+// only owner of the session; a second copy of the raw tokens in plain web localStorage was a pure
+// liability. What remains is the small "session user" projection used to paint the dashboard instantly
+// on a cold start, before the network confirms the session.
 const SESSION_USER_KEY = 'lioris.sessionUser';
+// Web only: the non-identifying part (ids, role, flags) lives in localStorage so a cold start in a new tab
+// can still route instantly; name / e-mail / avatar / department live in sessionStorage only.
+const WEB_CORE_KEY = 'lioris.sessionUser.core';
+const WEB_PII_KEY = 'lioris.sessionUser.pii';
+// Keys written by older builds. They are purged on sign-out and on every start.
+const LEGACY_ACCESS_TOKEN_KEY = 'lioris.accessToken';
+const LEGACY_REFRESH_TOKEN_KEY = 'lioris.refreshToken';
 
-// expo-secure-store backs onto Keychain (iOS) / Keystore (Android),
-// which is why tokens live here instead of AsyncStorage - PRD's
-// Security Requirements call for encrypting sensitive data at rest.
-//
-// This app targets iOS/Android; expo-secure-store has no native web
-// implementation, so calling it in a browser throws instead of
-// degrading gracefully. The guard below keeps `expo start --web`
-// (or someone opening the Metro web URL by accident) from hard-crashing.
-// It is NOT a substitute for secure storage - do not treat the web
-// fallback as safe for real tokens in production.
+// expo-secure-store backs onto Keychain (iOS) / Keystore (Android). It has no web implementation, so
+// the browser path below uses web storage instead, split as described above.
 const isWeb = Platform.OS === 'web';
 
-function webGet(key: string): string | null {
+function webGet(store: 'local' | 'session', key: string): string | null {
  try {
- return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+ const s = store === 'local' ? (typeof localStorage !== 'undefined' ? localStorage : null) : (typeof sessionStorage !== 'undefined' ? sessionStorage : null);
+ return s ? s.getItem(key) : null;
  } catch {
  return null;
  }
 }
 
-function webSet(key: string, value: string) {
+function webSet(store: 'local' | 'session', key: string, value: string) {
  try {
- if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
+ const s = store === 'local' ? (typeof localStorage !== 'undefined' ? localStorage : null) : (typeof sessionStorage !== 'undefined' ? sessionStorage : null);
+ if (s) s.setItem(key, value);
  } catch {
- // no-op - best effort only, this path is dev/web-preview convenience, not production storage
+ // no-op - best effort only
  }
 }
 
-function webDelete(key: string) {
+function webDelete(store: 'local' | 'session', key: string) {
  try {
- if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
+ const s = store === 'local' ? (typeof localStorage !== 'undefined' ? localStorage : null) : (typeof sessionStorage !== 'undefined' ? sessionStorage : null);
+ if (s) s.removeItem(key);
  } catch {
  // no-op
  }
@@ -45,47 +49,7 @@ const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
 };
 
-const memoryTokenCache: Record<string, string> = {};
-
-export async function setTokens(accessToken: string, refreshToken: string) {
-  memoryTokenCache[ACCESS_TOKEN_KEY] = accessToken;
-  memoryTokenCache[REFRESH_TOKEN_KEY] = refreshToken;
-  if (isWeb) {
-    webSet(ACCESS_TOKEN_KEY, accessToken);
-    webSet(REFRESH_TOKEN_KEY, refreshToken);
-    return;
-  }
-  try {
-    await Promise.all([
-      SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken, SECURE_STORE_OPTIONS),
-      SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken, SECURE_STORE_OPTIONS),
-    ]);
-  } catch {
-    // Retained in memoryTokenCache
-  }
-}
-
-export async function getAccessToken() {
-  if (isWeb) return webGet(ACCESS_TOKEN_KEY);
-  try {
-    const val = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY, SECURE_STORE_OPTIONS);
-    if (val !== null) memoryTokenCache[ACCESS_TOKEN_KEY] = val;
-    return val ?? memoryTokenCache[ACCESS_TOKEN_KEY] ?? null;
-  } catch {
-    return memoryTokenCache[ACCESS_TOKEN_KEY] ?? null;
-  }
-}
-
-export async function getRefreshToken() {
-  if (isWeb) return webGet(REFRESH_TOKEN_KEY);
-  try {
-    const val = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY, SECURE_STORE_OPTIONS);
-    if (val !== null) memoryTokenCache[REFRESH_TOKEN_KEY] = val;
-    return val ?? memoryTokenCache[REFRESH_TOKEN_KEY] ?? null;
-  } catch {
-    return memoryTokenCache[REFRESH_TOKEN_KEY] ?? null;
-  }
-}
+const memoryCache: Record<string, string> = {};
 
 // Persisted session-user shape. onboardingComplete/onboardingStep are
 // client-only scaffold concepts (the PRD's API contracts in Section 15
@@ -118,33 +82,87 @@ export interface StoredSessionUser {
   coverUrl?: string | null;
 }
 
-export async function setSessionUser(user: StoredSessionUser) {
+const PII_FIELDS = ['fullName', 'email', 'department', 'avatarUrl', 'coverUrl'] as const;
+
+function splitForWeb(user: StoredSessionUser): { core: Record<string, unknown>; pii: Record<string, unknown> } {
+  const core: Record<string, unknown> = {};
+  const pii: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(user)) {
+    if ((PII_FIELDS as readonly string[]).includes(k)) pii[k] = v;
+    else core[k] = v;
+  }
+  return { core, pii };
+}
+
+function writeWebUser(user: StoredSessionUser) {
+  const { core, pii } = splitForWeb(user);
+  webSet('local', WEB_CORE_KEY, JSON.stringify(core));
+  webSet('session', WEB_PII_KEY, JSON.stringify(pii));
+}
+
+export async function setSessionUser(user: StoredSessionUser | null) {
+  if (!user) {
+    await clearSessionUser();
+    return;
+  }
   const value = JSON.stringify(user);
-  memoryTokenCache[SESSION_USER_KEY] = value;
+  memoryCache[SESSION_USER_KEY] = value;
   if (isWeb) {
-    webSet(SESSION_USER_KEY, value);
+    writeWebUser(user);
+    webDelete('local', SESSION_USER_KEY); // legacy copy with PII
     return;
   }
   try {
     await SecureStore.setItemAsync(SESSION_USER_KEY, value, SECURE_STORE_OPTIONS);
   } catch {
-    // Retained in memoryTokenCache
+    // Retained in memoryCache
   }
 }
 
 export async function getSessionUser(): Promise<StoredSessionUser | null> {
-  let raw: string | null = null;
   if (isWeb) {
-    raw = webGet(SESSION_USER_KEY);
-  } else {
+    let coreRaw = webGet('local', WEB_CORE_KEY);
+    let piiRaw = webGet('session', WEB_PII_KEY);
+    if (!coreRaw) {
+      // One-time migration of the old all-in-one localStorage record.
+      const legacy = webGet('local', SESSION_USER_KEY);
+      if (legacy) {
+        try {
+          writeWebUser(JSON.parse(legacy));
+        } catch {
+          // unreadable: dropped below
+        }
+        webDelete('local', SESSION_USER_KEY);
+        coreRaw = webGet('local', WEB_CORE_KEY);
+        piiRaw = webGet('session', WEB_PII_KEY);
+      }
+    }
+    if (!coreRaw) {
+      const mem = memoryCache[SESSION_USER_KEY];
+      if (!mem) return null;
+      try {
+        return JSON.parse(mem);
+      } catch {
+        return null;
+      }
+    }
     try {
-      raw = await SecureStore.getItemAsync(SESSION_USER_KEY, SECURE_STORE_OPTIONS);
-      if (raw !== null) memoryTokenCache[SESSION_USER_KEY] = raw;
+      const core = JSON.parse(coreRaw);
+      const pii = piiRaw ? JSON.parse(piiRaw) : {};
+      return { fullName: '', ...core, ...pii } as StoredSessionUser;
     } catch {
-      raw = memoryTokenCache[SESSION_USER_KEY] ?? null;
+      return null;
     }
   }
-  if (!raw) raw = memoryTokenCache[SESSION_USER_KEY] ?? null;
+
+  let raw: string | null = null;
+  try {
+    raw = await SecureStore.getItemAsync(SESSION_USER_KEY, SECURE_STORE_OPTIONS);
+    if (raw !== null) memoryCache[SESSION_USER_KEY] = raw;
+  } catch {
+    raw = memoryCache[SESSION_USER_KEY] ?? null;
+  }
+  if (!raw) raw = memoryCache[SESSION_USER_KEY] ?? null;
   if (!raw) return null;
   try {
     return JSON.parse(raw);
@@ -153,23 +171,43 @@ export async function getSessionUser(): Promise<StoredSessionUser | null> {
   }
 }
 
-export async function clearTokens() {
-  delete memoryTokenCache[ACCESS_TOKEN_KEY];
-  delete memoryTokenCache[REFRESH_TOKEN_KEY];
-  delete memoryTokenCache[SESSION_USER_KEY];
+async function clearSessionUser() {
+  delete memoryCache[SESSION_USER_KEY];
   if (isWeb) {
-    webDelete(ACCESS_TOKEN_KEY);
-    webDelete(REFRESH_TOKEN_KEY);
-    webDelete(SESSION_USER_KEY);
+    webDelete('local', WEB_CORE_KEY);
+    webDelete('session', WEB_PII_KEY);
+    webDelete('local', SESSION_USER_KEY);
+    return;
+  }
+  try {
+    await SecureStore.deleteItemAsync(SESSION_USER_KEY, SECURE_STORE_OPTIONS);
+  } catch {
+    // Ignore native cleanup errors
+  }
+}
+
+/** Removes the raw tokens that older builds copied out of the Supabase session. Safe to call any time. */
+export async function purgeLegacyTokenCopies() {
+  if (isWeb) {
+    webDelete('local', LEGACY_ACCESS_TOKEN_KEY);
+    webDelete('local', LEGACY_REFRESH_TOKEN_KEY);
     return;
   }
   try {
     await Promise.all([
-      SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY, SECURE_STORE_OPTIONS),
-      SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY, SECURE_STORE_OPTIONS),
-      SecureStore.deleteItemAsync(SESSION_USER_KEY, SECURE_STORE_OPTIONS),
+      SecureStore.deleteItemAsync(LEGACY_ACCESS_TOKEN_KEY, SECURE_STORE_OPTIONS),
+      SecureStore.deleteItemAsync(LEGACY_REFRESH_TOKEN_KEY, SECURE_STORE_OPTIONS),
     ]);
   } catch {
     // Ignore native cleanup errors
   }
+}
+
+/**
+ * Forgets everything this module holds about the signed-in person: the cached session user and any legacy
+ * token copies. (Name kept for the existing call sites; the Supabase session itself is cleared by signOut.)
+ */
+export async function clearTokens() {
+  await clearSessionUser();
+  await purgeLegacyTokenCopies();
 }
