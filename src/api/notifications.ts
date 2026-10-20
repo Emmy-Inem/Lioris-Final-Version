@@ -364,11 +364,19 @@ export async function registerDevicePushToken(token: string): Promise<void> {
  if (userId) {
  // RPC (not a plain upsert): when a phone changes hands its token still belongs to the
  // previous account, and RLS would (correctly) stop the new user updating that row.
- // register_push_token() re-parents it to the caller and validates the token shape.
- const { error } = await supabase.rpc('register_push_token', {
- p_token: token,
- p_platform: Platform.OS,
- });
+ // claim_push_token() re-parents it to the caller and validates the token shape. Databases
+ // that predate it fall back to register_push_token(), then to the plain owner-only upsert.
+ const isMissingRpc = (e: { code?: string; message?: string } | null) =>
+ !!e && (e.code === 'PGRST202' || e.code === '42883' || /could not find the function|does not exist/i.test(e.message ?? ''));
+ let { error } = await supabase.rpc('claim_push_token', { p_token: token, p_platform: Platform.OS });
+ if (isMissingRpc(error)) {
+ ({ error } = await supabase.rpc('register_push_token', { p_token: token, p_platform: Platform.OS }));
+ }
+ if (isMissingRpc(error)) {
+ ({ error } = await supabase
+ .from('push_tokens')
+ .upsert({ user_id: userId, token, platform: Platform.OS }, { onConflict: 'token' }));
+ }
  if (error) {
  console.warn('[Notifications] Register push token error:', error.message);
  } else {
