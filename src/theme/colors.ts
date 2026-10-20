@@ -147,7 +147,8 @@ export const lightColors: ThemeColors = {
  glassShadowColor: 'rgba(27, 47, 94, 0.04)',
 
  textPrimary: palette.textDark,
- textSecondary: palette.liorisNeutralGray,
+ // #5B6679 (was #667085): 4.7:1 on the `border` fill and 5.8:1 on white; the old value was 4.06:1 on `border`.
+ textSecondary: '#5B6679',
  textInverse: '#FFFFFF',
 
  brandPrimary: palette.liorisBlue,

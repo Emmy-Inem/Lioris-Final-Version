@@ -1,0 +1,27 @@
+# Lioris - https://lioris-campus.vercel.app
+# The public pages are the landing page and the legal pages. Everything else is the
+# signed-in app and has nothing for a crawler to index.
+User-agent: *
+Allow: /$
+Allow: /terms
+Allow: /privacy
+Allow: /copyright
+Allow: /community-rules
+Disallow: /dashboard
+Disallow: /feed
+Disallow: /messages
+Disallow: /admin
+Disallow: /settings
+Disallow: /profile
+Disallow: /post
+Disallow: /events
+Disallow: /resources
+Disallow: /marketplace
+Disallow: /notifications
+Disallow: /search
+Disallow: /saved
+Disallow: /study-groups
+Disallow: /pod
+Disallow: /mentorship
+
+Sitemap: https://lioris-campus.vercel.app/sitemap.xml

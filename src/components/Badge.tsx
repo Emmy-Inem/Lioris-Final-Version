@@ -21,18 +21,18 @@ export function Badge({ label, tone = 'neutral' }: BadgeProps) {
 
  const fg: Record<BadgeTone, string> = {
  neutral: colors.textSecondary,
- brand: colors.brandPrimary,
+ brand: ensureContrast(colors.brandPrimary, colors.surface),
  accent: ensureContrast(colors.brandAccent, colors.surface),
- success: colors.success,
- warning: colors.warning,
- critical: colors.critical,
+ success: ensureContrast(colors.success, colors.surface),
+ warning: ensureContrast(colors.warning, colors.surface),
+ critical: ensureContrast(colors.critical, colors.surface),
  };
 
  return (
  <AppText
  variant="caption"
  weight="bold"
- style={{ color: fg[tone], fontSize: 10.5, letterSpacing: 0.3, textTransform: 'uppercase' }}
+ style={{ color: fg[tone], fontSize: 12, letterSpacing: 0.3, textTransform: 'uppercase' }}
  >
  {label}
  </AppText>

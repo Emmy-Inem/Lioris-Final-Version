@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '@/theme/ThemeProvider';
+import { readableOn } from '@/theme/contrast';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { LiorisLogo } from '@/components/LiorisLogo';
@@ -29,6 +30,8 @@ import { PhoneMockup } from '@/components/landing/PhoneMockup';
 export function LandingScreen() {
   const { campuses: liveCampuses } = useCampusRegistry();
   const { colors, radius, isDark, toggleTheme } = useTheme();
+  // Text/icons on a brand-coloured fill: white on the light brand, navy on the lighter dark-mode brand.
+  const onBrand = readableOn(colors.brandPrimary, '#0B1120', '#FFFFFF');
   const { width } = useWindowDimensions();
   const { isDesktop, isTablet } = useResponsive();
   const { settings, getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();
@@ -254,7 +257,7 @@ export function LandingScreen() {
                 marginBottom: 28,
               }}
             >
-              <Pressable
+              <Pressable accessibilityRole="button"
                 onPress={() => router.push('/(auth)/register')}
                 style={{
                   backgroundColor: colors.brandPrimary,
@@ -273,13 +276,13 @@ export function LandingScreen() {
                     : {}),
                 }}
               >
-                <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" />
-                <AppText variant="bodySmall" weight="bold" tone="inverse" style={{ fontSize: 15 }}>
+                <Ionicons name="shield-checkmark" size={18} color={onBrand} />
+                <AppText variant="bodySmall" weight="bold" tone="onBrand" style={{ fontSize: 15 }}>
                   Join Your Campus Space
                 </AppText>
               </Pressable>
 
-              <Pressable
+              <Pressable accessibilityRole="button"
                 onPress={() => router.push('/(auth)/login')}
                 style={[
                   glassStyle(radius.pill, isDark ? 0.5 : 0.7),
@@ -365,6 +368,7 @@ export function LandingScreen() {
 
             {/* Role Switcher: Student & Alumni Only */}
             <View
+              accessibilityRole="tablist"
               style={[
                 glassStyle(radius.pill, isDark ? 0.6 : 0.8),
                 {
@@ -382,8 +386,9 @@ export function LandingScreen() {
               ].map((tab) => {
                 const isSelected = previewRole === tab.id;
                 return (
-                  <Pressable
+                  <Pressable accessibilityRole="tab"
                     key={tab.id}
+                    accessibilityState={{ selected: isSelected }}
                     onPress={() => {
                       haptics.light();
                       setPreviewRole(tab.id as any);
@@ -395,6 +400,7 @@ export function LandingScreen() {
                       justifyContent: 'center',
                       gap: 6,
                       paddingVertical: 9,
+                      minHeight: 44,
                       borderRadius: radius.pill,
                       backgroundColor: isSelected ? colors.brandPrimary : 'transparent',
                     }}
@@ -402,13 +408,13 @@ export function LandingScreen() {
                     <Ionicons
                       name={tab.icon}
                       size={15}
-                      color={isSelected ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
+                      color={isSelected ? onBrand : isDark ? '#94A3B8' : '#64748B'}
                     />
                     <AppText
                       variant="caption"
                       weight="bold"
                       style={{
-                        color: isSelected ? '#FFFFFF' : isDark ? '#CBD5E1' : '#475569',
+                        color: isSelected ? onBrand : isDark ? '#CBD5E1' : '#475569',
                       }}
                     >
                       {tab.label}
@@ -829,7 +835,7 @@ export function LandingScreen() {
                 alignSelf: 'center',
               }}
             >
-              <Pressable
+              <Pressable accessibilityRole="button"
                 onPress={() => router.push('/(auth)/register')}
                 style={{
                   backgroundColor: colors.brandPrimary,
@@ -846,12 +852,12 @@ export function LandingScreen() {
                     : {}),
                 }}
               >
-                <AppText variant="bodySmall" weight="bold" tone="inverse" style={{ fontSize: 15 }}>
+                <AppText variant="bodySmall" weight="bold" tone="onBrand" style={{ fontSize: 15 }}>
                   Create Student Account
                 </AppText>
               </Pressable>
 
-              <Pressable
+              <Pressable accessibilityRole="button"
                 onPress={() => router.push('/(auth)/login')}
                 style={[
                   glassStyle(radius.pill, isDark ? 0.5 : 0.7),
@@ -945,7 +951,7 @@ export function LandingScreen() {
                     { label: 'Campus Forum', href: '/(auth)/register' },
                     { label: 'Career Board', href: '/(auth)/login' },
                   ].map((item) => (
-                    <Pressable key={item.label} onPress={() => router.push(item.href as any)} style={{ paddingVertical: 4 }}>
+                    <Pressable accessibilityRole="link" key={item.label} onPress={() => router.push(item.href as any)} hitSlop={{ top: 10, bottom: 10 }} style={{ paddingVertical: 4 }}>
                       <AppText variant="bodySmall" tone="secondary">
                         {item.label}
                       </AppText>
@@ -989,7 +995,7 @@ export function LandingScreen() {
                     { label: 'Community Guidelines', href: '/community-rules' },
                     { label: 'Copyright & Takedown', href: '/copyright' },
                   ].map((legal) => (
-                    <Pressable key={legal.label} onPress={() => router.push(legal.href as any)} style={{ paddingVertical: 4 }}>
+                    <Pressable accessibilityRole="link" accessibilityLabel={legal.label} key={legal.label} onPress={() => router.push(legal.href as any)} hitSlop={{ top: 10, bottom: 10 }} style={{ paddingVertical: 4 }}>
                       <AppText variant="bodySmall" weight="medium" style={{ color: colors.brandPrimary }}>
                         {legal.label} →
                       </AppText>
@@ -1024,27 +1030,27 @@ export function LandingScreen() {
               </AppText>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-                <Pressable onPress={() => router.push('/privacy' as any)} style={{ paddingVertical: 4 }}>
+                <Pressable accessibilityRole="link" onPress={() => router.push('/privacy' as any)} style={{ paddingVertical: 4, minHeight: 44, justifyContent: 'center' }}>
                   <AppText variant="caption" tone="secondary">
                     Privacy
                   </AppText>
                 </Pressable>
-                <Pressable onPress={() => router.push('/terms' as any)} style={{ paddingVertical: 4 }}>
+                <Pressable accessibilityRole="link" onPress={() => router.push('/terms' as any)} style={{ paddingVertical: 4, minHeight: 44, justifyContent: 'center' }}>
                   <AppText variant="caption" tone="secondary">
                     Terms
                   </AppText>
                 </Pressable>
-                <Pressable onPress={() => router.push('/community-rules' as any)} style={{ paddingVertical: 4 }}>
+                <Pressable accessibilityRole="link" onPress={() => router.push('/community-rules' as any)} style={{ paddingVertical: 4, minHeight: 44, justifyContent: 'center' }}>
                   <AppText variant="caption" tone="secondary">
                     Guidelines
                   </AppText>
                 </Pressable>
-                <Pressable onPress={() => router.push('/copyright' as any)} style={{ paddingVertical: 4 }}>
+                <Pressable accessibilityRole="link" onPress={() => router.push('/copyright' as any)} style={{ paddingVertical: 4, minHeight: 44, justifyContent: 'center' }}>
                   <AppText variant="caption" tone="secondary">
                     Copyright
                   </AppText>
                 </Pressable>
-                <Pressable onPress={() => scrollToSection('hero')} style={{ paddingVertical: 4 }}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Back to top" onPress={() => scrollToSection('hero')} style={{ paddingVertical: 4, minHeight: 44, justifyContent: 'center' }}>
                   <AppText variant="caption" tone="brand" weight="bold">
                     Back to Top ↑
                   </AppText>
@@ -1123,11 +1129,11 @@ export function LandingScreen() {
                 { label: 'Core Pillars', id: 'pillars' },
                 { label: 'Campuses', id: 'campuses' },
               ].map((link) => (
-                <Pressable
+                <Pressable accessibilityRole="link"
                   key={link.id}
                   onPress={() => scrollToSection(link.id)}
                   style={({ hovered }: any) => [
-                    { paddingVertical: 4 },
+                    { paddingVertical: 4, minHeight: 44, justifyContent: 'center' },
                     hovered && { opacity: 0.75 },
                   ]}
                 >
@@ -1149,7 +1155,7 @@ export function LandingScreen() {
               onPress={toggleTheme}
               accessibilityRole="button"
               accessibilityLabel="Toggle Theme"
-              hitSlop={width < 380 ? 6 : 4}
+              hitSlop={8}
               style={{
                 width: width < 380 ? 32 : 36,
                 height: width < 380 ? 32 : 36,
@@ -1162,11 +1168,13 @@ export function LandingScreen() {
               <Ionicons name={isDark ? 'sunny' : 'moon'} size={width < 380 ? 15 : 17} color={isDark ? '#F8FAFC' : '#1E293B'} />
             </Pressable>
 
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={() => router.push('/(auth)/login')}
               style={{
                 paddingHorizontal: width < 380 ? 10 : 14,
                 paddingVertical: 8,
+                minHeight: 44,
+                justifyContent: 'center',
                 borderRadius: radius.pill,
                 backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
               }}
@@ -1176,12 +1184,13 @@ export function LandingScreen() {
               </AppText>
             </Pressable>
 
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={() => router.push('/(auth)/register')}
               style={{
                 backgroundColor: colors.brandPrimary,
                 paddingHorizontal: width < 380 ? 12 : 16,
                 paddingVertical: 8,
+                minHeight: 44,
                 borderRadius: radius.pill,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -1193,10 +1202,10 @@ export function LandingScreen() {
                   : {}),
               }}
             >
-              <AppText variant="bodySmall" weight="bold" tone="inverse" style={{ fontSize: width < 380 ? 12 : 13 }}>
+              <AppText variant="bodySmall" weight="bold" tone="onBrand" style={{ fontSize: width < 380 ? 12 : 13 }}>
                 Get Started
               </AppText>
-              <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
+              <Ionicons name="arrow-forward" size={13} color={onBrand} />
             </Pressable>
           </View>
         </View>

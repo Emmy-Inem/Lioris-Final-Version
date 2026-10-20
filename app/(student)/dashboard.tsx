@@ -321,7 +321,7 @@ export default function StudentDashboard() {
                   }}
                 >
                   <Ionicons name="school" size={13} color="#68D391" style={heroTextShadowStyle} />
-                  <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 11, flexShrink: 1 }, heroTextShadowStyle]}>
+                  <AppText variant="caption" weight="bold" tone="inverse" style={[{ fontSize: 12, flexShrink: 1 }, heroTextShadowStyle]}>
                     {effectiveCampus === 'ALL'
                       ? 'All Campus Networks (Global)'
                       : ((activeCampusCode && getInstitutionByCode(activeCampusCode)?.name) || profile?.institutionName) ?? 'Campus Network'}
@@ -379,7 +379,7 @@ export default function StudentDashboard() {
                     style={[
                       {
                         marginTop: 2,
-                        fontSize: isDesktop ? 12 : 11,
+                        fontSize: 12,
                         lineHeight: 15,
                         color: 'rgba(255, 255, 255, 0.85)',
                       },
@@ -391,11 +391,13 @@ export default function StudentDashboard() {
                   </AppText>
 
                   {profile?.verificationStatus !== 'verified' && user?.role !== 'admin' ? (
-                    <Pressable
+                    <Pressable accessibilityRole="link"
+                      accessibilityLabel="Verify your student ID"
                       onPress={() => router.push('/(student)/profile')}
+                      hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
                       style={{ alignSelf: 'flex-start', marginTop: 3 }}
                     >
-                      <AppText variant="caption" tone="inverse" style={[{ fontSize: 11, textDecorationLine: 'underline', opacity: 0.95 }, heroTextShadowStyle]}>
+                      <AppText variant="caption" tone="inverse" style={[{ fontSize: 12, textDecorationLine: 'underline', opacity: 0.95 }, heroTextShadowStyle]}>
                         Verify student ID →
                       </AppText>
                     </Pressable>
@@ -445,7 +447,7 @@ export default function StudentDashboard() {
               <AppText weight="bold" style={{ fontSize: 13, lineHeight: 16 }}>
                 Complete Your Profile
               </AppText>
-              <AppText tone="secondary" style={{ fontSize: 11.5, lineHeight: 15, marginTop: 2 }}>
+              <AppText tone="secondary" style={{ fontSize: 12, lineHeight: 15, marginTop: 2 }}>
                 Add your department to get better alumni mentor matches.
               </AppText>
               <Pressable
@@ -455,9 +457,10 @@ export default function StudentDashboard() {
                   haptics.light();
                   router.push('/(student)/profile');
                 }}
+                hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
                 style={{ alignSelf: 'flex-start', marginTop: 3 }}
               >
-                <AppText variant="caption" style={{ fontSize: 11, color: colors.brandPrimary, textDecorationLine: 'underline' }}>
+                <AppText variant="caption" tone="brand" style={{ fontSize: 12, textDecorationLine: 'underline' }}>
                   Edit profile →
                 </AppText>
               </Pressable>
@@ -470,6 +473,7 @@ export default function StudentDashboard() {
                 haptics.light();
                 setProfileNudgeDismissed(true);
               }}
+              hitSlop={14}
               style={{ padding: 4, flexShrink: 0 }}
             >
               <Ionicons name="close" size={16} color={colors.textSecondary} />
@@ -487,14 +491,14 @@ export default function StudentDashboard() {
                   Important Campus Notices
                 </AppText>
               </View>
-              <AppText tone="secondary" style={{ fontSize: 11 }}>
+              <AppText tone="secondary" style={{ fontSize: 12 }}>
                 Tap to view • auto-dismisses
               </AppText>
             </View>
 
             <View style={{ gap: spacing.sm }}>
               {urgentBroadcasts.map((item) => (
-                <Pressable
+                <Pressable accessibilityRole="button"
                   key={item.id}
                   onPress={() => {
                     haptics.light();
@@ -516,20 +520,20 @@ export default function StudentDashboard() {
                   >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
                       <Badge label={item.badge} tone={item.tone === 'critical' ? 'critical' : item.tone === 'warning' ? 'warning' : 'brand'} />
-                      <Pressable
+                      <Pressable accessibilityRole="button"
                         onPress={(e) => {
                           e.stopPropagation();
                           haptics.light();
                           markAsRead(item.id);
                         }}
-                        hitSlop={10}
+                        hitSlop={{ top: 14, bottom: 14, left: 10, right: 10 }}
                         accessibilityLabel="Dismiss notice from home"
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
                       >
                         <Ionicons name="checkmark-done" size={15} color={isDark ? colors.textPrimary : '#475467'} />
                         <AppText
                           variant="caption"
-                          style={{ fontSize: 11, color: isDark ? colors.textPrimary : '#475467' }}
+                          style={{ fontSize: 12, color: isDark ? colors.textPrimary : '#475467' }}
                         >
                           Dismiss
                         </AppText>
@@ -555,7 +559,7 @@ export default function StudentDashboard() {
           </AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {isFeatureEnabled('e2ee_messaging') && (
-              <Pressable
+              <Pressable accessibilityRole="link"
                 onPress={() => router.push('/(student)/messages')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
               >
@@ -563,14 +567,14 @@ export default function StudentDashboard() {
                   <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.brandPrimary} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>Direct Messages</AppText>
-                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>Chats & calls</AppText>
+                    <AppText tone="secondary" style={{ fontSize: 12, marginTop: 1 }}>Chats & calls</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
             )}
 
             {isFeatureEnabled('utility_cards') && (
-              <Pressable
+              <Pressable accessibilityRole="link"
                 onPress={() => router.push('/(student)/calendar')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
               >
@@ -578,14 +582,14 @@ export default function StudentDashboard() {
                   <Ionicons name="time-outline" size={20} color="#0D9488" />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>My Schedule</AppText>
-                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>Timetable & tests</AppText>
+                    <AppText tone="secondary" style={{ fontSize: 12, marginTop: 1 }}>Timetable & tests</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
             )}
 
             {isFeatureEnabled('campus_map') && (
-              <Pressable
+              <Pressable accessibilityRole="button"
                 onPress={() => {
                   haptics.light();
                   setCampusMapOpen(true);
@@ -596,14 +600,14 @@ export default function StudentDashboard() {
                   <Ionicons name="map-outline" size={20} color="#3B82F6" />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>Campus Map</AppText>
-                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>Halls, ATMs & food</AppText>
+                    <AppText tone="secondary" style={{ fontSize: 12, marginTop: 1 }}>Halls, ATMs & food</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
             )}
 
             {isFeatureEnabled('academic_resources') && (
-              <Pressable
+              <Pressable accessibilityRole="link"
                 onPress={() => router.push('/(student)/resources')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
               >
@@ -611,14 +615,14 @@ export default function StudentDashboard() {
                   <Ionicons name="folder-open-outline" size={20} color="#10B981" />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>Course Catalog</AppText>
-                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>All past Qs & slides</AppText>
+                    <AppText tone="secondary" style={{ fontSize: 12, marginTop: 1 }}>All past Qs & slides</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
             )}
 
             {isFeatureEnabled('marketplace') && (
-              <Pressable
+              <Pressable accessibilityRole="link"
                 onPress={() => router.push('/(student)/marketplace')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
               >
@@ -626,14 +630,14 @@ export default function StudentDashboard() {
                   <Ionicons name="cart-outline" size={20} color="#F59E0B" />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>Marketplace</AppText>
-                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>Buy & sell with classmates</AppText>
+                    <AppText tone="secondary" style={{ fontSize: 12, marginTop: 1 }}>Buy & sell with classmates</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
             )}
 
             {isFeatureEnabled('alumni_mentorship') && (
-              <Pressable
+              <Pressable accessibilityRole="link"
                 onPress={() => router.push('/(student)/mentorship')}
                 style={{ flexGrow: 1, flexBasis: isDesktop ? 0 : '47%', minWidth: isDesktop ? 150 : '47%' }}
               >
@@ -641,7 +645,7 @@ export default function StudentDashboard() {
                   <Ionicons name="people-outline" size={20} color="#8B5CF6" />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <AppText weight="bold" style={{ fontSize: 12.5, lineHeight: 16 }}>Mentorship Hub</AppText>
-                    <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>Alumni mentors & guidance</AppText>
+                    <AppText tone="secondary" style={{ fontSize: 12, marginTop: 1 }}>Alumni mentors & guidance</AppText>
                   </View>
                 </GlassCard>
               </Pressable>
@@ -659,8 +663,8 @@ export default function StudentDashboard() {
                   {attendingEvents.length > 0 ? "Events You're Attending" : 'Featured Campus Events'}
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push('/(student)/events-list')} style={{ flexShrink: 0 }} hitSlop={8}>
-                <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
+              <Pressable accessibilityRole="link" accessibilityLabel="View all campus events" onPress={() => router.push('/(student)/events-list')} style={{ flexShrink: 0 }} hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}>
+                <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 12 }}>
                   View All ({events?.length ?? 0}) →
                 </AppText>
               </Pressable>
@@ -671,13 +675,14 @@ export default function StudentDashboard() {
                 {attendingEvents.slice(0, 2).map((evt: any) => (
                   <View key={evt.id} style={{ gap: 6 }}>
                     <EventCard event={evt} />
-                    <Pressable
+                    <Pressable accessibilityRole="button"
                       onPress={() => router.push(`/(student)/events/${evt.id}` as any)}
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: 6,
+                        minHeight: 44,
                         paddingVertical: 7,
                         paddingHorizontal: 12,
                         backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.08)',
@@ -723,8 +728,8 @@ export default function StudentDashboard() {
                   My Saved Course Materials
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push('/(student)/saved')} style={{ flexShrink: 0 }} hitSlop={8}>
-                <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
+              <Pressable accessibilityRole="link" accessibilityLabel="View saved course materials" onPress={() => router.push('/(student)/saved')} style={{ flexShrink: 0 }} hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}>
+                <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 12 }}>
                   Saved ({savedResources.length}) →
                 </AppText>
               </Pressable>
@@ -755,7 +760,8 @@ export default function StudentDashboard() {
                   }
 
                   return (
-                    <Pressable
+                    <Pressable accessibilityRole="button"
+                      accessibilityLabel={`Open ${cleanCourseName} in Resources`}
                       key={item.id}
                       onPress={() => router.push({ pathname: '/(student)/resources', params: { resourceId: item.itemId } })}
                     >
@@ -810,8 +816,8 @@ export default function StudentDashboard() {
                   My Study Pods
                 </AppText>
               </View>
-              <Pressable onPress={() => router.push('/(student)/study-groups')} style={{ flexShrink: 0 }} hitSlop={8}>
-                <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 11.5 }}>
+              <Pressable accessibilityRole="link" accessibilityLabel="View all study pods" onPress={() => router.push('/(student)/study-groups')} style={{ flexShrink: 0 }} hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}>
+                <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 12 }}>
                   View All ({studyGroups.length}) →
                 </AppText>
               </Pressable>
@@ -820,7 +826,7 @@ export default function StudentDashboard() {
             {studyGroups.length > 0 ? (
               <View style={{ gap: spacing.sm }}>
                 {studyGroups.slice(0, 3).map((group: any) => (
-                  <Pressable key={group.id} onPress={() => router.push(`/(student)/pod/${group.id}` as any)}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Open study pod ${group.name}`} key={group.id} onPress={() => router.push(`/(student)/pod/${group.id}` as any)}>
                     <SolidCard radius={16} style={{ padding: 13 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
@@ -867,7 +873,8 @@ export default function StudentDashboard() {
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {recentlyVisitedPortals.slice(0, 4).map((portal: any) => (
-                <Pressable
+                <Pressable accessibilityRole="button"
+                  accessibilityLabel={`Open ${portal.title} portal`}
                   key={portal.id}
                   onPress={() => handleOpenPortal(portal.url, portal.id)}
                   style={{ width: isDesktop ? '48%' : '100%', flexGrow: 1 }}
@@ -895,7 +902,7 @@ export default function StudentDashboard() {
         onRequestClose={() => setSelectedAnnouncement(null)}
       >
         <View style={modalStyles.backdrop}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedAnnouncement(null)} />
+          <Pressable accessibilityRole="none" accessible={false} focusable={false} importantForAccessibility="no" style={StyleSheet.absoluteFill} onPress={() => setSelectedAnnouncement(null)} />
           <View
             style={[
               modalStyles.modalCard,
@@ -912,7 +919,7 @@ export default function StudentDashboard() {
                 label={selectedAnnouncement?.priority === 'critical' ? 'Urgent Alert' : 'Campus Bulletin'}
                 tone={selectedAnnouncement?.priority === 'critical' ? 'critical' : 'brand'}
               />
-              <Pressable onPress={() => setSelectedAnnouncement(null)} hitSlop={10}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close announcement" onPress={() => setSelectedAnnouncement(null)} hitSlop={14}>
                 <Ionicons name="close" size={20} color={colors.textSecondary} />
               </Pressable>
             </View>

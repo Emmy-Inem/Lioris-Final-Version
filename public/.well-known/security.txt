@@ -2,5 +2,5 @@ Contact: mailto:security@lioris.app
 Contact: https://github.com/Emmy-Inem/Lioris-Final-Version/security/advisories/new
 Expires: 2027-09-18T00:00:00.000Z
 Preferred-Languages: en
-Canonical: https://lioris.app/.well-known/security.txt
+Canonical: https://lioris-campus.vercel.app/.well-known/security.txt
 Policy: https://github.com/Emmy-Inem/Lioris-Final-Version/blob/main/SECURITY.md

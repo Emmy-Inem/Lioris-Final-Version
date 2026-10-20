@@ -6,6 +6,7 @@ import { Ionicons } from'@expo/vector-icons';
 import { AppText } from'./AppText';
 import { Badge } from'./Badge';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useReducedMotion } from '@/theme/useReducedMotion';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { CampusEvent } from '@/api/types';
 import { useSignedUrl } from '@/api/signedUrls';
@@ -31,6 +32,22 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  const scrollRef = useRef<ScrollView>(null);
  const isInteracting = useRef(false);
  const resumeTimeout = useRef<any>(null);
+ const reduceMotion = useReducedMotion();
+ // WCAG 2.2.2: auto-advance can be paused by the viewer, and also holds while the pointer is
+ // over the carousel, keyboard focus is inside it, or a card is being pressed.
+ const [userPaused, setUserPaused] = useState(false);
+ const [hovered, setHovered] = useState(false);
+ const [focused, setFocused] = useState(false);
+ const [pressed, setPressed] = useState(false);
+ const holdAutoAdvance = reduceMotion || userPaused || hovered || focused || pressed;
+ const engagementProps = {
+ onHoverIn: () => setHovered(true),
+ onHoverOut: () => setHovered(false),
+ onFocus: () => setFocused(true),
+ onBlur: () => setFocused(false),
+ onPressIn: () => setPressed(true),
+ onPressOut: () => setPressed(false),
+ };
 
  const displayEvents = events.length > 0 ? events : [];
  const { width: screenWidth } = useWindowDimensions();
@@ -40,7 +57,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
 
  // Auto-scroll loop
  useEffect(() => {
- if (displayEvents.length <= 1) return;
+ if (displayEvents.length <= 1 || holdAutoAdvance) return;
 
  const interval = setInterval(() => {
  if (isInteracting.current) return;
@@ -52,7 +69,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  }, 3800);
 
  return () => clearInterval(interval);
- }, [displayEvents.length, itemStride]);
+ }, [displayEvents.length, itemStride, holdAutoAdvance]);
 
  if (!isFeatureEnabled('campus_events') || displayEvents.length === 0) return null;
 
@@ -61,7 +78,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  isInteracting.current = true;
  clearTimeout(resumeTimeout.current);
  setActiveIndex(index);
- scrollRef.current?.scrollTo({ x: index * itemStride, animated: true });
+ scrollRef.current?.scrollTo({ x: index * itemStride, animated: !reduceMotion });
  resumeTimeout.current = setTimeout(() => {
  isInteracting.current = false;
  }, 4500);
@@ -99,13 +116,40 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
 
  {/* Navigation Indicators & Prev / Next Controls */}
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+ {/* Pause / play the automatic slide show (hidden when motion is reduced: nothing auto-advances) */}
+ {!reduceMotion && displayEvents.length > 1 ? (
+ <Pressable
+ accessibilityRole="button"
+ accessibilityLabel={userPaused ? 'Play automatic slide show' : 'Pause automatic slide show'}
+ accessibilityState={{ selected: userPaused }}
+ onFocus={() => setFocused(true)}
+ onBlur={() => setFocused(false)}
+ onPress={() => {
+ haptics.light();
+ setUserPaused((v) => !v);
+ }}
+ hitSlop={8}
+ style={{
+ width: 28,
+ height: 28,
+ borderRadius: 14,
+ backgroundColor: colors.surface,
+ borderWidth: 1,
+ borderColor: colors.border,
+ alignItems: 'center',
+ justifyContent: 'center',
+ }}
+ >
+ <Ionicons name={userPaused ? 'play' : 'pause'} size={13} color={colors.textPrimary} />
+ </Pressable>
+ ) : null}
  {/* Pagination Indicators */}
  <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center' }}>
  {displayEvents.map((_, idx) => (
  <Pressable accessibilityRole="button" accessibilityLabel={`Go to slide ${idx + 1}`}
  key={idx}
  onPress={() => scrollToSlide(idx)}
- hitSlop={8}
+ hitSlop={{ top: 14, bottom: 14, left: 6, right: 6 }}
  style={{
  width: activeIndex === idx ? 20 : 6,
  height: 6,
@@ -175,6 +219,9 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
     return (
       <Pressable
         key={item.id}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title}, ${item.category}. Open event details`}
+        {...engagementProps}
         onPress={() => handleOpenEvent(item.id)}
         style={{
           width: cardWidth,
