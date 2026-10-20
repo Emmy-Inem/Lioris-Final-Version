@@ -1,7 +1,7 @@
 import React from'react';
 import { Text as RNText, TextProps, TextStyle } from'react-native';
 import { useTheme } from'@/theme/ThemeProvider';
-import { ensureContrast } from'@/theme/contrast';
+import { ensureContrast, readableOn } from'@/theme/contrast';
 import {
  fontFamily,
  fontFamilyMedium,
@@ -13,7 +13,13 @@ import {
 
 type Variant = keyof typeof typeScale;
 type Weight = 'regular' | 'medium' | 'semiBold' | 'bold';
-type Tone = 'primary' | 'secondary' | 'inverse' | 'brand' | 'accent' | 'critical';
+/**
+ * `inverse` is always white: it is used on dark scrims, critical fills and gradients too.
+ * `onBrand` is for text drawn on a `colors.brandPrimary` fill: it picks whichever of
+ * navy / white reads better on the active brand colour (white on the light-mode brands,
+ * navy on the lighter dark-mode brands where white is only 1.7-3.2:1).
+ */
+type Tone = 'primary' | 'secondary' | 'inverse' | 'onBrand' | 'brand' | 'accent' | 'critical';
 
 interface AppTextProps extends TextProps {
  variant?: Variant;
@@ -42,6 +48,7 @@ export function AppText({
  primary: colors.textPrimary,
  secondary: colors.textSecondary,
  inverse: colors.textInverse,
+ onBrand: readableOn(colors.brandPrimary, '#0B1120', '#FFFFFF'),
  brand: ensureContrast(colors.brandPrimary, colors.surface),
  // Accent is a fill colour first (orange/amber); as text it is nudged to AA (4.5:1).
  accent: ensureContrast(colors.brandAccent, colors.surface),

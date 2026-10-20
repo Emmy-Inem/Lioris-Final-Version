@@ -39,6 +39,53 @@
     });
   }
 
+  // The app can call `window.dispatchEvent(new Event('lioris:sign-out'))` when a user signs out
+  // to make the service worker drop its runtime caches (see CLEAR_RUNTIME_CACHES in sw.js).
+  window.addEventListener('lioris:sign-out', function () {
+    try {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_RUNTIME_CACHES' });
+      }
+    } catch (e) {
+      /* best effort */
+    }
+  });
+
+  // ---- 2b. Per-route metadata for the public legal pages ----------------------
+  // The site is one HTML file, so title/description/canonical would otherwise be the
+  // landing page's for every URL. This runs before the app boots. It lives here (not
+  // inline in index.html) because the CSP is script-src 'self' and blocks inline scripts.
+  (function setRouteMetadata() {
+    var ORIGIN = 'https://lioris-campus.vercel.app';
+    var PAGES = {
+      '/terms': ['Terms of Service | Lioris', 'The terms that apply when you use Lioris: eligibility, accounts, acceptable use, content, the marketplace, moderation and disputes.'],
+      '/privacy': ['Privacy Policy | Lioris', 'How Lioris collects, uses, shares and protects your personal data, and the choices and rights you have.'],
+      '/copyright': ['Copyright and Takedown Policy | Lioris', 'What you may share on Lioris, how rights holders ask for removal, and how we handle copyright complaints.'],
+      '/community-rules': ['Community Rules | Lioris', 'The standards of behaviour for everyone on Lioris, and what happens when they are broken.'],
+    };
+    try {
+      var path = window.location.pathname.replace(/\/+$/, '').toLowerCase();
+      var page = Object.prototype.hasOwnProperty.call(PAGES, path) ? PAGES[path] : null;
+      if (!page) return;
+      var url = ORIGIN + path;
+      var setMeta = function (selector, attr, value) {
+        var el = document.head.querySelector(selector);
+        if (el) el.setAttribute(attr, value);
+      };
+      document.title = page[0];
+      setMeta('meta[name="description"]', 'content', page[1]);
+      setMeta('link[rel="canonical"]', 'href', url);
+      setMeta('meta[property="og:url"]', 'content', url);
+      setMeta('meta[property="og:title"]', 'content', page[0]);
+      setMeta('meta[property="og:description"]', 'content', page[1]);
+      setMeta('meta[name="twitter:url"]', 'content', url);
+      setMeta('meta[name="twitter:title"]', 'content', page[0]);
+      setMeta('meta[name="twitter:description"]', 'content', page[1]);
+    } catch (e) {
+      /* metadata is cosmetic; never block boot */
+    }
+  })();
+
   // ---- 3. Blank-screen recovery ----------------------------------------------
   var RELOAD_KEY = 'lioris_recovery_reload_at';
   var RELOAD_GUARD_MS = 20000;

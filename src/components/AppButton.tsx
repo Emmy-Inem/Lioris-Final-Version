@@ -6,7 +6,7 @@ import {
  StyleSheet,
  View,
 } from'react-native';
-import { readableOn } from'@/theme/contrast';
+import { ensureContrast, readableOn } from'@/theme/contrast';
 import Animated, {
  useAnimatedStyle,
  useSharedValue,
@@ -37,7 +37,7 @@ export function AppButton({
  icon,
  ...rest
 }: AppButtonProps) {
- const { colors, radius, spacing, minTouchTarget, isDark } = useTheme();
+ const { colors, radius, spacing, minTouchTarget } = useTheme();
  const scale = useSharedValue(1);
 
  const animatedStyle = useAnimatedStyle(() => ({
@@ -45,9 +45,9 @@ export function AppButton({
  }));
 
  const palette = {
- primary: { bg: colors.brandPrimary, fg: isDark ? '#0B1120' : '#FFFFFF', border: 'transparent' },
+ primary: { bg: colors.brandPrimary, fg: readableOn(colors.brandPrimary, '#0B1120', '#FFFFFF'), border: 'transparent' },
  accent: { bg: colors.brandAccent, fg: readableOn(colors.brandAccent), border: 'transparent' },
- secondary: { bg: 'transparent', fg: colors.brandPrimary, border: colors.brandPrimary },
+ secondary: { bg: 'transparent', fg: ensureContrast(colors.brandPrimary, colors.background), border: colors.brandPrimary },
  ghost: { bg: 'transparent', fg: colors.textPrimary, border: 'transparent' },
  }[variant];
 

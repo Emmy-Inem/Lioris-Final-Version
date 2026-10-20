@@ -57,5 +57,5 @@ export const typeScale = {
  h3: { fontSize: 18, lineHeight: 24 },
  body: { fontSize: 15, lineHeight: 22 },
  bodySmall: { fontSize: 13, lineHeight: 18 },
- caption: { fontSize: 11, lineHeight: 14 },
+ caption: { fontSize: 12, lineHeight: 16 },
 } as const;

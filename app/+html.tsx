@@ -1,6 +1,10 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import { type PropsWithChildren } from 'react';
 
+// NOTE: unused by the current build. app.config.ts sets web.bundler='metro' with no web.output, so Expo
+// exports a single-page app (output 'single') whose HTML template is public/index.html; app/+html.tsx is only
+// rendered for web.output='static'. Keep the tags in public/index.html (and public/pwa-boot.js for per-route
+// metadata) in sync with this file, or delete it, until the project moves to static output.
 // Absolute site URL used for canonical/social-preview tags (crawlers require absolute URLs).
 // Set EXPO_PUBLIC_SITE_URL when the production domain changes; no trailing slash.
 const SITE_URL = (process.env.EXPO_PUBLIC_SITE_URL || 'https://lioris-campus.vercel.app').replace(/\/+$/, '');

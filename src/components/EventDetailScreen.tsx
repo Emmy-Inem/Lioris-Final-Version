@@ -716,7 +716,7 @@ export function EventDetailScreen() {
             marginBottom: spacing.lg,
           }}
         >
-          <Pressable onPress={goBackSafely} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Pressable accessibilityRole="button" hitSlop={8} onPress={goBackSafely} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
             <AppText weight="bold" variant="bodySmall">
               Back to Events Hub
@@ -752,7 +752,7 @@ export function EventDetailScreen() {
               </AppText>
             </Pressable>
 
-            <Pressable
+            <Pressable accessibilityRole="button" hitSlop={6}
               onPress={() => setLightboxOpen(true)}
               style={{
                 flexDirection: 'row',
@@ -1060,12 +1060,12 @@ export function EventDetailScreen() {
             </View>
 
             {/* Tab Navigation Controls */}
-            <View style={{ flexDirection: 'row', gap: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border, marginBottom: spacing.lg }}>
+            <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border, marginBottom: spacing.lg }}>
               {(['overview', 'agenda', 'map'] as const).map((tab) => {
                 const active = activeTab === tab;
                 const label = tab === 'overview' ? 'Overview' : tab === 'agenda' ? 'Agenda & Schedule' : 'Campus Map & Directions';
                 return (
-                  <Pressable
+                  <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }}
                     key={tab}
                     onPress={() => {
                       haptics.light();
@@ -1364,7 +1364,7 @@ export function EventDetailScreen() {
                   {currentRsvpCount} {event.ticketType === 'paid' ? 'interested' : 'students registered'}
                 </AppText>
                 {canManage && (
-                  <Pressable onPress={handleOpenRoster}>
+                  <Pressable accessibilityRole="button" hitSlop={12} onPress={handleOpenRoster}>
                     <AppText variant="caption" weight="bold" tone="brand">
                       View Roster
                     </AppText>
@@ -1725,12 +1725,12 @@ export function EventDetailScreen() {
             </View>
 
             {/* Mobile Tab Selectors */}
-            <View style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.md }}>
+            <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: 6, marginBottom: spacing.md }}>
               {(['overview', 'agenda', 'map'] as const).map((tab) => {
                 const active = activeTab === tab;
                 const label = tab === 'overview' ? 'Overview' : tab === 'agenda' ? 'Agenda' : 'Campus Map';
                 return (
-                  <Pressable
+                  <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }}
                     key={tab}
                     onPress={() => {
                       haptics.light();
@@ -1746,7 +1746,7 @@ export function EventDetailScreen() {
                       alignItems: 'center',
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone={active ? 'inverse' : 'secondary'}>
+                    <AppText variant="caption" weight="bold" tone={active ? 'onBrand' : 'secondary'}>
                       {label}
                     </AppText>
                   </Pressable>
@@ -1822,7 +1822,7 @@ export function EventDetailScreen() {
                     Program Schedule
                   </AppText>
                   {canManage && (
-                    <Pressable onPress={handleOpenAgendaEditor}>
+                    <Pressable accessibilityRole="button" hitSlop={12} onPress={handleOpenAgendaEditor}>
                       <AppText variant="caption" weight="bold" tone="brand">
                         {isOwner && !isAdmin ? 'Edit My Schedule' : 'Edit Schedule'}
                       </AppText>
@@ -1991,7 +1991,7 @@ export function EventDetailScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
         >
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditModalOpen(false)} />
+          <Pressable accessibilityRole="none" accessible={false} focusable={false} importantForAccessibility="no" style={StyleSheet.absoluteFill} onPress={() => setEditModalOpen(false)} />
           <View
             style={{
               backgroundColor: colors.surface,
@@ -2025,7 +2025,7 @@ export function EventDetailScreen() {
                   Edit Event Details & Controls
                 </AppText>
               </View>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setEditModalOpen(false)} hitSlop={8}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setEditModalOpen(false)} hitSlop={12}>
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -2055,11 +2055,11 @@ export function EventDetailScreen() {
               <AppText variant="caption" weight="bold" tone="secondary" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
                 EVENT CATEGORY
               </AppText>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
+              <View accessibilityRole="radiogroup" accessibilityLabel="Event category" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
                 {CATEGORIES.map((cat) => {
                   const active = editCategory.toLowerCase() === cat.toLowerCase();
                   return (
-                    <Pressable
+                    <Pressable accessibilityRole="radio" accessibilityState={{ checked: active }} hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
                       key={cat}
                       onPress={() => setEditCategory(cat)}
                       style={{
@@ -2071,7 +2071,7 @@ export function EventDetailScreen() {
                         borderColor: active ? colors.brandPrimary : colors.border,
                       }}
                     >
-                      <AppText variant="caption" weight="bold" tone={active ? 'inverse' : 'secondary'} style={{ fontSize: 11 }}>
+                      <AppText variant="caption" weight="bold" tone={active ? 'onBrand' : 'secondary'} style={{ fontSize: 11 }}>
                         {cat}
                       </AppText>
                     </Pressable>
@@ -2083,12 +2083,12 @@ export function EventDetailScreen() {
               <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
                 VENUE FORMAT
               </AppText>
-              <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
+              <View accessibilityRole="radiogroup" accessibilityLabel="Venue format" style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
                 {VENUE_FORMATS.map((vf) => {
                   const typeKey = vf === 'Physical Event' ? 'physical' : vf === 'Lioris Live Event (In-App)' ? 'virtual' : 'external';
                   const active = editVenueType === typeKey;
                   return (
-                    <Pressable
+                    <Pressable accessibilityRole="radio" accessibilityState={{ checked: active }}
                       key={vf}
                       onPress={() => setEditVenueType(typeKey)}
                       style={{
@@ -2101,7 +2101,7 @@ export function EventDetailScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <AppText variant="caption" weight="bold" tone={active ? 'inverse' : 'secondary'} style={{ fontSize: 10.5 }}>
+                      <AppText variant="caption" weight="bold" tone={active ? 'onBrand' : 'secondary'} style={{ fontSize: 10.5 }}>
                         {vf === 'Physical Event' ? 'Physical' : vf === 'Lioris Live Event (In-App)' ? 'Virtual' : 'External'}
                       </AppText>
                     </Pressable>
@@ -2175,7 +2175,7 @@ export function EventDetailScreen() {
                   { label: '+2 Hours', mins: 120 },
                   { label: '+3 Hours', mins: 180 },
                 ].map((q) => (
-                  <Pressable
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Set end time ${q.label} after the start`} hitSlop={{ top: 11, bottom: 11, left: 4, right: 4 }}
                     key={q.label}
                     onPress={() => {
                       if (editStartAt) {
@@ -2239,12 +2239,12 @@ export function EventDetailScreen() {
                     <AppText variant="caption" weight="bold" style={{ marginBottom: 4 }}>
                       Approval Status:
                     </AppText>
-                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <View accessibilityRole="radiogroup" accessibilityLabel="Approval status" style={{ flexDirection: 'row', gap: 6 }}>
                       {(['approved', 'pending', 'rejected'] as const).map((st) => {
                         const active = editApprovalStatus === st;
                         const label = st === 'approved' ? 'Approved & Live' : st === 'pending' ? 'Under Review' : 'Revoked';
                         return (
-                          <Pressable
+                          <Pressable accessibilityRole="radio" accessibilityState={{ checked: active }}
                             key={st}
                             onPress={() => setEditApprovalStatus(st)}
                             style={{
@@ -2276,7 +2276,7 @@ export function EventDetailScreen() {
                         Places this event in the top animated banner
                       </AppText>
                     </View>
-                    <Pressable
+                    <Pressable accessibilityRole="switch" accessibilityLabel="Feature in hero spotlight carousel" accessibilityState={{ checked: editIsSpotlight }} hitSlop={8}
                       onPress={() => setEditIsSpotlight(!editIsSpotlight)}
                       style={{
                         paddingHorizontal: 12,
@@ -2303,7 +2303,7 @@ export function EventDetailScreen() {
                         Highlights with gold sponsored badge
                       </AppText>
                     </View>
-                    <Pressable
+                    <Pressable accessibilityRole="switch" accessibilityLabel="Promoted or sponsored event" accessibilityState={{ checked: editSponsored }} hitSlop={8}
                       onPress={() => setEditSponsored(!editSponsored)}
                       style={{
                         paddingHorizontal: 12,
@@ -2358,7 +2358,7 @@ export function EventDetailScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
         >
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setAgendaEditorOpen(false)} />
+          <Pressable accessibilityRole="none" accessible={false} focusable={false} importantForAccessibility="no" style={StyleSheet.absoluteFill} onPress={() => setAgendaEditorOpen(false)} />
           <View
             style={{
               backgroundColor: colors.surface,
@@ -2479,7 +2479,7 @@ export function EventDetailScreen() {
                 </View>
               )}
 
-              <Pressable
+              <Pressable accessibilityRole="button"
                 onPress={handleAddAgendaItem}
                 style={{
                   flexDirection: 'row',

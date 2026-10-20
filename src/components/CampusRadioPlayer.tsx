@@ -4,7 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
 import { GlassCard } from '@/components/GlassCard';
 import { Badge } from '@/components/Badge';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useReducedMotion } from '@/theme/useReducedMotion';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import {
@@ -124,39 +134,70 @@ export function CampusRadioPlayer() {
     );
   }
 
-function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: string }) {
-  const [heights, setHeights] = useState([6, 12, 8, 16, 10]);
+// [idle, low, high] bar heights and the half-cycle duration (ms) of each of the five bars.
+// The bars are animated by reanimated shared values, so playing audio no longer re-renders
+// React every 160ms; with reduced motion on they hold a static mid-level shape instead.
+const EQ_BARS: ReadonlyArray<{ idle: number; low: number; high: number; ms: number }> = [
+  { idle: 4, low: 6, high: 16, ms: 420 },
+  { idle: 6, low: 8, high: 20, ms: 560 },
+  { idle: 4, low: 6, high: 14, ms: 380 },
+  { idle: 8, low: 8, high: 20, ms: 620 },
+  { idle: 5, low: 6, high: 17, ms: 480 },
+];
+
+function EqualizerBar({
+  bar,
+  isPlaying,
+  reduceMotion,
+  color,
+}: {
+  bar: (typeof EQ_BARS)[number];
+  isPlaying: boolean;
+  reduceMotion: boolean;
+  color: string;
+}) {
+  const height = useSharedValue(bar.idle);
 
   useEffect(() => {
-    if (!isPlaying) {
-      setHeights([4, 6, 4, 8, 5]);
-      return;
+    cancelAnimation(height);
+    if (isPlaying && !reduceMotion) {
+      height.value = withRepeat(
+        withSequence(
+          withTiming(bar.high, { duration: bar.ms, easing: Easing.inOut(Easing.quad) }),
+          withTiming(bar.low, { duration: bar.ms, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+        false,
+      );
+    } else {
+      height.value = withTiming(isPlaying ? (bar.low + bar.high) / 2 : bar.idle, { duration: 150 });
     }
-    const interval = setInterval(() => {
-      setHeights([
-        Math.floor(Math.random() * 12) + 6,
-        Math.floor(Math.random() * 16) + 8,
-        Math.floor(Math.random() * 10) + 6,
-        Math.floor(Math.random() * 18) + 8,
-        Math.floor(Math.random() * 14) + 6,
-      ]);
-    }, 160);
-    return () => clearInterval(interval);
-  }, [isPlaying]);
+    return () => cancelAnimation(height);
+  }, [isPlaying, reduceMotion, bar, height]);
+
+  const animatedStyle = useAnimatedStyle(() => ({ height: height.value }));
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2.5, height: 22, paddingBottom: 2 }}>
-      {heights.map((h, i) => (
-        <View
-          key={i}
-          style={{
-            width: 3,
-            height: h,
-            borderRadius: 1.5,
-            backgroundColor: color,
-            opacity: isPlaying ? 0.95 : 0.35,
-          }}
-        />
+    <Animated.View
+      style={[
+        { width: 3, borderRadius: 1.5, backgroundColor: color, opacity: isPlaying ? 0.95 : 0.35 },
+        animatedStyle,
+      ]}
+    />
+  );
+}
+
+function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: string }) {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2.5, height: 22, paddingBottom: 2 }}
+    >
+      {EQ_BARS.map((bar, i) => (
+        <EqualizerBar key={i} bar={bar} isPlaying={isPlaying} reduceMotion={reduceMotion} color={color} />
       ))}
     </View>
   );
