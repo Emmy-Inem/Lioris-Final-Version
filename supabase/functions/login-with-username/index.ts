@@ -10,17 +10,23 @@
 //   invalid_credentials (401)   unknown handle and wrong password are deliberately identical
 //   email_not_confirmed (403)   carries `email` - only revealed once the PASSWORD was correct
 //   captcha_failed      (400)
-//   rate_limited        (429)   per IP and per handle
+//   rate_limited        (429)   too many FAILED attempts: 30 per IP / 5 min, and 10 per handle+IP / 15 min.
+//                               Successful sign-ins are not counted, and the per-handle bucket includes the
+//                               caller's IP so a stranger cannot lock a victim's handle out.
 //   unavailable         (503)   limiter / configuration failure (fails closed)
+//
+// Note: the caller's real IP is NOT forwarded to GoTrue (supabase-js can not set it per request and
+// the gateway overwrites forwarded headers), so Auth's own per-IP limits see this function's address;
+// the limits above are what protect an individual account and caller here.
 //
 // Deployment:
 //   supabase functions deploy login-with-username --no-verify-jwt
 //   (needs SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY - all provided by default.)
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 import { readJsonBody } from '../_shared/body.ts';
-import { clientIp, consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
+import { clientIp, consumeRateLimit, createServiceClient, peekRateLimit } from '../_shared/ratelimit.ts';
 
 const MAX_BODY_BYTES = 4096;
 const IP_LIMIT = 30;
@@ -58,20 +64,33 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, INVALID, 401);
   }
 
+  // Only FAILED attempts count. The per-handle bucket is keyed by handle + IP, so a stranger who
+  // hammers a victim's handle only locks out their OWN address, never the victim's. The buckets are
+  // read here (peek) and spent by failLogin() below.
   const ip = clientIp(req);
-  const byIp = await consumeRateLimit(admin, `login-ip:${ip}`, IP_LIMIT, IP_WINDOW_SECONDS);
-  const byHandle = await consumeRateLimit(admin, `login-handle:${handle}`, HANDLE_LIMIT, HANDLE_WINDOW_SECONDS);
-  if (byIp === 'error' || byHandle === 'error') {
+  const ipKey = `login-ip:${ip}`;
+  const handleKey = `login-handle:${handle}:${ip}`;
+  const [ipFails, handleFails] = await Promise.all([
+    peekRateLimit(admin, ipKey, IP_WINDOW_SECONDS),
+    peekRateLimit(admin, handleKey, HANDLE_WINDOW_SECONDS),
+  ]);
+  if (ipFails === null || handleFails === null) {
     return jsonResponse(req, { error: 'unavailable', message: 'Sign-in is temporarily unavailable. Please use your e-mail address.' }, 503);
   }
-  if (byIp === 'limited' || byHandle === 'limited') {
+  if (ipFails >= IP_LIMIT || handleFails >= HANDLE_LIMIT) {
     return jsonResponse(
       req,
-      { error: 'rate_limited', message: 'Too many sign-in attempts. Please wait a few minutes and try again.' },
+      { error: 'rate_limited', message: 'Too many failed sign-in attempts. Please wait a few minutes and try again.' },
       429,
       { 'Retry-After': '300' },
     );
   }
+  /** Count one failed attempt against both buckets (unknown handle and wrong password look identical). */
+  const failLogin = async (countHandle = true): Promise<Response> => {
+    await consumeRateLimit(admin, ipKey, IP_LIMIT, IP_WINDOW_SECONDS);
+    if (countHandle) await consumeRateLimit(admin, handleKey, HANDLE_LIMIT, HANDLE_WINDOW_SECONDS);
+    return jsonResponse(req, INVALID, 401);
+  };
 
   let email: string | null = null;
   try {
@@ -81,7 +100,7 @@ Deno.serve(async (req: Request) => {
     console.error('[login-with-username] handle lookup failed:', err instanceof Error ? err.message : 'unknown');
   }
   // Unknown handle: answer exactly like a wrong password.
-  if (!email) return jsonResponse(req, INVALID, 401);
+  if (!email) return await failLogin();
 
   const anon = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
   const { data, error } = await anon.auth.signInWithPassword({
@@ -97,12 +116,13 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(req, { error: 'email_not_confirmed', message: 'Please confirm your e-mail address first.', email }, 403);
     }
     if (code === 'captcha_failed' || msg.includes('captcha')) {
+      await consumeRateLimit(admin, ipKey, IP_LIMIT, IP_WINDOW_SECONDS); // per-IP only: no password was tested
       return jsonResponse(req, { error: 'captcha_failed', message: 'Security verification failed or expired. Please complete the security check again.' }, 400);
     }
     if (code === 'over_request_rate_limit' || msg.includes('rate limit')) {
       return jsonResponse(req, { error: 'rate_limited', message: 'Too many sign-in attempts. Please wait a few minutes and try again.' }, 429, { 'Retry-After': '300' });
     }
-    return jsonResponse(req, INVALID, 401);
+    return await failLogin();
   }
 
   const s = data.session;

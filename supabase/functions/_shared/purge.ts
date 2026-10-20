@@ -2,11 +2,12 @@
 // admin-delete-user, so admin deletions never orphan storage objects or DB rows.
 //
 // Order matters and every step is idempotent, so a failed run can simply be retried:
-//   1. remove every Storage object under `<uid>/` in the user-owned buckets
+//   1. remove every Storage object under `<uid>/` in EVERY bucket (listed from the Storage API, so a
+//      bucket added later cannot be forgotten; USER_STORAGE_BUCKETS is the floor if listing fails)
 //   2. purge_user_data(uid) RPC (deletes all DB rows of the user, service_role only)
 //   3. auth.admin.deleteUser(uid)  <- only reached when 1 and 2 succeeded
 
-import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 
 export const USER_STORAGE_BUCKETS = ['avatars', 'resources', 'campus-media', 'verifications', 'resumes'] as const;
 
@@ -74,10 +75,31 @@ export async function removeObjects(admin: SupabaseClient, bucket: string, paths
   return removed;
 }
 
+/**
+ * Every bucket to sweep: all buckets the Storage API reports, plus the static list (so a listing
+ * failure, or an empty answer, can never shrink the sweep below the known user-owned buckets).
+ */
+async function bucketsToPurge(admin: SupabaseClient): Promise<string[]> {
+  const names = new Set<string>(USER_STORAGE_BUCKETS);
+  try {
+    const { data, error } = await admin.storage.listBuckets();
+    if (error) {
+      console.error('[purge] listBuckets failed, using the static bucket list:', error.message);
+    } else {
+      for (const b of data ?? []) {
+        if (b?.name) names.add(b.name);
+      }
+    }
+  } catch (err) {
+    console.error('[purge] listBuckets threw, using the static bucket list:', err instanceof Error ? err.message : 'unknown');
+  }
+  return [...names];
+}
+
 /** Delete ALL storage objects belonging to the user. Throws on any failure. */
 export async function purgeUserStorage(admin: SupabaseClient, uid: string): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
-  for (const bucket of USER_STORAGE_BUCKETS) {
+  for (const bucket of await bucketsToPurge(admin)) {
     const paths: string[] = [];
     try {
       await collectPaths(admin, bucket, uid, 0, paths);

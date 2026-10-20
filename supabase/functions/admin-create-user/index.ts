@@ -11,7 +11,9 @@
 //   * nobody else.
 //
 // Request:  POST { email, fullName, role, campusCode, department?, matricNo?, adminRole?, redirectTo? }
-// Success:  200 { userId, inviteSent }
+// Success:  200 { userId, inviteSent, warning? }   (warning is present when inviteSent is false: the
+//           account exists but the invitation e-mail failed, e.g. the project-wide hourly auth e-mail cap)
+//           `redirectTo` is honoured only if it is https, on an allowed origin and exactly /reset-password.
 // Errors:   { error: '<code>', message } - 400 validation, 403 scope, 409 email_exists, 429 rate_limited
 //
 // Deployment:
@@ -144,9 +146,16 @@ Deno.serve(async (req: Request) => {
   // ---- invitation: the person chooses their own password ---------------------------------------
   const requested = typeof body.redirectTo === 'string' ? body.redirectTo.trim() : '';
   const origins = allowedOrigins();
-  let redirectTo = origins.find((o) => o.startsWith('https://')) ? `${origins.find((o) => o.startsWith('https://'))}/reset-password` : undefined;
+  const defaultOrigin = origins.find((o) => o.startsWith('https://'));
+  let redirectTo = defaultOrigin ? `${defaultOrigin}/reset-password` : undefined;
   try {
-    if (requested && origins.includes(new URL(requested).origin)) redirectTo = requested;
+    // A caller-supplied redirect is honoured ONLY when it is https, on an allowed origin, and exactly
+    // the /reset-password page (an invite link must never land on an arbitrary path or scheme).
+    // Anything else silently falls back to the default above.
+    const u = requested ? new URL(requested) : null;
+    if (u && u.protocol === 'https:' && origins.includes(u.origin) && u.pathname === '/reset-password') {
+      redirectTo = `${u.origin}/reset-password`;
+    }
   } catch {
     // ignore a malformed redirect and keep the default
   }
@@ -168,5 +177,16 @@ Deno.serve(async (req: Request) => {
   });
   if (auditError) console.error('[admin-create-user] audit write failed:', auditError.message);
 
-  return jsonResponse(req, { userId, inviteSent: !inviteError }, 200);
+  return jsonResponse(
+    req,
+    inviteError
+      ? {
+          userId,
+          inviteSent: false,
+          warning:
+            'The account was created, but the invitation e-mail could not be sent (the project\'s hourly auth e-mail limit may be reached). Ask the person to use "Forgot password" on the sign-in screen, or try sending the invite again later.',
+        }
+      : { userId, inviteSent: true },
+    200,
+  );
 });

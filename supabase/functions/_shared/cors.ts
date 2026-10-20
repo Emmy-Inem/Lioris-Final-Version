@@ -1,6 +1,7 @@
 // Shared CORS helpers for all Lioris edge functions.
 //
-// The allow-list comes from the ALLOWED_ORIGINS secret (comma separated). The
+// The allow-list comes from the ALLOWED_ORIGINS secret (comma separated; defaults to the production
+// origins below, plus localhost only when ENV=dev). The
 // request Origin is echoed back ONLY when it is on that list; every response
 // carries `Vary: Origin` so caches never serve one origin's headers to another.
 // Requests without an Origin header (native apps, curl, server-to-server) are
@@ -11,13 +12,20 @@ export const DEFAULT_ALLOWED_ORIGINS = [
   'https://lioris-final-version.vercel.app',
   'https://lioris.app',
   'https://www.lioris.app',
-  'http://localhost:8081',
-  'http://localhost:19006',
 ];
+
+// Local dev origins are only part of the default list when the function runs with ENV=dev
+// (e.g. `supabase functions serve --env-file`). In production a localhost origin is allowed only
+// if an operator puts it in ALLOWED_ORIGINS explicitly.
+export const DEV_ALLOWED_ORIGINS = ['http://localhost:8081', 'http://localhost:19006'];
 
 export function allowedOrigins(): string[] {
   const raw = Deno.env.get('ALLOWED_ORIGINS');
-  if (!raw || !raw.trim()) return DEFAULT_ALLOWED_ORIGINS;
+  if (!raw || !raw.trim()) {
+    return Deno.env.get('ENV') === 'dev'
+      ? [...DEFAULT_ALLOWED_ORIGINS, ...DEV_ALLOWED_ORIGINS]
+      : DEFAULT_ALLOWED_ORIGINS;
+  }
   return raw
     .split(',')
     .map((o) => o.trim().replace(/\/+$/, ''))

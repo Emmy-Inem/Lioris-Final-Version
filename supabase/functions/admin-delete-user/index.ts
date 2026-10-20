@@ -10,8 +10,13 @@
 // privileged.
 //
 // Guard rails (all enforced server-side):
-//   * caller must be a non-suspended admin AND have an AAL2 (MFA) session
-//     (403 { error: 'mfa_required' } otherwise; set REQUIRE_ADMIN_MFA=false to disable)
+//   * caller must be a non-suspended SUPER admin. AAL2 (MFA) is required only for admins who
+//     enrolled a TOTP factor, or for everyone when REQUIRE_ADMIN_MFA=true
+//     (403 { error: 'mfa_required' }); REQUIRE_ADMIN_MFA=false never requires it
+//   * 20 deletions per admin per hour (durable rate limit, fails closed)
+//   * the audit trail is written BEFORE anything is erased (user_account_delete_started) and the
+//     outcome after (user_account_deleted | user_account_delete_failed); audit_logs is
+//     append-only, so the outcome is a second row
 //   * body must include `reason` (string, >= 10 characters) - written to the audit log
 //   * self-deletion is refused (use delete-my-account)
 //   * admin accounts cannot be deleted here: demote first. This also guarantees the
@@ -128,40 +133,66 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // --- 4. Erase: storage -> DB rows -> Auth user --------------------------
+    // --- 4. Audit the INTENT first (who, whom, why). Fail closed: no record, no deletion. ----------
+    const auditMeta = {
+      reason,
+      method: 'admin_delete',
+      targetIdRaw: targetUserId,
+      targetRole: targetProfile?.role ?? null,
+      actorRole: 'admin',
+      mfa: auth.caller.aal ?? null,
+    };
+    const writeAudit = async (action: string, status: string, summary: string) => {
+      const { error } = await admin.from('audit_logs').insert({
+        actor_id: callerUser.id,
+        action,
+        entity_type: 'user',
+        entity_id: targetUserId,
+        metadata: { ...auditMeta, status, summary },
+        created_at: new Date().toISOString(),
+      });
+      return error;
+    };
+    const startError = await writeAudit(
+      'user_account_delete_started',
+      'started',
+      `Started full deletion of account ${targetUserId} via admin-delete-user`,
+    );
+    if (startError) {
+      console.error('[admin-delete-user] Failed to write start audit entry:', startError.message);
+      return jsonResponse(req, { error: 'Could not record this action, so nothing was deleted. Try again shortly.' }, 500);
+    }
+
+    // --- 5. Erase: storage -> DB rows -> Auth user --------------------------
     try {
       await eraseUser(admin, targetUserId);
     } catch (err) {
       const step = err instanceof Error ? err.message : 'unknown';
       const cause = (err as { cause?: { message?: string } })?.cause?.message;
       console.error(`[admin-delete-user] erase failed at ${step}:`, cause ?? '');
+      // The failing step is logged server-side and kept in the audit row, never sent to the client.
+      const failError = await writeAudit(
+        'user_account_delete_failed',
+        'failed',
+        `Deletion of account ${targetUserId} FAILED at "${step}"; it is safe to retry`,
+      );
+      if (failError) console.error('[admin-delete-user] Failed to write failure audit entry:', failError.message);
       return jsonResponse(
         req,
-        { error: 'Failed to fully delete the account. Nothing further was removed; it is safe to retry.', step },
+        { error: 'Failed to fully delete the account. Some data may already have been removed; it is safe to retry.' },
         500,
       );
     }
 
-    // --- 5. Audit (who, whom, why) ------------------------------------------
-    const { error: auditError } = await admin.from('audit_logs').insert({
-      actor_id: callerUser.id,
-      action: 'user_account_deleted',
-      entity_type: 'user',
-      entity_id: targetUserId,
-      metadata: {
-        summary: `Fully deleted account ${targetUserId} (storage + data + Auth login) via admin-delete-user`,
-        reason,
-        method: 'admin_delete',
-        targetIdRaw: targetUserId,
-        targetRole: targetProfile?.role ?? null,
-        actorRole: 'admin',
-        mfa: auth.caller.aal ?? null,
-      },
-      created_at: new Date().toISOString(),
-    });
-    if (auditError) {
-      // The deletion already succeeded; surface for visibility, do not fail the request.
-      console.error('[admin-delete-user] Failed to write audit log entry:', auditError.message);
+    // --- 6. Audit the outcome ------------------------------------------------
+    const doneError = await writeAudit(
+      'user_account_deleted',
+      'completed',
+      `Fully deleted account ${targetUserId} (storage + data + Auth login) via admin-delete-user`,
+    );
+    if (doneError) {
+      // The deletion already succeeded (and the intent row exists); surface, do not fail the request.
+      console.error('[admin-delete-user] Failed to write audit log entry:', doneError.message);
     }
 
     return jsonResponse(req, { success: true, deletedUserId: targetUserId }, 200);

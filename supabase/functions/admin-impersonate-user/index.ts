@@ -12,7 +12,8 @@
 // Request (start):  POST { targetUserId: uuid, reason: string (>= 10 chars) }
 // Response (start): { email, tokenHash, targetUserId, targetName, expiresAt }
 // Request (end):    POST { action: 'end', targetUserId: uuid }
-// Response (end):   { success: true }   (audit only; no token is minted)
+// Response (end):   { success: true, sessionsRevoked }   (no token is minted; the target's sessions created
+//                   since the impersonation started are revoked via admin_revoke_user_sessions, best effort)
 //
 // Guard rails (all enforced server-side):
 //   * caller must be a non-suspended admin AND hold an AAL2 (MFA) session
@@ -105,7 +106,41 @@ Deno.serve(async (req: Request) => {
       console.error('[admin-impersonate-user] Failed to write end audit entry:', endAuditError.message);
       return jsonResponse(req, { error: 'Failed to record the end of impersonation.' }, 500);
     }
-    return jsonResponse(req, { success: true }, 200);
+
+    // Best-effort: destroy the target's sessions that were created since this admin started the
+    // impersonation, so the borrowed session cannot outlive the support action. Sessions the real
+    // user opened BEFORE the impersonation started are left alone; one they opened DURING the window
+    // is revoked too (it can not be told apart), which only costs them a re-login.
+    let sessionsRevoked = false;
+    try {
+      const { data: started } = await admin
+        .from('audit_logs')
+        .select('created_at')
+        .eq('action', 'impersonation_started')
+        .eq('actor_id', callerUser.id)
+        .eq('entity_id', targetUserId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const startedAt = started?.created_at ? Date.parse(String(started.created_at)) : Number.NaN;
+      // No start row found: fall back to a conservative 2-hour window.
+      const since = new Date(
+        Number.isFinite(startedAt) ? startedAt - 5_000 : Date.now() - 2 * 60 * 60 * 1000,
+      ).toISOString();
+      const { error: revokeError } = await admin.rpc('admin_revoke_user_sessions', {
+        p_user_id: targetUserId,
+        p_since: since,
+      });
+      if (revokeError) {
+        // e.g. migration 20261108000000_edge_support.sql not applied yet. The end is already audited.
+        console.error('[admin-impersonate-user] could not revoke impersonation sessions:', revokeError.message);
+      } else {
+        sessionsRevoked = true;
+      }
+    } catch (err) {
+      console.error('[admin-impersonate-user] revoke on end failed:', err instanceof Error ? err.message : 'unknown');
+    }
+    return jsonResponse(req, { success: true, sessionsRevoked }, 200);
   }
   if (action !== undefined && action !== 'start') {
     return jsonResponse(req, { error: 'Unknown action.' }, 400);

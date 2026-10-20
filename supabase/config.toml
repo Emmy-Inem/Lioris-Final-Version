@@ -1,7 +1,25 @@
-# Minimal Supabase CLI config: links this repo to the hosted project and records
-# the per-function JWT policy so `supabase functions deploy` is reproducible.
-# Deliberately NOT a full `supabase init` file; a later `supabase init` will
-# ask to overwrite it, so merge the [functions.*] blocks below into that file.
+# PARTIAL Supabase CLI config. DO NOT run `supabase config push` with this file.
+#
+# This file records ONLY two things for the hosted project:
+#   1. the per-function `verify_jwt` policy (the [functions.*] blocks at the bottom), so
+#      `supabase functions deploy` is reproducible, and
+#   2. the INTENT of the server-side Auth rate limits and e-mail OTP settings below.
+#
+# It is NOT a full `supabase init` file and does not describe the live Auth configuration.
+# `supabase config push` would write every section of the project's config from this file and fill
+# the sections it does not contain with CLI defaults, which can silently reset e-mail
+# confirmation, captcha, redirect URLs, password rules and MFA on the production project.
+# Apply the values below by hand in the Supabase Dashboard (Authentication) instead.
+#
+# Dashboard settings that must be checked MANUALLY (they are deliberately not recorded here):
+#   * Authentication > URL Configuration: site_url is the production https origin, and the
+#     redirect URL allow-list has no localhost / wildcard entries.
+#   * Authentication > Providers > Email: "Confirm email" (enable_confirmations) = ON.
+#   * Authentication > Policies / Password: minimum password length >= 8.
+#   * Authentication > Attack Protection: CAPTCHA protection ON (and the matching site key in the app).
+#   * Authentication > Multi-Factor: TOTP enrolment/verification enabled as the app expects.
+#   * Authentication > Email: OTP length (6) and OTP expiry (3600 s), matching [auth.email] below.
+#   * Authentication > Sessions: refresh token rotation ON with reuse detection.
 # See docs/security/deploy.md.
 
 project_id = "fdtnbluslkabwsmspbem"
@@ -11,13 +29,19 @@ project_id = "fdtnbluslkabwsmspbem"
 # app's own client-side rate limiting (src/utils/authRateLimit.ts) is trivially
 # bypassed by clearing localStorage, a private window, or calling the API
 # directly. These limits are enforced by the hosted Supabase project itself.
-# NOTE: this file alone does not change the live project - it must be applied
-# with `supabase config push`, or mirrored by hand in the Supabase Dashboard
-# under Authentication > Rate Limits.
+# NOTE: this file alone does not change the live project and must NOT be pushed with
+# `supabase config push`; mirror these values by hand in the Supabase Dashboard under
+# Authentication > Rate Limits.
 [auth.rate_limit]
 # Sign-in/sign-up requests per 5-minute window, per IP (Supabase default: 30).
 sign_in_sign_ups = 30
-# All auth emails (incl. password recovery) sent per hour, per IP (Supabase default: 2 - raised here so legitimate retries aren't blocked).
+# Outgoing auth e-mails (confirmation, recovery, invite, magic link, e-mail change) per HOUR,
+# counted PROJECT-WIDE - not per IP. It is a cap on how much auth mail the project may send at
+# all (Supabase default: 2 - raised so legitimate retries are not blocked). It is shared with
+# admin-create-user, whose invite e-mail (resetPasswordForEmail) spends from the same budget:
+# creating many accounts in one hour can exhaust it and make real users' password-reset e-mails
+# fail until the hour rolls over. Size it for (expected recoveries + admin invites) per hour; with
+# a custom SMTP provider this cap is configurable in the Dashboard.
 email_sent = 10
 # OTP/magic-link verifications per 5-minute window, per IP (Supabase default: 30).
 token_verifications = 30
@@ -50,6 +74,9 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.admin-create-user]
+verify_jwt = true
+
+[functions.admin-force-signout]
 verify_jwt = true
 
 [functions.admin-manage-institution]

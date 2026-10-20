@@ -8,18 +8,24 @@
 // password) looks compromised and admin-manage-* actions like suspend/delete
 // are too heavy or too slow.
 //
-// This exists because `supabase.auth.admin.signOut()` requires the
-// service-role key, which must NEVER be shipped inside the client app
-// (Expo/React Native bundle). This function runs server-side, reads the key
-// from a server-only secret, and verifies the caller before doing anything
-// privileged.
+// This exists because revoking another user's sessions requires the service
+// role, which must NEVER be shipped inside the client app (Expo/React Native
+// bundle). This function runs server-side, reads the key from a server-only
+// secret, and verifies the caller before doing anything privileged. Sessions
+// are revoked with the service-role-only RPC public.admin_revoke_user_sessions
+// (migration 20261108000000_edge_support.sql), NOT auth.admin.signOut(): that
+// API takes a user's JWT rather than a user id, so it could never work here.
 //
 // Guard rails (all enforced server-side):
 //   * caller must be a non-suspended admin (AAL2 step-up when they enrolled a factor)
 //   * self-signout is refused (use the ordinary "Sign Out All Other Active Sessions"
 //     control in Settings instead - this function is for acting on OTHER users)
 //   * 30 forced sign-outs per admin per hour
-//   * every call is written to audit_logs with the acting admin, win or lose
+//   * Campus Admins may only act on non-admin users of exactly their own campus (a NULL or
+//     GLOBAL campus on either side is Super Admin only)
+//   * every call is written to audit_logs with the acting admin, win or lose: an intent row
+//     (user_force_signout_started) BEFORE anything is revoked, then an outcome row
+//     (user_force_signed_out | user_force_signout_failed)
 //
 // Request:  POST { targetUserId: uuid }
 // Response: { success: true, targetUserId }  or  { error, message }
@@ -31,7 +37,7 @@
 // SUPABASE_URL and SUPABASE_ANON_KEY are provided automatically at runtime.
 
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
-import { isUuid, requireAdmin } from '../_shared/auth.ts';
+import { isCallerSuperAdmin, isUuid, requireAdmin } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
 import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 
@@ -90,50 +96,79 @@ Deno.serve(async (req: Request) => {
     }
 
     const callerProfile = auth.caller.profile;
-    const isSuperAdmin =
-      callerProfile?.admin_role === 'super_admin' ||
-      auth.caller.user.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
-      callerProfile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com';
+    const isSuperAdmin = isCallerSuperAdmin(auth.caller);
 
     if (!isSuperAdmin) {
       if (targetProfile.role === 'admin' || targetProfile.admin_role === 'super_admin' || targetProfile.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') {
         return jsonResponse(req, { error: 'forbidden', message: 'Campus Admins cannot force sign out administrator accounts.' }, 403);
       }
-      if (
-        !callerProfile?.campus_code ||
-        callerProfile.campus_code === 'GLOBAL' ||
-        !targetProfile.campus_code ||
-        targetProfile.campus_code !== callerProfile.campus_code
-      ) {
+      // Fail closed: a non-Super caller needs a real campus (not NULL, not GLOBAL) and the target must be
+      // on exactly that campus. A NULL / GLOBAL campus on either side means Super Admin only.
+      const callerCampus = (callerProfile?.campus_code ?? '').trim().toUpperCase();
+      const targetCampus = (targetProfile.campus_code ?? '').trim().toUpperCase();
+      if (!callerCampus || callerCampus === 'GLOBAL' || !targetCampus || targetCampus !== callerCampus) {
         return jsonResponse(req, { error: 'forbidden', message: 'Campus Admins cannot force sign out users outside their campus node.' }, 403);
       }
     }
 
-    // --- 4. Revoke every refresh token for this user, everywhere --------------------
-    const { error: signOutError } = await admin.auth.admin.signOut(targetUserId, 'global');
-    if (signOutError) {
-      console.error('[admin-force-signout] auth.admin.signOut failed:', signOutError.message);
-      return jsonResponse(req, { error: 'server_error', message: 'Could not end that session. Nothing was changed; it is safe to retry.' }, 500);
-    }
-
-    // --- 5. Audit (who, whom) --------------------------------------------------------
-    const { error: auditError } = await admin.from('audit_logs').insert({
+    // --- 4. Audit the INTENT first (audit_logs is append-only, so the outcome is a second row) ----
+    const auditMeta = {
+      targetIdRaw: targetUserId,
+      actorRole: 'admin',
+      mfa: auth.caller.aal ?? null,
+    };
+    const { error: startAuditError } = await admin.from('audit_logs').insert({
       actor_id: callerUser.id,
-      action: 'user_force_signed_out',
+      action: 'user_force_signout_started',
       entity_type: 'user',
       entity_id: targetUserId,
       metadata: {
-        summary: `Force-signed out ${targetProfile.full_name ?? targetUserId} (all devices, session revoked globally)`,
-        targetIdRaw: targetUserId,
-        actorRole: 'admin',
-        mfa: auth.caller.aal ?? null,
+        ...auditMeta,
+        status: 'started',
+        summary: `Started force sign-out of ${targetProfile.full_name ?? targetUserId} (all devices)`,
       },
       created_at: new Date().toISOString(),
     });
-    if (auditError) {
-      // The sign-out already succeeded; surface for visibility, do not fail the request.
-      console.error('[admin-force-signout] Failed to write audit log entry:', auditError.message);
+    if (startAuditError) {
+      // Fail closed: do not revoke sessions without a record of who asked.
+      console.error('[admin-force-signout] Failed to write start audit entry:', startAuditError.message);
+      return jsonResponse(req, { error: 'server_error', message: 'Could not record this action, so nothing was changed. Try again shortly.' }, 500);
     }
+
+    // --- 5. Revoke every session and refresh token for this user, everywhere ----------------------
+    // GoTrue's admin.signOut() takes a user's JWT, NOT a user id, so it can not be used here. The
+    // service-role-only RPC deletes the user's rows in auth.sessions / auth.refresh_tokens instead.
+    // (An access token already issued stays valid until it expires, at most the project's JWT expiry;
+    // it can no longer be refreshed.)
+    const { data: revoked, error: revokeError } = await admin.rpc('admin_revoke_user_sessions', {
+      p_user_id: targetUserId,
+    });
+
+    const outcomeAudit = async (ok: boolean) => {
+      const { error: auditError } = await admin.from('audit_logs').insert({
+        actor_id: callerUser.id,
+        action: ok ? 'user_force_signed_out' : 'user_force_signout_failed',
+        entity_type: 'user',
+        entity_id: targetUserId,
+        metadata: {
+          ...auditMeta,
+          status: ok ? 'completed' : 'failed',
+          summary: ok
+            ? `Force-signed out ${targetProfile.full_name ?? targetUserId} (all devices, sessions revoked)`
+            : `Force sign-out of ${targetProfile.full_name ?? targetUserId} FAILED; sessions may still be active`,
+          revoked: ok ? revoked ?? null : null,
+        },
+        created_at: new Date().toISOString(),
+      });
+      if (auditError) console.error('[admin-force-signout] Failed to write outcome audit entry:', auditError.message);
+    };
+
+    if (revokeError) {
+      console.error('[admin-force-signout] admin_revoke_user_sessions failed:', revokeError.message);
+      await outcomeAudit(false);
+      return jsonResponse(req, { error: 'server_error', message: 'Could not end that session. Nothing was changed; it is safe to retry.' }, 500);
+    }
+    await outcomeAudit(true);
 
     return jsonResponse(req, { success: true, targetUserId }, 200);
   } catch (err) {

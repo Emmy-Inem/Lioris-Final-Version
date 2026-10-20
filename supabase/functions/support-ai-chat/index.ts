@@ -27,6 +27,12 @@
 //     is unavailable.
 //   * The system prompt is owned by this function; only `message` and a
 //     short, size-capped `history` are accepted from the client.
+//   * Kill switch: AI_DISABLED=true secret, or platform_settings key 'ai_disabled' (value true or
+//     {"disabled": true}) answers 503 { error: "not_configured" }; a global daily request cap
+//     (AI_DAILY_CAP, default 3000, shared with gemini-proxy) bounds the worst-case bill.
+//   * Client `history` is sanitised: only 'user' / 'assistant' (or 'model') text turns, strictly
+//     alternating, starting with 'user', each capped in length; anything else is dropped.
+//   * One 40 s overall deadline; each model attempt gets an equal share of the time left.
 //   * Conversation content is never logged.
 //
 // Behaviour without a key: responds 503 { error: "not_configured" } and the
@@ -39,7 +45,8 @@
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 import { requireUser } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
-import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
+import { consumeRateLimit, createServiceClient, peekRateLimit } from '../_shared/ratelimit.ts';
+import { consumeGlobalAiBudget, isAiDisabled } from '../_shared/aiguard.ts';
 
 const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
 const MAX_MESSAGE_CHARS = 2000;
@@ -50,6 +57,7 @@ const HOURLY_LIMIT = 30;
 const HOURLY_WINDOW_SECONDS = 60 * 60;
 const BURST_LIMIT = 6;
 const BURST_WINDOW_SECONDS = 60;
+const OVERALL_DEADLINE_MS = 40_000;
 
 const NEEDS_HUMAN_RE = /\[\[NEEDS_HUMAN:\s*(true|false)\s*\]\]\s*$/i;
 
@@ -86,6 +94,31 @@ interface HistoryTurn {
   content?: unknown;
 }
 
+/**
+ * Client history is untrusted. Keep only plain-text turns whose role is 'user' or 'assistant'/'model'
+ * (anything else, including 'system', is dropped, never coerced to 'user'), cap each turn's length,
+ * strip any NEEDS_HUMAN marker a client planted, and force a strictly alternating user/model
+ * sequence that starts with 'user' and ends with 'model' (the new message is the next 'user' turn).
+ */
+function sanitizeHistory(raw: unknown): { role: 'user' | 'model'; content: string }[] {
+  if (!Array.isArray(raw)) return [];
+  const kept: { role: 'user' | 'model'; content: string }[] = [];
+  for (const turn of (raw as HistoryTurn[]).slice(-MAX_HISTORY_TURNS * 2)) {
+    if (!turn || typeof turn !== 'object') continue;
+    const role = turn.role === 'user' ? 'user' : turn.role === 'assistant' || turn.role === 'model' ? 'model' : null;
+    if (!role || typeof turn.content !== 'string') continue;
+    const content = turn.content.replace(/\[\[NEEDS_HUMAN:[^\]]*\]\]/gi, '').trim().slice(0, MAX_MESSAGE_CHARS);
+    if (!content) continue;
+    if (kept.length === 0 && role !== 'user') continue; // must start with a user turn
+    if (kept.length > 0 && kept[kept.length - 1].role === role) continue; // must alternate
+    kept.push({ role, content });
+  }
+  if (kept.length > 0 && kept[kept.length - 1].role === 'user') kept.pop(); // next turn is the new user message
+  const tail = kept.slice(-MAX_HISTORY_TURNS);
+  while (tail.length > 0 && tail[0].role !== 'user') tail.shift();
+  return tail;
+}
+
 Deno.serve(async (req: Request) => {
   const preflight = handlePreflight(req);
   if (preflight) return preflight;
@@ -112,15 +145,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, { error: `message is required and must be at most ${MAX_MESSAGE_CHARS} characters.` }, 400);
   }
 
-  const rawHistory = Array.isArray(body.history) ? (body.history as HistoryTurn[]) : [];
-  const history = rawHistory
-    .slice(-MAX_HISTORY_TURNS)
-    .map((turn) => {
-      const role = turn.role === 'assistant' ? 'model' : 'user';
-      const content = typeof turn.content === 'string' ? turn.content.trim().slice(0, MAX_MESSAGE_CHARS) : '';
-      return content ? { role, content } : null;
-    })
-    .filter((turn): turn is { role: string; content: string } => turn !== null);
+  const history = sanitizeHistory(body.history);
 
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
   if (!GEMINI_API_KEY) return jsonResponse(req, { error: 'not_configured' }, 503);
@@ -129,6 +154,18 @@ Deno.serve(async (req: Request) => {
   if (!admin) {
     console.error('[support-ai-chat] SUPABASE_SERVICE_ROLE_KEY missing; refusing to run unmetered.');
     return jsonResponse(req, { error: 'Service temporarily unavailable.' }, 503);
+  }
+
+  // Kill switch (AI_DISABLED secret or platform_settings 'ai_disabled'): checked before anything is consumed.
+  if (await isAiDisabled(admin)) return jsonResponse(req, { error: 'not_configured' }, 503);
+
+  // Hourly quota first (read-only peek), so a request refused for the hourly limit never touches the
+  // burst counter, and one refused for bursting never burns hourly quota.
+  const used = await peekRateLimit(admin, `support-chat:${user.id}`, HOURLY_WINDOW_SECONDS);
+  if (used !== null && used >= HOURLY_LIMIT) {
+    return jsonResponse(req, { error: 'Rate limit reached. Please try again later, or open a support ticket instead.' }, 429, {
+      'Retry-After': '3600',
+    });
   }
   const burst = await consumeRateLimit(admin, `support-chat-burst:${user.id}`, BURST_LIMIT, BURST_WINDOW_SECONDS);
   if (burst === 'error') return jsonResponse(req, { error: 'Service temporarily unavailable.' }, 503);
@@ -142,13 +179,24 @@ Deno.serve(async (req: Request) => {
       'Retry-After': '3600',
     });
   }
+  // Global daily budget across all users and both Gemini functions (spent last).
+  const budget = await consumeGlobalAiBudget(admin);
+  if (budget !== 'ok') {
+    return jsonResponse(req, { error: 'service_unavailable', message: 'The AI assistant is at capacity. Please open a support ticket instead.' }, 503);
+  }
 
   const contents = [
     ...history.map((turn) => ({ role: turn.role, parts: [{ text: turn.content }] })),
     { role: 'user', parts: [{ text: message }] },
   ];
 
-  for (const model of MODELS) {
+  // One overall deadline for the whole request; each model attempt gets an equal share of what is left.
+  const deadline = Date.now() + OVERALL_DEADLINE_MS;
+  for (let i = 0; i < MODELS.length; i++) {
+    const model = MODELS[i];
+    const remaining = deadline - Date.now();
+    if (remaining < 2000) break;
+    const timeoutMs = Math.floor(remaining / (MODELS.length - i));
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -160,7 +208,7 @@ Deno.serve(async (req: Request) => {
             systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
             generationConfig: { temperature: 0.3, maxOutputTokens: 700 },
           }),
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.timeout(timeoutMs),
         },
       );
       if (!res.ok) {
