@@ -196,6 +196,72 @@ function storeSigned(bucket: PrivateBucket, path: string, url: string): string {
   return url;
 }
 
+// A card list mounts many <useSignedUrl> consumers in the same frame, each of which used to cost its own
+// createSignedUrl request (one per marketplace card, one per post image ...). Paths asked for within a few
+// milliseconds are collected per bucket and signed with ONE createSignedUrls call.
+const BATCH_WINDOW_MS = 12;
+const batchQueues = new Map<PrivateBucket, { waiters: Map<string, Array<(url: string | null) => void>> }>();
+
+function signViaBatch(bucket: PrivateBucket, objectPath: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    let queue = batchQueues.get(bucket);
+    if (!queue) {
+      queue = { waiters: new Map() };
+      batchQueues.set(bucket, queue);
+      setTimeout(() => { void flushSignBatch(bucket); }, BATCH_WINDOW_MS);
+    }
+    const list = queue.waiters.get(objectPath) ?? [];
+    list.push(resolve);
+    queue.waiters.set(objectPath, list);
+  });
+}
+
+async function signOne(bucket: PrivateBucket, objectPath: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(objectPath, TTL_SECONDS);
+    return error || !data?.signedUrl ? null : data.signedUrl;
+  } catch {
+    return null;
+  }
+}
+
+async function flushSignBatch(bucket: PrivateBucket): Promise<void> {
+  const queue = batchQueues.get(bucket);
+  batchQueues.delete(bucket);
+  if (!queue) return;
+  const paths = Array.from(queue.waiters.keys());
+  const signed = new Map<string, string | null>();
+
+  if (paths.length === 1) {
+    signed.set(paths[0], await signOne(bucket, paths[0]));
+  } else {
+    let batchFailed = false;
+    try {
+      const { data, error } = await supabase.storage.from(bucket).createSignedUrls(paths, TTL_SECONDS);
+      if (error || !Array.isArray(data)) {
+        batchFailed = true;
+      } else {
+        for (const item of data) {
+          const returnedPath = (item as { path?: string | null }).path;
+          const signedUrl = (item as { signedUrl?: string | null }).signedUrl;
+          if (returnedPath) signed.set(returnedPath.replace(/^\/+/, ''), signedUrl ?? null);
+        }
+      }
+    } catch {
+      batchFailed = true;
+    }
+    if (batchFailed) {
+      // The plural endpoint is unavailable: sign each path on its own, like before batching existed.
+      await Promise.all(paths.map(async (p) => { signed.set(p, await signOne(bucket, p)); }));
+    }
+  }
+
+  queue.waiters.forEach((resolvers, path) => {
+    const url = signed.get(path) ?? null;
+    resolvers.forEach((resolve) => resolve(url));
+  });
+}
+
 export interface ResolveOptions {
   /**
    * Require at least this much remaining life. A cached URL with less is
@@ -241,9 +307,9 @@ export async function resolveMediaUrl(
 
   const request = (async (): Promise<string | null> => {
     try {
-      const { data, error } = await supabase.storage.from(bucket).createSignedUrl(objectPath, TTL_SECONDS);
-      if (error || !data?.signedUrl) return null;
-      return storeSigned(bucket, objectPath, data.signedUrl);
+      const signedUrl = await signViaBatch(bucket, objectPath);
+      if (!signedUrl) return null;
+      return storeSigned(bucket, objectPath, signedUrl);
     } catch {
       return null;
     } finally {

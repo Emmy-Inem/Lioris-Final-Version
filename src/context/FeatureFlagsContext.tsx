@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';import { Platform } from 'react-native';import * as SecureStore from 'expo-secure-store';import { supabase } from '@/api/supabase';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';import { AppState, Platform } from 'react-native';import * as SecureStore from 'expo-secure-store';import { supabase } from '@/api/supabase';
 import { recordAuditLogEntry } from '@/api/auditLog';
 
 // 'xp_gamification', 'stories_bar' and 'ai_copilot' were removed along with
@@ -396,7 +396,16 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
     // toggled by an admin mid-session would otherwise never reach an already-open,
     // continuously-foregrounded tab until the next auth event. Poll on the same
     // interval as MaintenanceGate's refetchInterval so every flag stays in sync.
-    const pollInterval = setInterval(fetchRemoteFlags, 60_000);
+    // The poll only runs while the app is in the foreground (a backgrounded app must not wake the radio every
+    // minute), at a relaxed 3 minutes, and refreshes immediately when the app returns to the foreground.
+    const pollInterval = setInterval(() => {
+      if (AppState.currentState === 'active') void fetchRemoteFlags();
+    }, 180_000);
+    let lastAppState = AppState.currentState;
+    const appStateSub = AppState.addEventListener('change', (next) => {
+      if (next === 'active' && lastAppState !== 'active') void fetchRemoteFlags();
+      lastAppState = next;
+    });
 
     if (isWeb && typeof window !== 'undefined') {
       const handleSync = (e: any) => {
@@ -417,6 +426,7 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
         mounted = false;
         clearTimeout(failsafe);
         clearInterval(pollInterval);
+        appStateSub.remove();
         authListener?.subscription?.unsubscribe();
         window.removeEventListener('lioris_feature_flags_sync', handleSync);
         window.removeEventListener('storage', handleSync);
@@ -427,6 +437,7 @@ export function FeatureFlagsProvider({ children }: { children: React.ReactNode }
       mounted = false;
       clearTimeout(failsafe);
       clearInterval(pollInterval);
+      appStateSub.remove();
       authListener?.subscription?.unsubscribe();
     };
   }, []);

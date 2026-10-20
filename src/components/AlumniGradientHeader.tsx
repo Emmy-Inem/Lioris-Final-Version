@@ -2,22 +2,18 @@
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import { AppText } from './AppText';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
-import { listNotifications } from '@/api/notifications';
+import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 
 export function AlumniGradientHeader() {
  const { colors, spacing, radius } = useTheme();
  const { user } = useAuth();
 
- const { data: notifications } = useQuery({
- queryKey: ['notifications', 'unread-count'],
- queryFn: () => listNotifications({ status: 'unread' }),
- });
+ const unreadNotifications = useUnreadCounts().notifications;
 
  return (
  <View
@@ -59,7 +55,7 @@ export function AlumniGradientHeader() {
  >
  <View>
  <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
- {(notifications?.length ?? 0) > 0 ? (
+ {unreadNotifications > 0 ? (
  <View
  style={{
  position: 'absolute',

@@ -5,6 +5,7 @@ import { generateUUID } from '../utils/uuid';
 import { FORUM_COMMUNITIES } from '../constants/forumCommunities';
 import { resolveCampusReadScope } from '../utils/campusAccess';
 import { getOwnProfileRow } from './profile';
+import { getSessionUserId } from './sessionUser';
 
 export interface ForumCommunityRecord {
   id: string;
@@ -67,12 +68,19 @@ function mapRow(row: any): ForumCommunityRecord {
 }
 
 /** Approved communities, plus the caller's own pending/rejected proposals so they can track status. */
-export async function listCommunities(campusCode?: string): Promise<ForumCommunityRecord[]> {
+export async function listCommunities(
+  campusCode?: string,
+  options: { allowOffline?: boolean } = {},
+): Promise<ForumCommunityRecord[]> {
+  let hadSession = false;
   try {
-    const [{ data: authData }, stored] = await Promise.all([
-      supabase.auth.getUser(),
+    // getSession() is local; getUser() was a network round trip on every list call.
+    const [{ data: sessionData }, stored] = await Promise.all([
+      supabase.auth.getSession(),
       getSessionUser(),
     ]);
+    const authData = { user: sessionData?.session?.user ?? null };
+    hadSession = !!authData.user?.id;
     let profile: any = null;
     const userId = authData?.user?.id || stored?.id;
     if (userId) {
@@ -93,6 +101,8 @@ export async function listCommunities(campusCode?: string): Promise<ForumCommuni
       campusCode,
     );
     const { data, error } = await supabase.from('forum_communities').select('*').order('created_at', { ascending: true });
+    // The table not being migrated yet is the documented reason for the launch defaults; any other error is real.
+    if (error && ['42P01', 'PGRST205'].includes(String((error as any).code))) return fallbackCommunities();
     if (error) throw error;
     if (!data || data.length === 0) return fallbackCommunities();
     const mapped = data.map(mapRow);
@@ -112,6 +122,8 @@ export async function listCommunities(campusCode?: string): Promise<ForumCommuni
     }
     return mapped.filter((community) => !community.campusCode || community.campusCode === 'GLOBAL');
   } catch (err) {
+    // A real failure must reach React Query (error state + retry) instead of being cached as launch defaults.
+    if (hadSession && !options.allowOffline) throw err;
     console.warn('[Communities] listCommunities failed, showing launch defaults only:', err);
     return fallbackCommunities();
   }
@@ -357,8 +369,7 @@ export async function listCommunityModerators(communityId: string): Promise<Comm
  */
 export async function listMyModeratedCommunityIds(): Promise<string[]> {
   try {
-    const { data: authData } = await supabase.auth.getUser();
-    let userId = authData?.user?.id;
+    let userId = (await getSessionUserId()) ?? undefined;
     if (!userId) {
       const stored = await getSessionUser();
       if (stored?.id) userId = stored.id;

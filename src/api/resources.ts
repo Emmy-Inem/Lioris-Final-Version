@@ -53,6 +53,8 @@ export interface ResourcesQuery {
   department?: string;
   approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
   campusCode?: string;
+  /** Show this session's local pool instead of throwing when the request fails (signed-out previews always do). */
+  allowOffline?: boolean;
   academicLevel?: string;
   /**
    * Minimum average rating (e.g. 4.5 for the filter modal's "4.5+ Stars").
@@ -229,8 +231,12 @@ export async function getResource(resourceId: string): Promise<Resource> {
 
 export async function listResources(query: ResourcesQuery = {}): Promise<Resource[]> {
   let userCampus = 'GLOBAL';
+  let hadSession = false;
   try {
-    const { data: authData } = await supabase.auth.getUser();
+    // getSession() is local; getUser() was a network round trip on every list call.
+    const { data: sessionData } = await supabase.auth.getSession();
+    const authData = { user: sessionData?.session?.user ?? null };
+    hadSession = !!authData.user?.id;
     const stored = await getSessionUser();
     let prof: any = null;
     if (authData?.user?.id) {
@@ -362,6 +368,8 @@ export async function listResources(query: ResourcesQuery = {}): Promise<Resourc
     const withRatings = needsRatings ? await withRatingSummaries(merged) : merged;
     return filterResources(withRatings, query);
   } catch (err) {
+    // A real failure must reach React Query (error state + retry) instead of being cached as an empty success.
+    if (hadSession && !query.allowOffline) throw err;
     console.warn('[Resources] listResources failed, showing local pool:', err);
     const targetCampus = userCampus;
     const fallbackPool = [...locallyCreatedResources].filter((r) => {

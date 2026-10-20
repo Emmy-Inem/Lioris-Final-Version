@@ -9,8 +9,7 @@ import { Avatar } from'./Avatar';
 import { LiorisLogo } from'./LiorisLogo';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
-import { listNotifications } from '@/api/notifications';
-import { listConversations } from '@/api/messaging';
+import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { getMyProfile } from '@/api/profile';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -41,22 +40,12 @@ export function AppHeader() {
  const segments = useSegments();
  const roleGroup = segments[0] || '(student)';
 
-  const { data: notifications } = useQuery({
-    queryKey: ['notifications', 'unread-count'],
-    queryFn: () => listNotifications({ status: 'unread' }),
-  });
-  const unreadCount = notifications?.length ?? 0;
+  // One shared head-count query for both badges (no notification / conversation lists downloaded).
+  const unread = useUnreadCounts();
+  const unreadCount = unread.notifications;
 
   const messagingEnabled = isFeatureEnabled('e2ee_messaging');
-  const { data: conversations } = useQuery({
-    queryKey: ['conversations', 'unread-count'],
-    queryFn: () => listConversations(),
-    enabled: !!user && messagingEnabled,
-  });
-  const unreadMessagesCount = (conversations ?? []).reduce(
-    (sum, c) => sum + (c.unreadCount || 0),
-    0,
-  );
+  const unreadMessagesCount = messagingEnabled ? unread.messages : 0;
 
  const { data: profile } = useQuery({
  queryKey: ['profile', 'me', user?.id],

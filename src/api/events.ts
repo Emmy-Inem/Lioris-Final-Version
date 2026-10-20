@@ -9,6 +9,7 @@ import { parseRpcError, RpcError } from '../utils/rpcErrors';
 import { resolveMediaUrl as resolveSignedMediaUrl, resolveMediaUrls as resolveSignedMediaUrls } from './signedUrls';
 import { isSuperAdminIdentity, resolveCampusReadScope } from '../utils/campusAccess';
 import { getOwnProfileRow } from './profile';
+import { buildEventListFilters } from '../utils/eventListFilters';
 
 
 let locallyCreatedEvents: CampusEvent[] = [];
@@ -63,7 +64,16 @@ export interface EventsQuery {
   sponsored?: boolean;
   approvalStatus?: 'pending' | 'approved' | 'rejected' | 'all';
   campusCode?: string;
+  /** Show this session's local pool instead of throwing when the request fails (signed-out previews always do). */
+  allowOffline?: boolean;
 }
+
+/** Most events one list request returns (newest first, then shown soonest-first). */
+const EVENT_LIST_LIMIT = 200;
+
+/** Every column the list mapper below reads (the embeds are added in the select string). */
+const EVENT_LIST_COLUMNS =
+  'id, creator_id, title, description, category, venue, start_time, end_time, capacity, registered_count, status, cancellation_reason, visibility_scope, campus_code, banner_url, venue_type, virtual_link, agenda, is_spotlight, sponsored, ticket_price, target_cohort, ticket_type, payment_method, reservation_held, booking_deadline, payment_review_status, payment_review_note';
 
 function filterEvents(pool: CampusEvent[], query: EventsQuery, currentUserId?: string, isStaffOrAdmin: boolean = false): CampusEvent[] {
   let results = pool.filter((e) => !isUserBlocked(e.organizerId) && !isUserMuted(e.organizerId));
@@ -144,8 +154,11 @@ function filterEvents(pool: CampusEvent[], query: EventsQuery, currentUserId?: s
 export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]> {
   let userCampus = 'GLOBAL';
   let isStaffOrAdmin = false;
+  let hadSession = false;
   try {
-    const { data: authData } = await supabase.auth.getUser();
+    // getSession() is local; getUser() was a network round trip on every list call.
+    const { data: sessionData } = await supabase.auth.getSession();
+    const authData = { user: sessionData?.session?.user ?? null };
     const stored = await getSessionUser();
     let userRole = stored?.actualRole || stored?.role || 'student';
     let adminRole: string | null = null;
@@ -179,16 +192,29 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
 
     isStaffOrAdmin = isSuperAdmin || userRole === 'admin' || userRole === 'staff' || stored?.actualRole === 'admin';
     const currentUserId = authData?.user?.id;
+    hadSession = !!currentUserId;
 
-    let listQuery = supabase
-      .from('events')
-      .select('*, profiles:creator_id(full_name), event_attendees(user_id)')
-      .order('start_time', { ascending: true });
-    // The RSVP table is private: everybody may embed their own row (that is all "am I registered?" needs).
-    if (currentUserId) listQuery = listQuery.eq('event_attendees.user_id', currentUserId);
-    const { data, error } = await listQuery;
+    const buildListQuery = (columns: string) => {
+      let q = supabase
+        .from('events')
+        .select(`${columns}, profiles:creator_id(full_name), event_attendees(user_id)`)
+        // Newest first so the 200-row cap keeps the upcoming events; re-sorted soonest-first below.
+        .order('start_time', { ascending: false });
+      for (const filter of buildEventListFilters({ skipEndedWindow: isStaffOrAdmin || query.scope === 'all', activeCampus: userCampus })) {
+        q = q.or(filter);
+      }
+      // The RSVP table is private: everybody may embed their own row (that is all "am I registered?" needs).
+      if (currentUserId) q = q.eq('event_attendees.user_id', currentUserId);
+      return q.limit(EVENT_LIST_LIMIT);
+    };
+    let { data: listData, error } = await buildListQuery(EVENT_LIST_COLUMNS);
+    if (error && (error as any).code === '42703') {
+      // A column the explicit list names is missing on this database (older schema): fall back to every column.
+      ({ data: listData, error } = await buildListQuery('*'));
+    }
 
     if (error) throw error;
+    const data = ((listData ?? []) as any[]).slice().reverse();
 
     const filteredRows = (data ?? [])
       .filter((row: any) => !isUserBlocked(row.creator_id) && !isUserMuted(row.creator_id))
@@ -265,6 +291,9 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     }
     return filterEvents(merged, { ...query, campusCode: userCampus }, currentUserId, isStaffOrAdmin);
   } catch (err) {
+    // A real failure must reach React Query (error state + retry) instead of being cached as a (seeded / empty) success.
+    // The local pool is only for signed-out previews or an explicit allowOffline.
+    if (hadSession && !query.allowOffline) throw err;
     console.warn('[Events] Supabase listEvents error, showing local pool only:', err);
     return filterEvents([...locallyCreatedEvents], { ...query, campusCode: userCampus }, undefined, isStaffOrAdmin);
   }

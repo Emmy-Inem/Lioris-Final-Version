@@ -10,6 +10,7 @@ import { AppButton } from '@/components/AppButton';
 import { PublishThreadModal } from '@/components/PublishThreadModal';
 import { PermissionGate } from '@/components/PermissionGate';
 import { listNotifications, markNotificationRead, markAllNotificationsRead } from '@/api/notifications';
+import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 import { createPost } from '@/api/posts';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { submitVerificationRequest } from '@/api/verification';
@@ -78,14 +79,13 @@ export function DesktopTopBar() {
     }
   }
 
+  // The badge is a head-only count shared with every other header; the dropdown only needs the 5 newest rows.
+  const unreadCount = useUnreadCounts().notifications;
   const { data: notifications } = useQuery({
-    queryKey: ['notifications', user?.id],
-    queryFn: () => listNotifications(),
+    queryKey: ['notifications', 'recent', user?.id],
+    queryFn: () => listNotifications({ limit: 5, allowOffline: true }),
     enabled: !!user?.id,
   });
-
- const unreadNotifications = (notifications ?? []).filter((n: any) => !n.openedAt);
- const unreadCount = unreadNotifications.length;
  const role = user?.role || 'student';
  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
 
