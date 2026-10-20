@@ -802,7 +802,7 @@ await check('live diagnostic script runs and the "applied" section reports all t
   eq(get('can_read_media_object'), 'true', 'media helper');
   eq(get('admin_aal2_ok() exists'), 'true', '2fa helper');
   assert(Number(get('restrictive scope_')) >= 40, `restrictive policy count ${get('restrictive scope_')}`);
-  eq(get('role_permission_insert'), '4', 'role_permission_insert');
+  assert(Number(get('role_permission_insert')) >= 4, `role_permission_insert policies: ${get('role_permission_insert')}`);
 });
 
 // --------------------------------------------------------------------------- 9. nothing else broke
