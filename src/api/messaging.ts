@@ -290,8 +290,10 @@ export async function archiveConversation(id: string): Promise<void> {
 
     if (currentUserId) {
       // Replace any older marker so archived_at is "now" (the list un-hides a chat that gets newer messages).
+      // archived_at is left to the column default (DEFAULT NOW()) so it is stamped by the server, the same clock
+      // as chat_messages.created_at it is compared with - a device clock that is off would hide or resurrect chats.
       await supabase.from('chat_channel_archives').delete().eq('channel_id', id).eq('user_id', currentUserId);
-      await supabase.from('chat_channel_archives').insert({ channel_id: id, user_id: currentUserId, archived_at: new Date().toISOString() });
+      await supabase.from('chat_channel_archives').insert({ channel_id: id, user_id: currentUserId });
     }
   } catch {
     // Session fallback
@@ -638,7 +640,9 @@ export async function sendMessage(
       content,
       media_url: mediaUrl ?? null,
       is_read: false,
-      created_at: now,
+      // created_at is left to the column default (DEFAULT NOW()): the server stamps it, so ordering, the
+      // archive comparison and the call-invite staleness check never depend on this device's clock.
+      // `now` below is only the optimistic local timestamp.
     });
 
     if (msgError) {

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 import { saveAttachment } from '@/utils/saveAttachment';
 import { router } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -146,11 +146,16 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const { status: realtimeStatus } = useRealtimeChannel(handleRealtimeEvent);
   const realtimeLive = realtimeStatus === 'open';
   const [messageLimit, setMessageLimit] = useState(MESSAGE_PAGE_SIZE);
-  const skipNextAutoScroll = useRef(false);
+  // Set to the message count when "Load earlier messages" is tapped; cleared once the list has actually grown.
+  const skipAutoScrollFromCount = useRef<number | null>(null);
+  const lastContentHeight = useRef(0);
+  const scrollOffsetY = useRef(0);
 
-  const { data } = useQuery({
+  const { data, isPlaceholderData } = useQuery({
     queryKey: ['messages', conversationId, messageLimit],
     queryFn: () => listMessages(conversationId, messageLimit),
+    // Keep showing the current page while a bigger one loads, otherwise the list blanks and the viewport is lost.
+    placeholderData: keepPreviousData,
     refetchInterval: realtimeLive ? 30_000 : 3000,
     enabled: !isRestrictedGuest && messagingEnabled,
   });
@@ -194,12 +199,18 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
+    // The fetch for earlier messages finished without growing the list (nothing older / failed): stop suppressing.
+    if (skipAutoScrollFromCount.current !== null && !isPlaceholderData && allMessages.length <= skipAutoScrollFromCount.current) {
+      skipAutoScrollFromCount.current = null;
+    }
+    // Prepending older messages must not move the viewport.
+    if (skipAutoScrollFromCount.current !== null) return;
     if (allMessages.length > 0) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [allMessages.length]);
+  }, [allMessages.length, isPlaceholderData]);
 
   async function handleStartCall(callType: 'voice' | 'video') {
     haptics.medium();
@@ -518,10 +529,26 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => {
-          // Loading older messages must not yank the view to the bottom.
-          if (skipNextAutoScroll.current) {
-            skipNextAutoScroll.current = false;
+        onScroll={(e) => {
+          scrollOffsetY.current = e.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={64}
+        // Native keeps the same message under the finger when older ones are prepended; react-native-web has no
+        // such prop, so the web path below shifts the offset by the added height instead.
+        maintainVisibleContentPosition={Platform.OS === 'web' ? undefined : { minIndexForVisible: 0 }}
+        onContentSizeChange={(_w, h) => {
+          const previousHeight = lastContentHeight.current;
+          lastContentHeight.current = h;
+          const waitingFrom = skipAutoScrollFromCount.current;
+          // Loading older messages must not yank the view to the bottom. Only the render in which the list really
+          // grew counts: the empty re-render while the larger page loads used to consume this one-shot flag.
+          if (waitingFrom !== null) {
+            if (allMessages.length > waitingFrom) {
+              skipAutoScrollFromCount.current = null;
+              if (Platform.OS === 'web' && previousHeight > 0 && h > previousHeight) {
+                flatListRef.current?.scrollToOffset({ offset: scrollOffsetY.current + (h - previousHeight), animated: false });
+              }
+            }
             return;
           }
           flatListRef.current?.scrollToEnd({ animated: false });
@@ -532,7 +559,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
               accessibilityRole="button"
               accessibilityLabel="Load earlier messages"
               onPress={() => {
-                skipNextAutoScroll.current = true;
+                skipAutoScrollFromCount.current = allMessages.length;
                 setMessageLimit((n) => n + MESSAGE_PAGE_SIZE);
               }}
               style={{ alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}

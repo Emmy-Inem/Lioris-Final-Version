@@ -403,13 +403,21 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
       if (!includeAllCampuses) {
         const code = viewerInstitutionCode && /^[A-Za-z0-9_-]{1,32}$/.test(viewerInstitutionCode) ? viewerInstitutionCode : undefined;
         const own = viewerId ? `,author_id.eq.${viewerId}` : '';
+        // Campus codes are stored upper-case. `.eq` on the upper-cased code, never `.ilike`: `_` is an ilike wildcard.
+        const campusEq = code ? code.toUpperCase() : undefined;
         if (query.viewScope === 'global') {
-          dbQuery = dbQuery.or(`${code ? `campus_code.ilike.${code},` : ''}campus_code.eq.GLOBAL,campus_code.is.null,visibility_scope.eq.global${own}`);
-        } else if (code) {
-          dbQuery = dbQuery.or(`campus_code.ilike.${code}${own}`);
+          dbQuery = dbQuery.or(`${campusEq ? `campus_code.eq.${campusEq},` : ''}campus_code.eq.GLOBAL,campus_code.is.null,visibility_scope.eq.global${own}`);
+        } else if (campusEq) {
+          dbQuery = dbQuery.or(`campus_code.eq.${campusEq}${own}`);
         } else {
           dbQuery = dbQuery.or(`campus_code.eq.GLOBAL,campus_code.is.null,visibility_scope.eq.global${own}`);
         }
+      }
+      // Search is applied in the database too: filtering only the newest page client-side meant older posts could
+      // never be found. filterPosts() still runs afterwards as a second pass (it also matches the author's name).
+      const searchTerm = query.q ? escapePostgrestLike(query.q).replace(/[*]/g, ' ').replace(/\s+/g, ' ').trim() : '';
+      if (searchTerm) {
+        dbQuery = dbQuery.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%`);
       }
       // No caller gets an unbounded feed: without a page size the query used to return up to 1000 posts.
       const pageSize = query.pageSize ?? DEFAULT_FEED_PAGE_SIZE;

@@ -391,7 +391,19 @@ export function ResourceReaderModal({
                           A preview is not available for this file. You can still download it.
                         </AppText>
                       ) : null}
-                      <PermissionGate permission="can_download_resources">
+                      {/* Phones and tablets have no inline preview, so download is the only action. When campus
+                          administration has turned it off, say so instead of leaving an empty card. */}
+                      <PermissionGate
+                        permission="can_download_resources"
+                        fallback={
+                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
+                            <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={{ marginTop: 2 }} />
+                            <AppText tone="secondary" variant="bodySmall" style={{ flex: 1, lineHeight: 20 }}>
+                              Downloading has been turned off for your account by campus administration.
+                            </AppText>
+                          </View>
+                        }
+                      >
                       <AppButton
                         label={downloaded ? 'Download again' : fileSizeLabel ? `Download · ${fileSizeLabel}` : 'Download'}
                         onPress={handleDownload}

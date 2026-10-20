@@ -11,6 +11,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { listResources, createResource, updateResource, deleteResource } from '@/api/resources';
 import { Resource } from '@/api/types';
 import { haptics } from '@/utils/haptics';
+import { pickResourceFile, PickedResourceFile } from '@/utils/pickResourceFile';
 
 const CATEGORIES: Resource['category'][] = ['Past Questions', 'Notes', 'Projects'];
 
@@ -34,6 +35,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
   const [formCategory, setFormCategory] = useState<Resource['category']>('Notes');
   const [formDescription, setFormDescription] = useState('');
   const [formFileSize, setFormFileSize] = useState('2.4 MB');
+  const [pickedFile, setPickedFile] = useState<PickedResourceFile | null>(null);
   const [saving, setSaving] = useState(false);
 
  const { data: resources = [], refetch } = useQuery({
@@ -56,6 +58,7 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  setFormCategory('Notes');
  setFormDescription('');
  setFormFileSize('3.2 MB');
+ setPickedFile(null);
  setIsCreating(true);
  }
 
@@ -68,12 +71,29 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  setFormCategory(resource.category);
  setFormDescription(resource.description);
  setFormFileSize(resource.fileSize ?? '');
+ setPickedFile(null);
  setIsCreating(false);
+ }
+
+ async function handlePickFile() {
+ try {
+ const file = await pickResourceFile();
+ if (!file) return;
+ setPickedFile(file);
+ const bytes = file.size ?? file.blob.size;
+ if (bytes) setFormFileSize(bytes > 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+ } catch (err: any) {
+ Alert.alert('File Picker Error', err?.message ?? 'Unable to access document.');
+ }
  }
 
  async function handleSave() {
  if (!formTitle.trim() || !formCode.trim()) {
  Alert.alert('Required Fields', 'Please enter resource title and course code.');
+ return;
+ }
+ if (!editingResource && !pickedFile) {
+ Alert.alert('File Required', 'Please choose the document to publish.');
  return;
  }
 
@@ -91,12 +111,20 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
  });
  Alert.alert('Resource Updated', `Saved changes for ${formTitle.trim()}.`);
  } else {
- await createResource({
+ await createResource(
+ {
  title: formTitle.trim(),
  courseCode: formCode.trim(),
+ department: formDept.trim() || 'General',
  category: formCategory,
  description: formDescription.trim(),
- });
+ fileType: pickedFile!.fileType,
+ fileMimeType: pickedFile!.mimeType,
+ fileSizeBytes: pickedFile!.size,
+ fileSize: formFileSize.trim() || undefined,
+ },
+ pickedFile!.blob,
+ );
  Alert.alert('Resource Created', `${formTitle.trim()} published to library.`);
  }
 
@@ -248,7 +276,40 @@ export function ManageResourcesModal({ visible, onClose }: ManageResourcesModalP
 
  <AppTextField label="Description & Notes"placeholder="Key topics covered, semester year, solutions guide..."value={formDescription} onChangeText={setFormDescription} multiline numberOfLines={3} />
 
-
+ {!editingResource ? (
+ <>
+ <AppText variant="bodySmall"weight="bold"style={{ marginBottom: spacing.xs }}>
+ File *
+ </AppText>
+ <Pressable
+ onPress={handlePickFile}
+ accessibilityRole="button"
+ accessibilityLabel="Choose the resource file"
+ style={{
+ flexDirection: 'row',
+ alignItems: 'center',
+ gap: spacing.sm,
+ padding: spacing.md,
+ borderRadius: radius.md,
+ borderWidth: 1,
+ borderStyle: 'dashed',
+ borderColor: pickedFile ? colors.brandPrimary : colors.border,
+ backgroundColor: colors.surface,
+ marginBottom: spacing.md,
+ }}
+ >
+ <Ionicons name={pickedFile ? 'document-attach' : 'cloud-upload-outline'} size={20} color={pickedFile ? colors.brandPrimary : colors.textSecondary} />
+ <AppText variant="bodySmall" style={{ flex: 1 }} numberOfLines={1}>
+ {pickedFile ? pickedFile.name : 'Choose a PDF, Word, PowerPoint, Excel, ZIP, text or image file'}
+ </AppText>
+ {pickedFile ? (
+ <Pressable onPress={() => setPickedFile(null)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Remove the chosen file">
+ <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+ </Pressable>
+ ) : null}
+ </Pressable>
+ </>
+ ) : null}
 
  <AppButton
  label={saving ? 'Saving...' : editingResource ? 'Save Resource Changes' : 'Publish Resource'}

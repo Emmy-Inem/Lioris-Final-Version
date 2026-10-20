@@ -62,27 +62,32 @@ function aliasesOf(ref: CommunityRef): string[] {
   return out;
 }
 
-/** Resolves a uuid / slug ("tech" or "c/tech") / category label to ONE community row, or null. */
-async function resolveCommunity(identifier: string): Promise<CommunityRef | null> {
+/**
+ * Resolves a uuid / slug ("tech" or "c/tech") / category label to ONE community row, or null.
+ * Only approved communities resolve (a pending or rejected one must not be joinable by guessing its slug);
+ * leaving passes `approvedOnly: false` so a membership in a since-unapproved space can still be dropped.
+ */
+async function resolveCommunity(identifier: string, approvedOnly = true): Promise<CommunityRef | null> {
   const base = supabase.from('forum_communities').select('id, slug, category');
   if (UUID_RE.test(identifier)) {
-    const { data, error } = await base.eq('id', identifier).limit(1);
+    const { data, error } = await (approvedOnly ? base.eq('approval_status', 'approved') : base).eq('id', identifier).limit(1);
     if (error) throw error;
     return (data?.[0] as CommunityRef | undefined) ?? null;
   }
   const bare = identifier.replace(/^c\//, '');
-  const bySlug = await supabase
+  const slugQuery = supabase
     .from('forum_communities')
     .select('id, slug, category')
-    .in('slug', [`c/${bare}`, bare])
-    .limit(1);
+    .in('slug', [`c/${bare}`, bare]);
+  const bySlug = await (approvedOnly ? slugQuery.eq('approval_status', 'approved') : slugQuery).limit(1);
   if (bySlug.error) throw bySlug.error;
   if (bySlug.data?.[0]) return bySlug.data[0] as CommunityRef;
-  const byCategory = await supabase
+  // An exact, case-insensitive match: `%` and `_` are escaped so they are not ilike wildcards ("a_c" must not match "abc").
+  const categoryQuery = supabase
     .from('forum_communities')
     .select('id, slug, category')
-    .ilike('category', bare)
-    .limit(1);
+    .ilike('category', bare.replace(/[\\%_]/g, '\\$&'));
+  const byCategory = await (approvedOnly ? categoryQuery.eq('approval_status', 'approved') : categoryQuery).limit(1);
   if (byCategory.error) throw byCategory.error;
   return (byCategory.data?.[0] as CommunityRef | undefined) ?? null;
 }
@@ -139,14 +144,11 @@ export async function listMyJoinedCommunityIds(userId?: string): Promise<string[
     let rows = (data ?? []) as any[];
 
     if (rows.length === 0 && !(await defaultsSeeded(userId))) {
-      await markDefaultsSeeded(userId);
-      for (const id of DEFAULT_JOINED_COMMUNITY_IDS) {
-        try {
-          await joinCommunity(id, userId);
-        } catch {
-          // a default space that does not exist on this campus is simply skipped
-        }
-      }
+      // Joined in parallel; a default space that does not exist on this campus is simply skipped. Only once at
+      // least one join really succeeded is seeding marked done - a total failure (offline, RLS hiccup) retries
+      // on the next call instead of leaving the student with no spaces forever.
+      const outcomes = await Promise.allSettled(DEFAULT_JOINED_COMMUNITY_IDS.map((id) => joinCommunity(id, userId)));
+      if (outcomes.some((o) => o.status === 'fulfilled')) await markDefaultsSeeded(userId);
       const again = await supabase
         .from('forum_community_members')
         .select('community_id, community:forum_communities(id, slug, category)')
@@ -199,7 +201,7 @@ export async function leaveCommunity(communityIdentifier: string, userId?: strin
   }
   if (!userId) throw new Error('Sign in to manage your spaces.');
 
-  const community = await resolveCommunity(communityIdentifier);
+  const community = await resolveCommunity(communityIdentifier, false);
   if (community) {
     const { error } = await supabase
       .from('forum_community_members')

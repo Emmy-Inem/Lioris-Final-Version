@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { heroTextShadowStyle } from '@/theme/heroTextShadow';
 import { MarketplaceListing } from'@/api/types';
 import { isWishlisted, toggleWishlist, markListingSold, deleteListing } from '@/api/marketplace';
-import { SAVED_ITEMS_KEY, subscribeSavedItems } from '@/api/bookmarks';
+import { subscribeSavedItems } from '@/api/bookmarks';
 import { useSignedUrl } from '@/api/signedUrls';
 import { submitReport } from '@/api/moderation';
 import { getOrCreateConversationWithUser, sendMessage } from '@/api/messaging';
@@ -203,11 +203,12 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  ],
  );
  }, 600);
- } catch {
+ } catch (err) {
  setProcessingOrder(false);
+ // sendMessage's own message says why (messaging switched off for the account, a blocked user, offline).
  Alert.alert(
  'Request Not Sent',
- 'We could not message the seller. Check your connection and try again. No payment has been taken.',
+ `${err instanceof Error && err.message ? err.message : 'We could not message the seller. Check your connection and try again.'} No payment has been taken.`,
  );
  }
  }

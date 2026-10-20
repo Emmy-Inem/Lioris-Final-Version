@@ -72,7 +72,7 @@ export function SearchScreen() {
   // params.category for the same "seed from the param, don't keep resyncing" convention).
   const params = useLocalSearchParams<{ q?: string }>();
   const [query, setQuery] = useState(params.q ?? '');
-  const [tab, setTab] = useState<SearchTab>('posts');
+  const [selectedTab, setTab] = useState<SearchTab>('posts');
   // Super admins can search across every university; null = all schools.
   const [school, setSchool] = useState<string | null>(null);
   const { campuses: schoolChoices } = useCampusRegistry();
@@ -82,8 +82,6 @@ export function SearchScreen() {
   const trimmed = query.trim();
   const debouncedTrimmed = useDebouncedValue(trimmed);
   const active = debouncedTrimmed.length > 0;
-  const canBrowseBySchool = isSuperAdmin && (tab === 'events' || tab === 'resources');
-
   // Jobs/Career is alumni-only and Marketplace is student-only (staff/admin can
   // still search either, matching their broader cross-role visibility
   // elsewhere) - this shared search screen must not offer the other role's tab.
@@ -95,6 +93,11 @@ export function SearchScreen() {
     if (flag && !isFeatureEnabled(flag)) return false;
     return true;
   });
+
+  // The tab that is actually shown: if the selected one was switched off (module disabled) or never applied to this
+  // role, fall back to the first visible tab so no query runs for a hidden module.
+  const tab: SearchTab = visibleTabs.includes(selectedTab) ? selectedTab : (visibleTabs[0] ?? 'alumni');
+  const canBrowseBySchool = isSuperAdmin && (tab === 'events' || tab === 'resources');
 
   const { data: posts, isLoading: postsLoading } = useQuery({
     queryKey: ['search', 'posts', debouncedTrimmed, campusCode, forumScope],

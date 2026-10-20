@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,6 +18,7 @@ import { openExternalUrl } from '@/utils/openExternalUrl';
 import { recordAuditLogEntry } from '@/api/auditLog';
 import { useAuth } from '@/auth/AuthContext';
 import { haptics } from '@/utils/haptics';
+import { pickResourceFile, PickedResourceFile } from '@/utils/pickResourceFile';
 
 const CATEGORIES: Resource['category'][] = ['Past Questions', 'Notes', 'Projects'];
 const LEVELS: Resource['academicLevel'][] = ['100L', '200L', '300L', '400L', '500L', 'Postgraduate'];
@@ -48,6 +49,7 @@ export function ResourcesModerationTab() {
  const [formFileType, setFormFileType] = useState<Resource['fileType']>('PDF');
  const [formDesc, setFormDesc] = useState('');
  const [formFileSize, setFormFileSize] = useState('3.8 MB');
+ const [pickedFile, setPickedFile] = useState<PickedResourceFile | null>(null);
  const [saving, setSaving] = useState(false);
 
  // Preview Document Modal State
@@ -84,7 +86,21 @@ export function ResourcesModerationTab() {
  setFormFileType('PDF');
  setFormDesc('');
  setFormFileSize('4.2 MB');
+ setPickedFile(null);
  setEditModalOpen(true);
+ }
+
+ async function handlePickFile() {
+ try {
+ const file = await pickResourceFile();
+ if (!file) return;
+ setPickedFile(file);
+ setFormFileType(file.fileType);
+ const bytes = file.size ?? file.blob.size;
+ if (bytes) setFormFileSize(bytes > 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+ } catch (err: any) {
+ Alert.alert('File Picker Error', err?.message ?? 'Unable to access document.');
+ }
  }
 
  function handleOpenEdit(resource: Resource) {
@@ -98,6 +114,7 @@ export function ResourcesModerationTab() {
  setFormFileType(resource.fileType || 'PDF');
  setFormDesc(resource.description);
  setFormFileSize(resource.fileSize ?? '');
+ setPickedFile(null);
  setEditModalOpen(true);
  }
 
@@ -182,6 +199,10 @@ export function ResourcesModerationTab() {
  Alert.alert('Required Fields', 'Please enter resource title and course code.');
  return;
  }
+ if (!editingResource && !pickedFile) {
+ Alert.alert('File Required', 'Please choose the document to upload.');
+ return;
+ }
 
  haptics.medium();
  setSaving(true);
@@ -206,17 +227,22 @@ export function ResourcesModerationTab() {
  });
  Alert.alert('Resource Updated', `Changes to"${formTitle.trim()}"have been saved.`);
  } else {
- await createResource({
+ await createResource(
+ {
  title: formTitle.trim(),
  courseCode: formCode.trim(),
  department: formDept.trim() || 'General',
  category: formCategory,
  academicLevel: formLevel,
- fileType: formFileType,
- fileSize: formFileSize.trim(),
+ fileType: pickedFile!.fileType,
+ fileMimeType: pickedFile!.mimeType,
+ fileSizeBytes: pickedFile!.size,
+ fileSize: formFileSize.trim() || undefined,
  description: formDesc.trim(),
  campusCode: campusFilter,
- });
+ },
+ pickedFile!.blob,
+ );
  Alert.alert('Resource Published', `"${formTitle.trim()}"is now available in the university library.`);
  }
 
@@ -688,6 +714,41 @@ export function ResourcesModerationTab() {
             onChangeText={setFormDept}
           />
 
+          {!editingResource ? (
+            <>
+              <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
+                DOCUMENT FILE *
+              </AppText>
+              <Pressable
+                onPress={handlePickFile}
+                accessibilityRole="button"
+                accessibilityLabel="Choose the resource file"
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  padding: spacing.md,
+                  borderRadius: radius.md,
+                  borderWidth: 1,
+                  borderStyle: 'dashed',
+                  borderColor: pickedFile ? colors.brandPrimary : colors.border,
+                  backgroundColor: colors.surface,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Ionicons name={pickedFile ? 'document-attach' : 'cloud-upload-outline'} size={20} color={pickedFile ? colors.brandPrimary : colors.textSecondary} />
+                <AppText variant="bodySmall" style={{ flex: 1 }} numberOfLines={1}>
+                  {pickedFile ? pickedFile.name : 'Choose a PDF, Word, PowerPoint, Excel, ZIP, text or image file'}
+                </AppText>
+                {pickedFile ? (
+                  <Pressable onPress={() => setPickedFile(null)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Remove the chosen file">
+                    <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                  </Pressable>
+                ) : null}
+              </Pressable>
+            </>
+          ) : null}
+
           {/* Category Picker */}
           <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, marginBottom: spacing.xs }}>
             RESOURCE TYPE / CATEGORY
@@ -742,6 +803,7 @@ export function ResourcesModerationTab() {
               </ScrollView>
             </View>
 
+            {editingResource ? (
             <View style={{ flex: 1 }}>
               <AppText variant="caption" weight="bold" tone="brand" style={{ marginBottom: spacing.xs }}>
                 FILE FORMAT
@@ -768,6 +830,7 @@ export function ResourcesModerationTab() {
                 ))}
               </View>
             </View>
+            ) : null}
           </View>
 
           <AppTextField

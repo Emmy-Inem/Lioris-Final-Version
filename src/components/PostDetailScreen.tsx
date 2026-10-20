@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, findNodeHandle, Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, UIManager, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, findNodeHandle, Keyboard, Platform, Pressable, ScrollView, StyleSheet, TextInput, UIManager, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from'expo-image';
 import * as Clipboard from 'expo-clipboard';
@@ -11,12 +11,9 @@ import { ScreenContainer } from'./ScreenContainer';
 import { AppHeader } from'./AppHeader';
 import { AppText } from'./AppText';
 import { Avatar } from'./Avatar';
-import { Badge } from'./Badge';
 import { UserTypeBadge } from'./UserTypeBadge';
 import { VerifiedBadge } from './VerifiedBadge';
 import { SolidCard } from'./SolidCard';
-import { AppTextField } from'./AppTextField';
-import { AppButton } from'./AppButton';
 import { ImageViewerModal } from'./ImageViewerModal';
 import { UserProfileModal } from'./UserProfileModal';
 import { ActionSheetModal } from'./ActionSheetModal';
@@ -25,12 +22,11 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { usePermissions } from '@/context/RolePermissionsContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { getPost, listFeedPosts, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost, updatePostComment, deletePostComment, extractMentionHandles, resolvePostMentions, buildPostShareUrl, PostComment } from '@/api/posts';
+import { getPost, listPostComments, createPostComment, togglePostLike, toggleCommentLike, voteOnPoll, deletePost, updatePost, updatePostComment, deletePostComment, extractMentionHandles, resolvePostMentions, buildPostShareUrl, PostComment } from '@/api/posts';
 import { toggleSavedItem, SAVED_ITEMS_KEY, isItemSavedSync, subscribeSavedItems } from '@/api/bookmarks';
 import { canManageCommunityCategory } from '@/api/communities';
 import { useSignedUrl } from '@/api/signedUrls';
 import { getMyProfile } from '@/api/profile';
-import { submitReport } from '@/api/moderation';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { VerificationRequiredGate } from './VerificationRequiredGate';
 import { haptics } from '@/utils/haptics';
@@ -330,9 +326,11 @@ export function PostDetailScreen() {
      await togglePostLike(post.id, next);
      queryClient.invalidateQueries({ queryKey: ['feed'] });
      queryClient.invalidateQueries({ queryKey: ['post', post.id] });
-   } catch {
+   } catch (err: any) {
      setLiked(!next);
      setLikesCount((prev) => prev + (next ? -1 : 1));
+     haptics.error();
+     Alert.alert('Could not update', getFriendlyErrorMessage(err, 'Could not mark this thread as helpful. Please try again.'));
    }
  }
 

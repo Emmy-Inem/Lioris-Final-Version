@@ -71,7 +71,12 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
       if (reminderNotificationId && Platform.OS !== 'web') {
         await Notifications.cancelScheduledNotificationAsync(reminderNotificationId).catch(() => {});
       }
-      await toggleReminder();
+      try {
+        await toggleReminder();
+      } catch (err: any) {
+        Alert.alert('Could not remove the reminder', err?.message || 'Please try again.');
+        return;
+      }
       Alert.alert('Reminder Removed', `You will no longer receive alerts for "${event.title}".`);
       return;
     }
@@ -93,7 +98,13 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
       }
     }
 
-    await toggleReminder(notifId);
+    try {
+      await toggleReminder(notifId);
+    } catch (err: any) {
+      if (notifId && Platform.OS !== 'web') await Notifications.cancelScheduledNotificationAsync(notifId).catch(() => {});
+      Alert.alert('Could not set the reminder', err?.message || 'Please try again.');
+      return;
+    }
     Alert.alert(
       'Reminder Set!',
       `You will be reminded before "${event.title}" begins. Would you like to add it to your Google Calendar?`,
@@ -375,11 +386,16 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  <Pressable
  onPress={async () => {
  setMenuOpen(false);
+ try {
  const { muteUser } = await import('@/api/connections');
  await muteUser(event.organizerId, event.organizerName);
  await queryClient.invalidateQueries({ queryKey: ['events'] });
  haptics.light();
  Alert.alert('Organizer Muted', `You will no longer see events from ${event.organizerName || 'this organizer'}. They won't be notified.`);
+ } catch (err: any) {
+ haptics.error();
+ Alert.alert('Could not mute this organizer', err?.message || 'Please try again.');
+ }
  }}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >
@@ -399,11 +415,16 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  text: 'Block Organizer',
  style: 'destructive',
  onPress: async () => {
+ try {
  const { blockUser } = await import('@/api/connections');
  await blockUser(event.organizerId, event.organizerName);
  await queryClient.invalidateQueries({ queryKey: ['events'] });
  haptics.medium();
  Alert.alert('Organizer Blocked', `Events from ${event.organizerName || 'this organizer'} have been filtered.`);
+ } catch (err: any) {
+ haptics.error();
+ Alert.alert('Could not block this organizer', err?.message || 'Please try again.');
+ }
  },
  },
  ]

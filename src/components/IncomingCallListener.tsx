@@ -14,6 +14,8 @@ import { isCallMessage, extractCallDetails, CallDetails, CALL_DECLINED_MARKER } 
 import { isUserBlocked, isUserMuted } from '@/api/connections';
 import { haptics } from '@/utils/haptics';
 
+const CALL_INVITE_MAX_AGE_MS = 3 * 60_000;
+
 interface IncomingCall {
   conversationId: string;
   details: CallDetails;
@@ -65,9 +67,11 @@ export function IncomingCallListener() {
     if (row.sender_id && (isUserBlocked(row.sender_id) || isUserMuted(row.sender_id))) return;
     if (!isCallMessage(row.content)) return;
     // The realtime feed also delivers UPDATEs (opening a chat marks old messages read). A call invitation
-    // that is more than a minute old, or already read, is a dead call - never ring for it.
+    // that is already read, or older than a few minutes, is a dead call - never ring for it. created_at is
+    // stamped by the server while Date.now() is this device's clock, so the window is deliberately wide
+    // enough (3 minutes) to absorb ordinary clock skew while still dropping old invitations.
     const ageMs = Date.now() - new Date(row.created_at ?? Date.now()).getTime();
-    if (row.is_read === true || (Number.isFinite(ageMs) && ageMs > 60_000)) return;
+    if (row.is_read === true || (Number.isFinite(ageMs) && ageMs > CALL_INVITE_MAX_AGE_MS)) return;
 
     const conv = conversationsRef.current?.find((c) => c.id === row.channel_id);
     if (!conv) return; // not a channel this user belongs to
