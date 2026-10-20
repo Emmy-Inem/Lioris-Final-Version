@@ -23,8 +23,9 @@ import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { Post } from'@/api/types';
-import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost, extractMentionHandles, resolvePostMentions, buildPostShareUrl } from'@/api/posts';
+import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost, extractMentionHandles, buildPostShareUrl } from'@/api/posts';
 import { toggleSavedItem, SAVED_ITEMS_KEY, isItemSavedSync, subscribeSavedItems } from '@/api/bookmarks';
+import { resolvePostMentionsBatched } from '@/api/mentionResolver';
 import { useSignedUrl } from '@/api/signedUrls';
 import { submitReport } from '@/api/moderation';
 import { haptics } from'@/utils/haptics';
@@ -96,7 +97,7 @@ function PostImageItem({
       style={[{ position: 'relative', overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.05)' }, style]}
     >
       {source ? (
-        <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+        <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} recyclingKey={path} cachePolicy="memory-disk" />
       ) : loading ? (
         <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center' }]}>
           <ActivityIndicator size="small" color="#999999" />
@@ -178,7 +179,8 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  const mentionHandles = React.useMemo(() => extractMentionHandles(post.content), [post.content]);
  const { data: resolvedMentions } = useQuery({
    queryKey: ['post-mentions', mentionHandles, post.institutionCode],
-   queryFn: () => resolvePostMentions(mentionHandles, post.institutionCode),
+   // Batched: every card of a page shares one lookup instead of querying profiles once per post.
+   queryFn: () => resolvePostMentionsBatched(mentionHandles, post.institutionCode),
    enabled: mentionHandles.length > 0,
    staleTime: 5 * 60_000,
  });

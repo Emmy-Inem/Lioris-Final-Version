@@ -81,10 +81,11 @@ async function selectPostsWithFallback(
 /** The signed-in user's id, falling back to the stored session when offline. */
 async function currentUserId(): Promise<string | undefined> {
   try {
-    const { data } = await supabase.auth.getUser();
-    if (data?.user?.id) return data.user.id;
+    // getSession() reads the stored session; getUser() was a network round trip on every call.
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.user?.id) return data.session.user.id;
   } catch {
-    // offline - fall through to the stored session below
+    // fall through to the stored session below
   }
   try {
     const stored = await getSessionUser();
@@ -271,6 +272,8 @@ export interface FeedQuery {
  viewScope?: 'campus' | 'global';
   /** Verified super-admin-only: include campus-scoped threads from every institution. */
   includeAllCampuses?: boolean;
+  /** Show the local pool (own just-created posts + seed content) instead of throwing when the request fails. Signed-out previews always do. */
+  allowOffline?: boolean;
   showBots?: boolean;
   /** Internal: the viewer's id, so their own posts are never filtered out of their feed. */
   viewerId?: string;
@@ -361,10 +364,14 @@ const DEFAULT_FEED_PAGE_SIZE = 100;
 export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
   let viewerInstitutionCode: string | undefined;
   let includeAllCampuses = false;
+  let hadSession = false;
   try {
-    const { data: authData } = await supabase.auth.getUser();
+    // getSession() is local; getUser() was a network round trip on every feed load.
+    const { data: sessionData } = await supabase.auth.getSession();
+    const authData = { user: sessionData?.session?.user ?? null };
     const stored = await getSessionUser();
     const viewerId = authData?.user?.id;
+    hadSession = !!viewerId;
     let profile: any = null;
     if (viewerId) {
       const { data } = await supabase
@@ -457,6 +464,9 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     }
     return decorated;
   } catch (err) {
+    // A real failure must reach React Query (error state + retry): it used to come back as a successful feed of
+    // seeded bot posts that was then cached. The local pool is only for signed-out previews or an explicit allowOffline.
+    if (hadSession && !query.allowOffline) throw err;
     console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
     const isFirstPage = (query.page ?? 0) === 0;
     return filterPosts(isFirstPage ? [...locallyCreatedPosts, ...SEED_FORUM_POSTS] : [], {

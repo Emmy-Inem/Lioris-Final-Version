@@ -22,6 +22,7 @@ import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useIsOfflinePaused } from '@/hooks/useIsOfflinePaused';
 import { listFeedPosts, createPost, notifyPostMentions } from '@/api/posts';
 import { listMyJoinedCommunityIds, joinCommunity, leaveCommunity, DEFAULT_JOINED_COMMUNITY_IDS, getCommunityStatsMap } from '@/api/forumMemberships';
 import { listCommunities, proposeCommunity, listMyModeratedCommunityIds, ForumCommunityRecord } from '@/api/communities';
@@ -423,6 +424,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     isLoading,
     isError,
     error,
+    fetchStatus: feedFetchStatus,
     refetch,
     isRefetching,
     fetchNextPage,
@@ -449,6 +451,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   });
 
   const rawPosts = React.useMemo(() => feedPages?.pages.flat() ?? [], [feedPages]);
+  // Paused (no connection) with nothing cached: say "You're offline" instead of an empty forum.
+  const feedOffline = useIsOfflinePaused({ fetchStatus: feedFetchStatus, data: feedPages });
 
   const handleLoadMore = () => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -1091,21 +1095,18 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   return (
     <ScreenContainer glow={false}>
       {isDesktop ? (
-        <ScrollView
-          style={{ flex: 1, width: '100%', minHeight: 0 }}
-          showsVerticalScrollIndicator={true}
-          keyboardShouldPersistTaps="handled"
-          scrollEventThrottle={160}
-          onScroll={(e) => {
-            const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-            if (contentSize.height - (layoutMeasurement.height + contentOffset.y) < 420) {
-              handleLoadMore();
-            }
-          }}
-        >
-        <View style={{ flexDirection: 'row', gap: 24, paddingTop: spacing.md, paddingBottom: 60, alignItems: 'flex-start' }}>
+        // Two columns, each scrolling on its own: the feed is ONE virtualized FlatList (its title / composer header is
+        // the ListHeaderComponent) so only the posts near the viewport are mounted and onEndReached paginates; the
+        // sidebar scrolls separately. It used to be a non-scrolling FlatList inside a ScrollView, which rendered every
+        // loaded post at once and never fired onEndReached.
+        <View style={{ flex: 1, width: '100%', minHeight: 0, flexDirection: 'row', gap: 24, paddingTop: spacing.md, alignItems: 'stretch' }}>
           {/* Main Feed Column */}
-          <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+          <FlatList
+            style={{ flex: 1 }}
+            keyboardShouldPersistTaps="handled"
+            ListHeaderComponent={
+          <View>
             {/* Desktop Screen Title & Actions Header */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md, flexWrap: 'wrap', gap: spacing.sm }}>
               <View>
@@ -1506,19 +1507,19 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
 
 
 
-            {/* Posts Feed Stream */}
-            <FlatList
+          </View>
+            }
               data={posts}
               keyExtractor={(item) => item.id}
               initialNumToRender={8}
               maxToRenderPerBatch={8}
               windowSize={7}
-              contentContainerStyle={{ paddingBottom: 40 }}
+              removeClippedSubviews={Platform.OS === 'android'}
+              contentContainerStyle={{ paddingBottom: 60 }}
               renderItem={({ item }) => (
                 <PostCard post={item} canModerateCommunity={myManagedCategories.has(item.category)} forceScopeBadge={showAllCampuses} />
               )}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={true}
               onEndReached={handleLoadMore}
               onEndReachedThreshold={0.4}
               ListFooterComponent={
@@ -1529,6 +1530,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               ListEmptyComponent={
                 isLoading ? (
                   <PostCardSkeletonList count={4} />
+                ) : feedOffline ? (
+                  <ErrorStateView
+                    title="You're offline"
+                    message="Reconnect to load discussions. They will appear automatically."
+                    icon="cloud-offline-outline"
+                    onRetry={refetch}
+                  />
                 ) : isError ? (
                   <ErrorStateView
                     title="Could not load discussions"
@@ -1543,11 +1551,10 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           </View>
 
           {/* Right Sidebar: Hubs, Mentors & Guidelines */}
-          <View
-            style={[
-              { width: isWideDesktop ? 320 : 280, flexShrink: 0, gap: spacing.md, paddingBottom: 80 },
-              Platform.OS === 'web' ? ({ position: 'sticky', top: 16 } as any) : {},
-            ]}
+          <ScrollView
+            style={{ width: isWideDesktop ? 320 : 280, flexGrow: 0, flexShrink: 0 }}
+            contentContainerStyle={{ gap: spacing.md, paddingBottom: 80 }}
+            showsVerticalScrollIndicator={false}
           >
             {selectedChannel !== null ? (
               <SolidCard radius={18} style={{ padding: spacing.md }}>
@@ -1701,9 +1708,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 ))}
               </View>
             </SolidCard>
-          </View>
+          </ScrollView>
         </View>
-        </ScrollView>
       ) : (
       /* Mobile Single Column FlatList */
       <FlatList
@@ -1732,6 +1738,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         ListEmptyComponent={
           isLoading ? (
             <PostCardSkeletonList count={4} />
+          ) : feedOffline ? (
+            <ErrorStateView
+              title="You're offline"
+              message="Reconnect to load discussions. They will appear automatically."
+              icon="cloud-offline-outline"
+              onRetry={refetch}
+            />
           ) : isError ? (
             <ErrorStateView
               title="Could not load discussions"

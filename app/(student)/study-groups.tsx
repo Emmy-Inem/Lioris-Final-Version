@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -18,6 +18,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useIsOfflinePaused } from '@/hooks/useIsOfflinePaused';
 import { createStudyGroup, listStudyGroups } from '@/api/studyGroups';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
@@ -30,7 +31,7 @@ type Tab = 'mine' | 'discover';
 
 export default function StudyGroupsScreen() {
   const { colors, spacing, radius } = useTheme();
-  const { isDesktop } = useResponsive();
+  const { isDesktop, isWideDesktop } = useResponsive();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -90,16 +91,10 @@ export default function StudyGroupsScreen() {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['study-groups'] });
 
-  return (
-    <ScreenContainer glow={false}>
-      {!isDesktop && <AppHeader />}
-      <ScrollView
-        style={{ flex: 1, width: '100%' }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130, gap: spacing.md }}
-        refreshControl={<RefreshControl refreshing={groups.isRefetching} onRefresh={refresh} />}
-      >
+  // Everything above the pod cards. Passed to the FlatList as an element (not a component) so the search field
+  // keeps focus while typing.
+  const header = (
+      <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
         <View
           style={{
             flexDirection: isDesktop ? 'row' : 'column',
@@ -177,16 +172,14 @@ export default function StudyGroupsScreen() {
         {groups.isError ? (
           <EmptyState icon="cloud-offline-outline" title="Could not load study pods" description={parseRpcError(groups.error).message} actionLabel="Try again" onAction={() => groups.refetch()} />
         ) : null}
+      </View>
+  );
 
-        <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.md }}>
-          {filtered.map((g) => (
-            <View key={g.id} style={isDesktop ? { flexGrow: 1, flexBasis: '31%', minWidth: 340 } : undefined}>
-              <StudyGroupCard group={g} onJoined={refresh} />
-            </View>
-          ))}
-        </View>
-
-        {!groups.isLoading && !groups.isError && filtered.length === 0 ? (
+  const offline = useIsOfflinePaused(groups);
+  const emptyState = offline ? (
+        <EmptyState icon="cloud-offline-outline" title="You're offline" description="Reconnect to see study pods. They will load automatically." actionLabel="Try again" onAction={() => groups.refetch()} />
+      ) :
+        !groups.isLoading && !groups.isError && filtered.length === 0 ? (
           activeTab === 'mine' ? (
             <EmptyState
               icon="people-outline"
@@ -204,8 +197,37 @@ export default function StudyGroupsScreen() {
               onAction={handlePressCreate}
             />
           )
-        ) : null}
-      </ScrollView>
+        ) : null;
+
+  // Pods are laid out in a grid on desktop; FlatList needs a new key when the column count changes.
+  const columns = isWideDesktop ? 3 : isDesktop ? 2 : 1;
+
+  return (
+    <ScreenContainer glow={false}>
+      {!isDesktop && <AppHeader />}
+      <FlatList
+        key={`pods-${columns}`}
+        data={filtered}
+        keyExtractor={(g) => g.id}
+        numColumns={columns}
+        columnWrapperStyle={columns > 1 ? { gap: 16 } : undefined}
+        ItemSeparatorComponent={() => <View style={{ height: columns > 1 ? 16 : spacing.md }} />}
+        renderItem={({ item: g }) => (
+          <View style={columns > 1 ? { flex: 1, maxWidth: `${100 / columns}%` } : undefined}>
+            <StudyGroupCard group={g} onJoined={refresh} />
+          </View>
+        )}
+        ListHeaderComponent={header}
+        ListEmptyComponent={emptyState}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+        style={{ flex: 1, width: '100%' }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 130 }}
+        refreshControl={<RefreshControl refreshing={groups.isRefetching} onRefresh={refresh} />}
+      />
 
       <CreateStudyGroupModal visible={createOpen} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} defaultDepartment={me?.department ?? undefined} />
       <ApplyForVerificationModal

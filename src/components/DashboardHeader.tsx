@@ -2,12 +2,11 @@ import React from'react';
 import { Pressable, View } from'react-native';
 import { Ionicons } from'@expo/vector-icons';
 import { router, useSegments } from'expo-router';
-import { useQuery } from'@tanstack/react-query';
 import { AppText } from'./AppText';
 import { Avatar } from'./Avatar';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
-import { listNotifications } from'@/api/notifications';
+import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 
 interface DashboardHeaderProps {
  greetingOverride?: string;
@@ -20,12 +19,7 @@ export function DashboardHeader({ greetingOverride, notificationsPath }: Dashboa
  const segments = useSegments();
  const roleGroup = segments[0];
 
- const { data: notifications } = useQuery({
- queryKey: ['notifications', 'unread-count'],
- queryFn: () => listNotifications({ status: 'unread' }),
- });
-
- const unreadCount = notifications?.length ?? 0;
+ const unreadCount = useUnreadCounts().notifications;
 
  return (
  <View

@@ -24,7 +24,11 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
     queryFn: () => isMaintenanceModeOn(true),
     enabled: !!user,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    // Poll every 3 minutes, only while the app is focused / foregrounded (focusManager follows AppState), and
+    // refetch right away when it returns to the foreground (staleTime has passed by then).
+    refetchInterval: 180_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
     retry: false,
   });
 

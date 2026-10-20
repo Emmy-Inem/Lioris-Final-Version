@@ -10,8 +10,7 @@ import { AppText } from '@/components/AppText';
 import { Avatar } from '@/components/Avatar';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { getMyProfile } from '@/api/profile';
-import { listConversations } from '@/api/messaging';
-import { listNotifications } from '@/api/notifications';
+import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { ChangeWorkspaceScopeModal } from '@/components/ChangeWorkspaceScopeModal';
 import { getInstitutionByCode } from '@/api/institutions';
@@ -42,26 +41,10 @@ export function DesktopSidebar() {
  enabled: !!user,
  });
 
- const { data: conversations } = useQuery({
- queryKey: ['conversations', user?.id],
- queryFn: () => listConversations(),
- enabled: !!user?.id,
- });
-
- const { data: notifications } = useQuery({
- queryKey: ['notifications', user?.id],
- queryFn: () => listNotifications(),
- enabled: !!user?.id,
- });
-
-
- const unreadMessagesCount = (conversations ?? []).reduce(
- (acc: number, c: any) => acc + (c.unreadCount || 0),
- 0,
- );
- const unreadNotificationsCount = (notifications ?? []).filter(
- (n: any) => !n.openedAt,
- ).length;
+ // Shared head-count query (same cache entry as the headers); no conversation / notification lists downloaded.
+ const unread = useUnreadCounts();
+ const unreadMessagesCount = unread.messages;
+ const unreadNotificationsCount = unread.notifications;
 
  const role = user?.role || 'student';
 

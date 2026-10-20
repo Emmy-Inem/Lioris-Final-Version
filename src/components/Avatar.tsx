@@ -144,7 +144,12 @@ export function Avatar({ name, uri, size = 44, role }: AvatarProps) {
           style={{ width: '100%', height: '100%' }}
           contentFit="cover"
           transition={200}
-          cachePolicy="disk"
+          // Lists reuse Avatar views while scrolling: key the recycled view by the picture so it never flashes the
+          // previous row's face, and keep decoded pictures in memory as well as on disk.
+          recyclingKey={uri ?? undefined}
+          cachePolicy="memory-disk"
+          // Decode at the displayed size, never at the original resolution.
+          allowDownscaling
         />
       ) : initials ? (
         <AppText

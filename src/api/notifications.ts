@@ -2,6 +2,8 @@ import { Platform } from 'react-native';
 import { supabase } from './supabase';
 import { AppNotification } from './types';
 import { getSessionUser } from '../auth/tokenStorage';
+import { getSessionUserId } from './sessionUser';
+import { queryClient } from './queryClient';
 import { generateUUID } from '../utils/uuid';
 import { isViewedNotificationExpired, VIEWED_NOTIFICATION_RETENTION_MS } from '../utils/notificationExpiry';
 
@@ -226,22 +228,56 @@ async function purgeExpiredViewedNotifications(userId: string): Promise<void> {
 export interface NotificationsQuery {
  status?: 'unread' | 'read';
  type?: AppNotification['type'];
+ /** Newest-first page size. Defaults to 100. */
+ limit?: number;
+ /** Show this session's local pool instead of throwing when the request fails (signed-out previews always do). */
+ allowOffline?: boolean;
+}
+
+const DEFAULT_NOTIFICATION_LIMIT = 100;
+const NOTIFICATION_LIST_COLUMNS = 'id, type, title, body, action_url, is_read, read_at, created_at';
+
+/**
+ * How many unread notifications the signed-in user has: a head-only count, no rows downloaded.
+ * Throws on a request failure so React Query can retry (the badge simply shows nothing meanwhile).
+ */
+export async function getUnreadNotificationCount(): Promise<number> {
+ const uid = await getSessionUserId();
+ if (!uid) return 0;
+ const { count, error } = await supabase
+ .from('notifications')
+ .select('id', { count: 'exact', head: true })
+ .eq('recipient_id', uid)
+ .eq('is_read', false);
+ if (error) throw error;
+ return count ?? 0;
+}
+
+function refreshUnreadBadges() {
+ void queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
 }
 
 export async function listNotifications(
  query: NotificationsQuery = {},
 ): Promise<AppNotification[]> {
+ const localPool = () => {
+ const pool = [...localNotificationsCache];
+ return query.status === 'unread' ? pool.filter((n) => !n.openedAt) : pool;
+ };
+ // Signed out (preview): there is nothing to fetch, show whatever this session created locally.
+ const uid = await getSessionUserId();
+ if (!uid) return localPool();
+
  try {
- const { data: authData } = await supabase.auth.getUser();
- const uid = authData?.user?.id;
-
- if (!uid) throw new Error('Not signed in');
-
- const { data, error } = await supabase
+ let request = supabase
  .from('notifications')
- .select('*')
- .eq('recipient_id', uid)
- .order('created_at', { ascending: false });
+ .select(NOTIFICATION_LIST_COLUMNS)
+ .eq('recipient_id', uid);
+ if (query.status === 'unread') request = request.eq('is_read', false);
+ else if (query.status === 'read') request = request.eq('is_read', true);
+ const { data, error } = await request
+ .order('created_at', { ascending: false })
+ .limit(query.limit ?? DEFAULT_NOTIFICATION_LIMIT);
 
  if (error) throw error;
 
@@ -278,9 +314,10 @@ export async function listNotifications(
  }
  return query.status === 'unread' ? merged.filter((n) => !n.openedAt) : merged;
  } catch (err) {
+ // A real failure must reach React Query (error state + retry) instead of being cached as an empty success.
+ if (!query.allowOffline) throw err;
  console.warn('[Notifications] listNotifications failed, showing local pool only:', err);
- const pool = [...localNotificationsCache];
- return query.status === 'unread' ? pool.filter((n) => !n.openedAt) : pool;
+ return localPool();
  }
 }
 
@@ -291,6 +328,7 @@ export async function markNotificationRead(id: string) {
  try {
  const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
  if (error) throw error;
+ refreshUnreadBadges();
  } catch {
  // Not saved: put it back so the badge is truthful (callers refetch right after; opening the item still works).
  localNotificationsCache = before;
@@ -308,6 +346,7 @@ export async function markAllNotificationsRead() {
  if (uid) {
  const { error } = await supabase.from('notifications').update({ is_read: true }).eq('recipient_id', uid).eq('is_read', false);
  if (error) throw error;
+ refreshUnreadBadges();
  }
  } catch {
  localNotificationsCache = before;
