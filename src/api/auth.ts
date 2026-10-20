@@ -5,6 +5,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { AuthSession, UserRole } from './types';
 import { getInstitutionForEmail } from './institutions';
 import { recordAuditLogEntry } from './auditLog';
+import { markAuthLinkExpected } from '../auth/authLinkMarker';
 import { unregisterDevicePushToken } from './notifications';
 import { checkPassword, isPasswordValid, isValidEmailFormat } from '../utils/validation';
 import { getFriendlyErrorMessage } from '../utils/errors';
@@ -162,6 +163,7 @@ export async function resendConfirmationEmail(email: string, captchaToken?: stri
     );
   }
   recordResendAttempt(cleanEmail);
+  await markAuthLinkExpected('signup');
   return { success: true };
 }
 
@@ -429,6 +431,9 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
     throw new Error('An account with this email address already exists. Please sign in or reset your password.');
   }
 
+  // A confirmation link for this sign-up is now expected on this device (see consumeAuthLink).
+  await markAuthLinkExpected('signup');
+
   // With email confirmation on, signUp returns no session: the profile is created server-side
   // (auth trigger) and the user must enter the 6-digit code we emailed to confirm their address.
   let activeSession = data.session;
@@ -473,6 +478,7 @@ export async function sendPasswordResetEmail(
     throw new Error(getFriendlyErrorMessage(error, 'Could not send recovery email. Please check your email address.'));
   }
 
+  await markAuthLinkExpected('recovery');
   const { warning } = recordPasswordResetAttempt(cleanEmail);
   return { success: true, warning };
 }
@@ -524,6 +530,7 @@ export async function requestEmailChange(newEmail: string): Promise<{ email: str
   if (error) {
     throw new Error(friendlyEmailChangeError(error, 'We could not send a code to that address. Please try again.'));
   }
+  await markAuthLinkExpected('email_change');
   return { email: clean };
 }
 
@@ -534,6 +541,7 @@ export async function resendEmailChangeCode(newEmail: string): Promise<{ success
   if (error) {
     throw new Error(friendlyEmailChangeError(error, 'We could not send the code right now. Please try again shortly.'));
   }
+  await markAuthLinkExpected('email_change');
   return { success: true };
 }
 

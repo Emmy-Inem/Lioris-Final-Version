@@ -9,7 +9,8 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import { reportError } from '@/monitoring/errorReporter';
+import { reportError, computeFingerprint } from '@/monitoring/errorReporter';
+import { useAuth } from '@/auth/AuthContext';
 
 const FAVICON_ASSET = require('../../assets/images/favicon.png');
 
@@ -126,6 +127,24 @@ function ErrorFallbackView({
   onRetry,
   onGoLogin,
 }: ErrorFallbackViewProps) {
+  // Technical details are for developers and admins only. useAuth throws outside the provider (the root
+  // boundary can render above it), so that case simply means "not an admin".
+  let isAdmin = false;
+  try {
+    isAdmin = useAuth().user?.actualRole === 'admin';
+  } catch {
+    isAdmin = false;
+  }
+  const canSeeDetails = __DEV__ || isAdmin;
+  // Same fingerprint the error reporter files this error under, so support can find it from the reference.
+  const referenceId = React.useMemo(() => {
+    try {
+      return computeFingerprint(error?.message || 'Error', error?.stack || '').slice(0, 8).toUpperCase();
+    } catch {
+      return null;
+    }
+  }, [error]);
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -135,8 +154,15 @@ function ErrorFallbackView({
 
         <Text style={styles.errorTitle}>Something went wrong</Text>
         <Text style={styles.errorMessage}>
-          {error?.message || 'An unexpected issue occurred while rendering this page.'}
+          {canSeeDetails
+            ? error?.message || 'An unexpected issue occurred while rendering this page.'
+            : 'An unexpected problem occurred. Please try again. If it keeps happening, contact support.'}
         </Text>
+        {referenceId ? (
+          <Text style={styles.referenceText} selectable>
+            Reference: {referenceId}
+          </Text>
+        ) : null}
 
         <View style={styles.actionRow}>
           <Pressable
@@ -154,13 +180,15 @@ function ErrorFallbackView({
           </Pressable>
         </View>
 
-        <Pressable onPress={onToggleDetails} style={styles.detailsToggle}>
-          <Text style={styles.detailsToggleText}>
-            {showDetails ? 'Hide Error Details ▲' : 'Show Error Details ▼'}
-          </Text>
-        </Pressable>
+        {canSeeDetails ? (
+          <Pressable onPress={onToggleDetails} style={styles.detailsToggle}>
+            <Text style={styles.detailsToggleText}>
+              {showDetails ? 'Hide Error Details ▲' : 'Show Error Details ▼'}
+            </Text>
+          </Pressable>
+        ) : null}
 
-        {showDetails && (
+        {canSeeDetails && showDetails && (
           <ScrollView style={styles.detailsBox} nestedScrollEnabled>
             <Text style={styles.detailsText} selectable>
               {error?.stack || error?.message || 'No stack trace available.'}
@@ -225,6 +253,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
+  },
+  referenceText: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: -16,
+    marginBottom: 20,
   },
   actionRow: {
     flexDirection: 'row',

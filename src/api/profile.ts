@@ -606,10 +606,14 @@ export async function updateMyProfile(
  * `delete-my-account` edge function, because a client cannot delete its own
  * auth user or every dependent row. On success the local session is wiped.
  * Server errors (for example the last-admin protection) are surfaced verbatim.
+ *
+ * The function re-authenticates the caller: it wants the CURRENT PASSWORD (or a sign-in newer than ten
+ * minutes). When it answers `reauth_required` this throws an Error whose `code` is 'reauth_required' so the
+ * screen can ask for the password and retry.
  */
-export async function deleteMyAccount(): Promise<{ success: boolean }> {
+export async function deleteMyAccount(password?: string): Promise<{ success: boolean }> {
   const { data, error } = await supabase.functions.invoke('delete-my-account', {
-    body: { confirm: 'DELETE' },
+    body: { confirm: 'DELETE', ...(password ? { password } : {}) },
   });
 
   let message: string | null = null;
@@ -626,6 +630,15 @@ export async function deleteMyAccount(): Promise<{ success: boolean }> {
     }
   } else if (data && typeof data === 'object' && typeof (data as { error?: unknown }).error === 'string') {
     message = (data as { error: string }).error;
+  }
+  if (message === 'reauth_required') {
+    const reauth: Error & { code?: string } = new Error(
+      password
+        ? 'That password is not correct. Please try again.'
+        : 'Enter your current password to delete your account.',
+    );
+    reauth.code = 'reauth_required';
+    throw reauth;
   }
   if (message !== null || error) {
     const friendly =

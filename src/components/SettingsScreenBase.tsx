@@ -321,6 +321,7 @@ export function SettingsScreen() {
   const [exportingData, setExportingData] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deactivatingAccount, setDeactivatingAccount] = useState(false);
@@ -585,6 +586,7 @@ export function SettingsScreen() {
   function openDeleteModal() {
     haptics.light();
     setDeleteConfirmText('');
+    setDeletePassword('');
     setDeleteError(null);
     setDeleteModalOpen(true);
   }
@@ -651,11 +653,17 @@ export function SettingsScreen() {
 
   async function handleDeleteAccount() {
     if (deletingAccount || deleteConfirmText.trim() !== 'DELETE') return;
+    if (!deletePassword) {
+      setDeleteError('Enter your current password to delete your account.');
+      return;
+    }
     setDeletingAccount(true);
     setDeleteError(null);
     haptics.medium();
     try {
-      await deleteMyAccount();
+      // The server re-checks the password (reauth_required) before it deletes anything.
+      await deleteMyAccount(deletePassword);
+      setDeletePassword('');
       setDeleteModalOpen(false);
       try {
         await logout();
@@ -2360,6 +2368,16 @@ export function SettingsScreen() {
               placeholder="DELETE"
               editable={!deletingAccount}
             />
+            <AppTextField
+              label="Current password"
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="Your password"
+              editable={!deletingAccount}
+            />
             {deleteError ? (
               <AppText style={{ color: colors.critical, fontSize: 12, lineHeight: 16 }}>{deleteError}</AppText>
             ) : null}
@@ -2377,7 +2395,7 @@ export function SettingsScreen() {
                   label={deletingAccount ? 'Deleting…' : 'Delete forever'}
                   onPress={handleDeleteAccount}
                   loading={deletingAccount}
-                  disabled={deletingAccount || deleteConfirmText.trim() !== 'DELETE'}
+                  disabled={deletingAccount || deleteConfirmText.trim() !== 'DELETE' || !deletePassword}
                 />
               </View>
             </View>
