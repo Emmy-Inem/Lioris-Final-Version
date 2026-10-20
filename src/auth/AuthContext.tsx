@@ -27,6 +27,12 @@ import { clearMarketplaceSessionCache } from '@/api/marketplace';
 
 /** Everything held in memory for the account that is going away. */
 function clearAccountSessionCaches(): void {
+  // Tell the web service worker to drop runtime caches (see public/pwa-boot.js); harmless elsewhere.
+  try {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') window.dispatchEvent(new Event('lioris:sign-out'));
+  } catch {
+    // best effort
+  }
   clearMessagingSessionCache();
   clearPostsSessionCache();
   clearEventsSessionCache();
