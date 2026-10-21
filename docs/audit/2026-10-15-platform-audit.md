@@ -306,3 +306,45 @@ Three independent read-only reviews of the student journey, each finding verifie
 * The dependency advisories above (build tooling: metro, react-native, expo-updates -> node-forge) until Expo ships a clean release.
 * `event_reminders` is not read server-side (reminders are device-local notifications).
 * iOS saves downloads through "Save to Files" (a Files-app folder needs a native config change in the next store build).
+
+
+## Round 5 - second-pass audit (edge functions, portals, database, regressions, performance, compliance)
+
+Five more independent reviews (about 100 distinct findings) were fixed by eight parallel workstreams and merged.
+
+**Database (migrations 20261106 - 20261110)**
+* Anonymous callers can no longer run security-definer functions (member e-mails, matric numbers, analytics were readable
+  with the public key); a schema-wide EXECUTE sweep keeps only `check_username_available` for anon, with a test that lists them.
+* Campus admins no longer read/delete other campuses' DMs, notifications, connections, blocks or mentorships; the paid-event,
+  pod, mentorship, diagnostics, takedown, moderator and suspension RPCs are scoped with `can_admin_campus`.
+* Job applications can no longer point at someone else's resume; closed jobs refuse applications; the status cannot be forged.
+* Campus wall holes on INSERT/UPDATE closed (posts, marketplace, study groups, events, jobs, campaigns); counters
+  (likes, comments, downloads, upvotes, applications) can no longer be forged; notifications cannot be spoofed or used for
+  push spam; group-chat membership cannot be forced; avatars bucket cannot be listed; the root-email bootstrap needs a confirmed e-mail.
+* Compliance functions (`export_my_data`, `purge_user_data`, consent) now live in migrations; erasure anonymises audit rows
+  instead of keeping raw ids and covers every user column; verification documents are actually purged after 30 days; retention
+  jobs added for analytics, tokens, click logs, moderation, notifications; analytics inserts validated; stale push tokens re-claimed.
+* Admin workflow: job edits after approval go back to review; campaigns separate organiser-reported from confirmed totals and
+  reviews are guarded, scoped and audited; verify/unsuspend/broadcast RPCs with audit; audit rows are stamped with their campus.
+* Upstream migrations 20261103/05 called an `is_feature_enabled()` that did not exist and exposed every post's media; mentorship
+  requests called a missing 4-argument `mentorship_notify`. Both fixed in 20261110.
+* Hand-run script rebuilt: `supabase/manual/02_apply_all.sql` (all migrations from 20261028, lock timeout, chain guard, progress log).
+
+**Edge functions / config**: force sign-out really revokes sessions; trustworthy client IP for rate limits; one audit row per
+rate-limit window; delete-my-account needs recent sign-in or password; AI proxies get a global cap, kill switch, system
+instruction and sanitised history; pinned imports; localhost CORS only in dev; push dedupe and per-sender/recipient caps;
+overpass and purge job hardened; `config.toml` documents that it must NOT be `config push`ed.
+
+**Client**: impersonation reads the right profile and survives reload with a 15-minute limit and audit; email-link handler
+validates scheme/host/type and needs a pending-flow marker; duplicate token store removed; fetch timeouts; analytics paths
+normalised, heartbeat reduced, opt-out helper; combined consent version; admin resource upload picker; server-side search;
+chat paging/clock/archiving fixes; realtime invalidation coalesced; unread counts via count queries; bounded event lists;
+list APIs surface errors; desktop feed virtualized; images resized before upload; web alert dialog accessible; robots/sitemap/
+per-page metadata; service worker cache hygiene; contrast and motion fixes; kill-switch gates for alumni/staff routes; bulk
+admin actions confirmed and capped.
+
+**Still needs a decision or a store release**: PKCE and verified app links; iOS privacy manifest and Android `allowBackup`;
+expo-router `asyncRoutes` for web code splitting; minors flag and guardian record; non-uploader takedown claims no longer hide
+resources instantly (policy call); instant `reported_total` vs `confirmed_total` backfill; remaining screens without an error state
+(student/staff/alumni dashboards, calendar, notifications list, search, forum explore, alumni network); remaining image pickers
+not yet resizing; the privacy page still lists Jitsi as a processor.

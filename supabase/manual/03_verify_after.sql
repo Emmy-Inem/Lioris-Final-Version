@@ -196,3 +196,19 @@ ORDER BY section, item;
 --   Project Settings -> API: is the legacy `service_role` key ever shipped in the client? (it must not be)
 --   Edge Functions: are `login-with-username` and `admin-create-user` deployed? ALLOWED_ORIGINS includes your web origin(s)?
 -- ============================================================================
+
+
+-- ============================================================================
+-- APPLY PROGRESS + HEADLINE CHECKS (run after 02_apply_all.sql)
+-- ============================================================================
+SELECT 'migration applied' AS check_name, version AS value FROM public._manual_migration_log ORDER BY version;
+
+SELECT 'EXPECT 0: parts of 02_apply_all.sql missing' AS check_name,
+       (SELECT count(*) FROM (VALUES ('20261028000000'),('20261029000000'),('20261030000000'),('20261031000000'),('20261101000000'),('20261102000000'),('20261103000000'),('20261104000000'),('20261105000000'),('20261106000000'),('20261107000000'),('20261108000000'),('20261109000000'),('20261110000000')) v(version)
+         WHERE NOT EXISTS (SELECT 1 FROM public._manual_migration_log l WHERE l.version = v.version))::text AS value;
+
+SELECT 'EXPECT only check_username_available: SECURITY DEFINER functions anonymous callers can run' AS check_name,
+       COALESCE(string_agg(p.proname, ', ' ORDER BY p.proname), '(none)') AS value
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace AND n.nspname = 'public'
+WHERE p.prosecdef AND has_function_privilege('anon', p.oid, 'EXECUTE');
