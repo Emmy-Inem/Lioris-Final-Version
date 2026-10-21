@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { AppState } from 'react-native';
 import { useAuth } from '@/auth/AuthContext';
 import {
@@ -13,6 +13,8 @@ import {
 export interface RolePermissionsContextValue {
   records: RolePermissionRecord[];
   isLoading: boolean;
+  /** True when the latest refresh failed; the last good matrix (if any) is still in use. */
+  loadError: boolean;
   hasPermission: (key: PermissionKey) => boolean;
   can: (role: SystemRole, key: PermissionKey) => boolean;
   togglePermission: (role: SystemRole, key: PermissionKey) => Promise<void>;
@@ -24,6 +26,7 @@ export interface RolePermissionsContextValue {
 const DEFAULT_CONTEXT: RolePermissionsContextValue = {
   records: [],
   isLoading: false,
+  loadError: false,
   hasPermission: () => true,
   can: () => true,
   togglePermission: async () => {},
@@ -38,31 +41,58 @@ export function RolePermissionsProvider({ children }: { children: React.ReactNod
   const { user } = useAuth();
   const [records, setRecords] = useState<RolePermissionRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const userId = user?.id ?? null;
+  const retryAttempt = useRef(0);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchPermissions = useCallback(async () => {
+    // The matrix is for signed-in members (the database refuses signed-out reads), so there is nothing to fetch
+    // before sign-in and nothing to keep after sign-out.
+    if (!userId) {
+      setRecords([]);
+      setLoadError(false);
+      setIsLoading(false);
+      return;
+    }
     try {
       const data = await listRolePermissions();
-      if (data && data.length > 0) {
-        setRecords(data);
-      }
+      // An empty matrix is a legitimate answer (every permission falls back to its default), so apply it too.
+      setRecords(data);
+      setLoadError(false);
+      retryAttempt.current = 0;
+    } catch (err: any) {
+      // Keep the last good matrix; a failed refresh must not wipe or silently freeze it.
+      console.warn('[RolePermissions] Failed to load permissions:', err?.message || err);
+      setLoadError(true);
+      // Retry sooner than the 5-minute refresh: 15s, 30s, 60s, then every 2 minutes.
+      const delay = Math.min(120_000, 15_000 * 2 ** Math.min(retryAttempt.current, 3));
+      retryAttempt.current += 1;
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+      retryTimer.current = setTimeout(() => {
+        void fetchPermissions();
+      }, delay);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   // Load when the account appears or changes (it used to load once, before sign-in, and never again), and keep
   // it current: an admin flipping a toggle must reach people who already have the app open.
   useEffect(() => {
-    fetchPermissions();
+    retryAttempt.current = 0;
+    void fetchPermissions();
+    if (!userId) return undefined;
     const timer = setInterval(fetchPermissions, 5 * 60 * 1000);
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') fetchPermissions();
+      if (state === 'active') void fetchPermissions();
     });
     return () => {
       clearInterval(timer);
       sub.remove();
+      if (retryTimer.current) clearTimeout(retryTimer.current);
     };
-  }, [fetchPermissions, user?.id]);
+  }, [fetchPermissions, userId]);
 
   // Lookup map: role -> permissionKey -> boolean
   const permissionsMap = useMemo(() => {
@@ -144,6 +174,7 @@ export function RolePermissionsProvider({ children }: { children: React.ReactNod
       value={{
         records,
         isLoading,
+        loadError,
         hasPermission,
         can,
         togglePermission,

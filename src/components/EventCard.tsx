@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from'react';
-import { Alert, Platform, Pressable, View } from'react-native';
+import { Alert, Pressable, View } from'react-native';
 import { Image } from'expo-image';
 import { router, useSegments } from'expo-router';
 import { useQueryClient } from'@tanstack/react-query';
 import { Ionicons } from'@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from'react-native-reanimated';
-import * as Notifications from'expo-notifications';
 import { SolidCard } from'./SolidCard';
 import { AppText } from'./AppText';
 import { AppButton } from'./AppButton';
@@ -45,7 +44,7 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  setRsvpd(!!event.isRsvpd);
  setRsvpCount(event.rsvpCount);
  }, [event.isRsvpd, event.rsvpCount]);
-  const { reminderOn, notificationId: reminderNotificationId, toggleReminder } = useEventReminder(event.id);
+  const { reminderOn, toggleReminder } = useEventReminder(event.id);
   const [submitting, setSubmitting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const cardScale = useSharedValue(1);
@@ -68,9 +67,6 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
   async function handleToggleReminder() {
     haptics.light();
     if (reminderOn) {
-      if (reminderNotificationId && Platform.OS !== 'web') {
-        await Notifications.cancelScheduledNotificationAsync(reminderNotificationId).catch(() => {});
-      }
       try {
         await toggleReminder();
       } catch (err: any) {
@@ -81,27 +77,11 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
       return;
     }
 
-    let notifId: string | undefined;
-    const triggerDate = new Date(new Date(event.startAt).getTime() - 60 * 60 * 1000);
-    if (Platform.OS !== 'web' && triggerDate.getTime() > Date.now()) {
-      try {
-        notifId = await Notifications.scheduleNotificationAsync({
-          content: {
-            title: `${event.title} starts soon`,
-            body: event.location,
-            data: { deepLinkPath: `/${roleGroup}/events/${event.id}` },
-          },
-          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
-        });
-      } catch {
-        // Fallback to backend toggle
-      }
-    }
-
+    // The server holds the reminder and sends it about an hour before the event starts, so it also reaches the
+    // account's other devices and the web app.
     try {
-      await toggleReminder(notifId);
+      await toggleReminder();
     } catch (err: any) {
-      if (notifId && Platform.OS !== 'web') await Notifications.cancelScheduledNotificationAsync(notifId).catch(() => {});
       Alert.alert('Could not set the reminder', err?.message || 'Please try again.');
       return;
     }
@@ -273,9 +253,7 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
               </Pressable>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 0 }}>
-                  {/* Reminders are phone notifications scheduled on the device: the browser has no scheduler, so the bell
-                      used to say "Reminder set" and do nothing. */}
-                  {Platform.OS !== 'web' ? (
+                  {/* The reminder is kept and sent by the server (in-app notification and push), so it works on the web too. */}
                   <Pressable
                     onPress={handleToggleReminder}
                     hitSlop={8}
@@ -289,7 +267,6 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
                       color={reminderOn ? colors.brandPrimary : colors.textSecondary}
                     />
                   </Pressable>
-                  ) : null}
                   <Pressable
                     onPress={() => setMenuOpen(true)}
                     hitSlop={8}

@@ -843,26 +843,24 @@ export async function purgeEvent(id: string) {
 }
 
 /**
- * Toggles a user's reminder for an event on the backend database (public.event_reminders).
- * Returns true if reminder is now active, false if removed.
+ * Turns the signed-in user's reminder for an event on or off (public.event_reminders). Idempotent, so a retry or a
+ * double tap can never flip it the wrong way the way the old toggle could. The server sends the reminder itself
+ * (in-app notification and push) about an hour before the event starts. Returns the state the server now holds.
  */
-export async function toggleEventReminder(eventId: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc('toggle_event_reminder', { p_event_id: eventId });
+export async function setEventReminderOnServer(eventId: string, on: boolean): Promise<boolean> {
+  const { data, error } = await supabase.rpc('set_event_reminder', { p_event_id: eventId, p_on: on });
   if (error) {
-    throwReadable(error, 'Could not update event reminder');
+    throwReadable(error, on ? 'Could not set the event reminder' : 'Could not remove the event reminder');
   }
-  return !!data?.reminder_on;
+  return !!(data as { reminder_on?: boolean } | null)?.reminder_on;
 }
 
 /**
- * Lists the IDs of all events the current user has an active reminder set for.
+ * Lists the IDs of all events the current user has an active reminder set for. Throws when the server cannot be
+ * reached, so callers can tell "no reminders" from "could not check" and keep what they already show.
  */
 export async function listUserEventReminders(): Promise<string[]> {
-  try {
-    const { data, error } = await supabase.rpc('get_my_event_reminders');
-    if (error || !data) return [];
-    return data.map((r: any) => r.event_id);
-  } catch {
-    return [];
-  }
+  const { data, error } = await supabase.rpc('get_my_event_reminders');
+  if (error) throw error;
+  return ((data ?? []) as { event_id: string }[]).map((r) => r.event_id);
 }

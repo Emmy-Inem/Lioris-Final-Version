@@ -65,3 +65,26 @@ export function normalizeAnalyticsPath(pathname: string | null | undefined): str
   }
   return `/${out.join('/')}`;
 }
+
+/**
+ * Pages anybody can open without an account. Signed-out visits are counted for these and ONLY these (the
+ * database enforces the same list in record_public_page_view), so an anonymous visitor never reveals which
+ * private screen or object they were sent to by a deep link.
+ */
+export const PUBLIC_ANALYTICS_PATHS: readonly string[] = [
+  '/',
+  '/login',
+  '/register',
+  '/reset-password',
+  '/verify-email',
+  '/privacy',
+  '/terms',
+  '/copyright',
+  '/community-rules',
+];
+
+export function isPublicAnalyticsPath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  const normalized = normalizeAnalyticsPath(pathname).replace(/\/\(auth\)(?=\/|$)/g, '') || '/';
+  return PUBLIC_ANALYTICS_PATHS.includes(normalized);
+}

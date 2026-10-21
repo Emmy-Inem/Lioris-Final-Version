@@ -93,7 +93,7 @@ export default function RolePermissionsScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const toast = useToast();
-  const { records, isLoading, setPermission, resetToDefaults } = usePermissions();
+  const { records, loadError, refresh, setPermission, resetToDefaults } = usePermissions();
 
   const [activeRole, setActiveRole] = useState<SystemRole>('student');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
@@ -231,6 +231,31 @@ export default function RolePermissionsScreen() {
               onPress={handleConfirmResetRoleDefaults}
             />
           </View>
+
+          {loadError ? (
+            <View
+              accessibilityRole="alert"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: spacing.sm,
+                padding: spacing.sm,
+                marginBottom: spacing.md,
+                borderRadius: radius.md,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+              }}
+            >
+              <AppText variant="caption" tone="secondary" style={{ flex: 1 }}>
+                {records.length > 0
+                  ? 'Could not refresh the permission matrix. Showing the last loaded settings.'
+                  : 'Could not load the permission matrix, so the toggles below are not the saved settings.'}
+              </AppText>
+              <AppButton label="Retry" variant="secondary" size="sm" onPress={() => void refresh()} />
+            </View>
+          ) : null}
 
           {/* Role Segmented Switcher */}
           <ScrollView

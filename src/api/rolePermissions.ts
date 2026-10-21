@@ -54,22 +54,19 @@ function mapRow(row: any): RolePermissionRecord {
 }
 
 /**
- * Lists all permissions configured across all roles from the database.
+ * Lists all permissions configured across all roles from the database. The matrix is readable by signed-in
+ * members only, so call this with a session; a failure throws (it used to return an empty list, which made a
+ * network error look like "nothing is configured").
  */
 export async function listRolePermissions(): Promise<RolePermissionRecord[]> {
-  try {
-    const { data, error } = await supabase
-      .from('role_permissions')
-      .select('*')
-      .order('category', { ascending: true })
-      .order('label', { ascending: true });
+  const { data, error } = await supabase
+    .from('role_permissions')
+    .select('*')
+    .order('category', { ascending: true })
+    .order('label', { ascending: true });
 
-    if (error) throw error;
-    return (data ?? []).map(mapRow);
-  } catch (err: any) {
-    console.warn('[RolePermissions] Failed to list permissions from DB:', err?.message || err);
-    return [];
-  }
+  if (error) throw error;
+  return (data ?? []).map(mapRow);
 }
 
 /**

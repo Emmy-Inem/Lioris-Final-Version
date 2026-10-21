@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 
 /**
- * Persists which events have an active local reminder notification, keyed by
- * event id -> the scheduled notification's id. Without this, EventCard kept
- * `reminderOn`/`reminderNotificationId` in plain useState, which reset to
- * "off" on every remount (list re-render, navigating away and back) while
- * the OS notification scheduled earlier kept running - so re-enabling the
- * reminder could schedule a second, duplicate notification with no way to
- * cancel the first. Mirrors the SecureStore/localStorage + per-user
- * namespacing pattern in src/utils/readDiscussionsTracker.ts and
+ * Which events the signed-in user has a reminder for. The server (public.event_reminders) is the source of truth
+ * and also delivers the reminder (an in-app notification plus push about an hour before the event starts), so a
+ * reminder follows the account across phones, the web app and reinstalls. This module keeps a per-account copy in
+ * secure storage / localStorage only so the bell renders at once and still works offline; every hydrate replaces
+ * it with what the server says. It used to schedule an OS notification on the device and merge the server list
+ * one way only, so reminders removed elsewhere stayed "on", and a failed save still said "Reminder set".
+ * Mirrors the SecureStore/localStorage + per-user namespacing pattern in src/utils/readDiscussionsTracker.ts and
  * src/api/bookmarks.ts.
  */
 
 const STORAGE_KEY_BASE = 'lioris_event_reminders_v1';
+/** Value stored for a reminder the server holds (older app versions stored a device notification id here). */
+const SERVER_MARKER = 'server';
 
 // Safe runtime detection without breaking the Node test runner.
 let secureStore: any = null;
@@ -50,7 +51,7 @@ function scopedKey(userId: string | null): string {
   return userId ? `${STORAGE_KEY_BASE}:${userId}` : STORAGE_KEY_BASE;
 }
 
-/** eventId -> scheduled notification id. */
+/** eventId -> SERVER_MARKER (or, from older versions, the device notification id to cancel). */
 let memoryCache: Record<string, string> = {};
 let isHydrated = false;
 let hydratedForUserId: string | null = null;
@@ -94,42 +95,75 @@ async function writeRaw(key: string, raw: string): Promise<void> {
   }
 }
 
-/** Hydrates the eventId -> notificationId map for the current account. */
-export async function hydrateEventReminders(): Promise<Record<string, string>> {
-  const uid = await currentUserId();
-  if (isHydrated && hydratedForUserId === uid) return memoryCache;
+/** Event ids with an optimistic change in flight; a server refresh must not undo them mid-request. */
+const inFlight = new Set<string>();
+const RECONCILE_MIN_INTERVAL_MS = 60_000;
+let lastReconcileAt = 0;
+let reconcilePromise: Promise<void> | null = null;
 
+/** Cancels notifications an older app version scheduled on this device, so the server's reminder is the only one. */
+async function cancelLegacyDeviceReminders(markers: string[]): Promise<void> {
+  if (typeof localStorage !== 'undefined' || markers.length === 0) return;
   try {
-    const raw = await readRaw(scopedKey(uid));
-    const parsed = raw ? JSON.parse(raw) : null;
-    memoryCache = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    const Notifications = require('expo-notifications');
+    await Promise.all(markers.map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => {})));
   } catch {
-    memoryCache = {};
+    // notifications unavailable: nothing was scheduled by the OS
+  }
+}
+
+/** Replaces the local copy with the server's list. A failed request keeps what is already shown. */
+async function reconcileWithServer(uid: string): Promise<void> {
+  if (!eventsApi?.listUserEventReminders) return;
+  let remote: string[];
+  try {
+    remote = await eventsApi.listUserEventReminders();
+  } catch {
+    return;
+  }
+  if (hydratedForUserId !== uid) return; // signed out or switched account while waiting
+
+  const remoteSet = new Set(remote);
+  const next: Record<string, string> = {};
+  for (const id of remoteSet) next[id] = SERVER_MARKER;
+  // Keep the optimistic state of anything the user is changing right now.
+  for (const id of inFlight) {
+    if (id in memoryCache) next[id] = memoryCache[id];
+    else delete next[id];
   }
 
-  isHydrated = true;
-  hydratedForUserId = uid;
-  notify();
+  const legacy = Object.values(memoryCache).filter((marker) => marker && !marker.startsWith('backend-') && marker !== SERVER_MARKER);
+  const changed =
+    Object.keys(next).length !== Object.keys(memoryCache).length ||
+    Object.keys(next).some((id) => !(id in memoryCache));
+  memoryCache = next;
+  lastReconcileAt = Date.now();
+  if (changed) notify();
+  void writeRaw(scopedKey(uid), JSON.stringify(memoryCache));
+  void cancelLegacyDeviceReminders(legacy);
+}
 
-  // Reconcile with remote database reminders if signed in
-  if (uid && eventsApi?.listUserEventReminders) {
-    eventsApi.listUserEventReminders()
-      .then((remoteEventIds: string[]) => {
-        if (Array.isArray(remoteEventIds) && remoteEventIds.length > 0) {
-          let updated = false;
-          for (const evId of remoteEventIds) {
-            if (!memoryCache[evId]) {
-              memoryCache[evId] = `backend-${evId}`;
-              updated = true;
-            }
-          }
-          if (updated) {
-            notify();
-            void writeRaw(scopedKey(uid), JSON.stringify(memoryCache));
-          }
-        }
-      })
-      .catch(() => {});
+/** Hydrates the eventId -> marker map for the current account, then refreshes it from the server. */
+export async function hydrateEventReminders(): Promise<Record<string, string>> {
+  const uid = await currentUserId();
+  if (!(isHydrated && hydratedForUserId === uid)) {
+    try {
+      const raw = await readRaw(scopedKey(uid));
+      const parsed = raw ? JSON.parse(raw) : null;
+      memoryCache = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      memoryCache = {};
+    }
+    isHydrated = true;
+    hydratedForUserId = uid;
+    lastReconcileAt = 0;
+    notify();
+  }
+
+  if (uid && !reconcilePromise && Date.now() - lastReconcileAt > RECONCILE_MIN_INTERVAL_MS) {
+    reconcilePromise = reconcileWithServer(uid).finally(() => {
+      reconcilePromise = null;
+    });
   }
 
   return memoryCache;
@@ -140,11 +174,7 @@ export function getEventReminderNotificationIdSync(eventId: string): string | nu
   return memoryCache[eventId] ?? null;
 }
 
-/** Records that `eventId` now has a pending notification, and persists it. */
-export async function setEventReminder(eventId: string, notificationId: string): Promise<void> {
-  await hydrateEventReminders();
-  memoryCache = { ...memoryCache, [eventId]: notificationId };
-  notify();
+async function persist(): Promise<void> {
   try {
     const uid = await currentUserId();
     await writeRaw(scopedKey(uid), JSON.stringify(memoryCache));
@@ -153,19 +183,37 @@ export async function setEventReminder(eventId: string, notificationId: string):
   }
 }
 
-/** Clears the persisted reminder for `eventId` (after cancelling the OS notification). */
-export async function clearEventReminder(eventId: string): Promise<void> {
+/**
+ * Turns the reminder for `eventId` on or off. The bell updates at once; if the server refuses (offline, event gone,
+ * too many reminders) the change is rolled back and the error is thrown so the caller can say so.
+ */
+export async function setEventReminderState(eventId: string, on: boolean): Promise<void> {
   await hydrateEventReminders();
-  if (!(eventId in memoryCache)) return;
-  const next = { ...memoryCache };
-  delete next[eventId];
-  memoryCache = next;
+  const had = eventId in memoryCache;
+  const previousMarker = memoryCache[eventId];
+  inFlight.add(eventId);
+  if (on) memoryCache = { ...memoryCache, [eventId]: SERVER_MARKER };
+  else {
+    const next = { ...memoryCache };
+    delete next[eventId];
+    memoryCache = next;
+  }
   notify();
   try {
-    const uid = await currentUserId();
-    await writeRaw(scopedKey(uid), JSON.stringify(memoryCache));
-  } catch {
-    // Non-blocking
+    if (!eventsApi?.setEventReminderOnServer) throw new Error('Reminders are unavailable right now.');
+    await eventsApi.setEventReminderOnServer(eventId, on);
+    await persist();
+  } catch (err) {
+    if (had) memoryCache = { ...memoryCache, [eventId]: previousMarker };
+    else {
+      const next = { ...memoryCache };
+      delete next[eventId];
+      memoryCache = next;
+    }
+    notify();
+    throw err;
+  } finally {
+    inFlight.delete(eventId);
   }
 }
 
@@ -185,42 +233,16 @@ export function useEventReminder(eventId: string) {
     };
   }, []);
 
-  const notificationId = getEventReminderNotificationIdSync(eventId);
-  const reminderOn = !!notificationId;
+  const reminderOn = !!getEventReminderNotificationIdSync(eventId);
 
-  const setReminder = useCallback(
-    (notifId: string) => {
-      void setEventReminder(eventId, notifId);
-    },
-    [eventId],
-  );
-
-  const clearReminder = useCallback(() => {
-    void clearEventReminder(eventId);
+  /** Flips the reminder and returns the new state. Throws (after rolling the bell back) when the server refuses. */
+  const toggleReminder = useCallback(async (): Promise<boolean> => {
+    const next = !getEventReminderNotificationIdSync(eventId);
+    await setEventReminderState(eventId, next);
+    return next;
   }, [eventId]);
 
-  const toggleReminder = useCallback(
-    async (notifId?: string): Promise<boolean> => {
-      const isCurrentlyOn = !!getEventReminderNotificationIdSync(eventId);
-      if (isCurrentlyOn) {
-        await clearEventReminder(eventId);
-        if (eventsApi?.toggleEventReminder) {
-          await eventsApi.toggleEventReminder(eventId).catch(() => {});
-        }
-        return false;
-      } else {
-        const idToStore = notifId || `backend-${eventId}`;
-        await setEventReminder(eventId, idToStore);
-        if (eventsApi?.toggleEventReminder) {
-          await eventsApi.toggleEventReminder(eventId).catch(() => {});
-        }
-        return true;
-      }
-    },
-    [eventId],
-  );
-
-  return { reminderOn, notificationId, setReminder, clearReminder, toggleReminder };
+  return { reminderOn, toggleReminder };
 }
 
 /**

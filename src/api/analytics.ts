@@ -66,6 +66,20 @@ export async function recordUserActivity(event: AnalyticsEvent): Promise<void> {
   }
 }
 
+/**
+ * Counts a visit to a public page (landing, login, register, legal pages) before anyone is signed in. The
+ * database accepts only that fixed list of paths, stores no user or device id, and caps the total rate.
+ */
+export async function recordPublicPageView(name: string): Promise<void> {
+  try {
+    const { error } = await supabase.rpc('record_public_page_view', { p_name: name });
+    if (error) console.warn('[Analytics] record_public_page_view RPC error:', error.message);
+  } catch (err) {
+    // Non-blocking best-effort analytics
+    console.warn('[Analytics] recordPublicPageView failure:', err);
+  }
+}
+
 export async function fetchAdminAnalyticsSummary(
   days: number = 30,
   campusCode: string = 'ALL',
