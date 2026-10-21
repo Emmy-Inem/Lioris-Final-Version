@@ -493,17 +493,17 @@ export default function StaffDashboard() {
             </View>
 
             <View style={{ gap: spacing.sm }}>
-              {activeDiscussions.map((post: any) => (
-                <Pressable
-                  key={post.id}
-                  onPress={() => {
-                    markAsRead(post.id);
-                    router.push(`/(staff)/post/${post.id}` as any);
-                  }}
-                >
-                  <SolidCard radius={18} style={{ padding: spacing.md }}>
+              {activeDiscussions.map((post: any) => {
+                // The card is not itself a button: opening the post and Dismiss are siblings, because a button
+                // nested inside a button is invalid for keyboard and screen-reader users.
+                const openPost = () => {
+                  markAsRead(post.id);
+                  router.push(`/(staff)/post/${post.id}` as any);
+                };
+                return (
+                  <SolidCard key={post.id} radius={18} style={{ padding: spacing.md }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                      <Pressable accessibilityRole="button" accessibilityLabel={`Open ${post.title}`} onPress={openPost} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                         <View style={{ flexShrink: 0 }}>
                           <Avatar name={post.authorName ?? 'Student'} size={28} />
                         </View>
@@ -515,7 +515,7 @@ export default function StaffDashboard() {
                             {post.department ?? 'Academic Discussion'}
                           </AppText>
                         </View>
-                      </View>
+                      </Pressable>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Badge label={post.category ?? 'Discussion'} tone="neutral" />
                         <Pressable
@@ -536,15 +536,17 @@ export default function StaffDashboard() {
                       </View>
                     </View>
 
-                    <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 4, marginBottom: 2 }}>
-                      {post.title}
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={2}>
-                      {post.content}
-                    </AppText>
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Open ${post.title}`} onPress={openPost}>
+                      <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 4, marginBottom: 2 }}>
+                        {post.title}
+                      </AppText>
+                      <AppText tone="secondary" variant="caption" numberOfLines={2}>
+                        {post.content}
+                      </AppText>
+                    </Pressable>
                   </SolidCard>
-                </Pressable>
-              ))}
+                );
+              })}
             </View>
           </View>
         )}

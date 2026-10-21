@@ -689,17 +689,17 @@ export default function AlumniDashboard() {
             </View>
 
             <View style={{ gap: spacing.xs }}>
-              {activeDiscussions.map((post: any) => (
-                <Pressable
-                  key={post.id}
-                  onPress={() => {
-                    markAsRead(post.id);
-                    router.push(`/(alumni)/post/${post.id}` as any);
-                  }}
-                >
-                  <SolidCard radius={16} style={{ padding: 12 }}>
+              {activeDiscussions.map((post: any) => {
+                // The card is not itself a button: opening the post and Dismiss are siblings, because a button
+                // nested inside a button is invalid for keyboard and screen-reader users.
+                const openPost = () => {
+                  markAsRead(post.id);
+                  router.push(`/(alumni)/post/${post.id}` as any);
+                };
+                return (
+                  <SolidCard key={post.id} radius={16} style={{ padding: 12 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                      <Pressable accessibilityRole="button" accessibilityLabel={`Open ${post.title}`} onPress={openPost} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                         <Avatar name={post.authorName ?? 'Fellow'} size={26} />
                         <View style={{ flex: 1, minWidth: 0 }}>
                           <AppText variant="caption" weight="bold">
@@ -709,7 +709,7 @@ export default function AlumniDashboard() {
                             {post.department ?? 'Alumni Network'}
                           </AppText>
                         </View>
-                      </View>
+                      </Pressable>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Badge label={post.category ?? 'Discussion'} tone="neutral" />
                         <Pressable
@@ -730,30 +730,32 @@ export default function AlumniDashboard() {
                       </View>
                     </View>
 
-                    <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 2, marginBottom: 2 }}>
-                      {post.title}
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={2}>
-                      {post.content}
-                    </AppText>
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Open ${post.title}`} onPress={openPost}>
+                      <AppText variant="bodySmall" weight="semiBold" style={{ marginTop: 2, marginBottom: 2 }}>
+                        {post.title}
+                      </AppText>
+                      <AppText tone="secondary" variant="caption" numberOfLines={2}>
+                        {post.content}
+                      </AppText>
 
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xs }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Ionicons name="heart-outline" size={13} color={colors.textSecondary} />
-                        <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                          {post.upvotesCount ?? 0}
-                        </AppText>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xs }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Ionicons name="heart-outline" size={13} color={colors.textSecondary} />
+                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                            {post.upvotesCount ?? 0}
+                          </AppText>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Ionicons name="chatbubble-outline" size={13} color={colors.textSecondary} />
+                          <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
+                            {post.commentsCount ?? 0} replies
+                          </AppText>
+                        </View>
                       </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Ionicons name="chatbubble-outline" size={13} color={colors.textSecondary} />
-                        <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                          {post.commentsCount ?? 0} replies
-                        </AppText>
-                      </View>
-                    </View>
+                    </Pressable>
                   </SolidCard>
-                </Pressable>
-              ))}
+                );
+              })}
             </View>
           </View>
         )}

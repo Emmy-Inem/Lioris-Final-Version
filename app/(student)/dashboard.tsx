@@ -497,20 +497,21 @@ export default function StudentDashboard() {
             </View>
 
             <View style={{ gap: spacing.sm }}>
-              {urgentBroadcasts.map((item) => (
-                <Pressable accessibilityRole="button"
-                  key={item.id}
-                  onPress={() => {
-                    haptics.light();
-                    markAsRead(item.id);
-                    if (item.type === 'announcement') {
-                      setSelectedAnnouncement(item.raw);
-                    } else {
-                      router.push(`/(student)/post/${item.id}` as any);
-                    }
-                  }}
-                >
+              {urgentBroadcasts.map((item) => {
+                // The card is not itself a button: the open action and Dismiss are siblings, because a button
+                // nested inside a button is invalid for keyboard and screen-reader users.
+                const openItem = () => {
+                  haptics.light();
+                  markAsRead(item.id);
+                  if (item.type === 'announcement') {
+                    setSelectedAnnouncement(item.raw);
+                  } else {
+                    router.push(`/(student)/post/${item.id}` as any);
+                  }
+                };
+                return (
                   <SolidCard
+                    key={item.id}
                     radius={16}
                     style={{
                       padding: 13,
@@ -519,10 +520,11 @@ export default function StudentDashboard() {
                     }}
                   >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
-                      <Badge label={item.badge} tone={item.tone === 'critical' ? 'critical' : item.tone === 'warning' ? 'warning' : 'brand'} />
+                      <Pressable accessibilityRole="button" accessibilityLabel={`Open notice: ${item.title}`} onPress={openItem}>
+                        <Badge label={item.badge} tone={item.tone === 'critical' ? 'critical' : item.tone === 'warning' ? 'warning' : 'brand'} />
+                      </Pressable>
                       <Pressable accessibilityRole="button"
-                        onPress={(e) => {
-                          e.stopPropagation();
+                        onPress={() => {
                           haptics.light();
                           markAsRead(item.id);
                         }}
@@ -539,15 +541,17 @@ export default function StudentDashboard() {
                         </AppText>
                       </Pressable>
                     </View>
-                    <AppText weight="bold" style={{ fontSize: 13.5, lineHeight: 18, marginBottom: 2 }}>
-                      {item.title}
-                    </AppText>
-                    <AppText tone="secondary" variant="caption" numberOfLines={2} style={{ lineHeight: 16 }}>
-                      {item.content}
-                    </AppText>
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Open notice: ${item.title}`} onPress={openItem}>
+                      <AppText weight="bold" style={{ fontSize: 13.5, lineHeight: 18, marginBottom: 2 }}>
+                        {item.title}
+                      </AppText>
+                      <AppText tone="secondary" variant="caption" numberOfLines={2} style={{ lineHeight: 16 }}>
+                        {item.content}
+                      </AppText>
+                    </Pressable>
                   </SolidCard>
-                </Pressable>
-              ))}
+                );
+              })}
             </View>
           </View>
         )}

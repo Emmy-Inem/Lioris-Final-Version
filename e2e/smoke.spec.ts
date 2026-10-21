@@ -168,7 +168,7 @@ test.describe('authenticated role portals', () => {
     await waitForApp(page);
 
     await expect(page.getByText(/Quick Services/i)).toBeVisible();
-    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('lioris.sessionUser') || '{}'));
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('lioris.sessionUser.core') || '{}'));
     expect(stored.actualRole).toBe('admin');
     expect(stored.adminRole).toBe('super_admin');
   });
@@ -266,7 +266,7 @@ test.describe('student onboarding continuity', () => {
     await page.getByRole('button', { name: /Continue with \d+ selected|Skip for now/ }).click();
 
     await expect(page).toHaveURL(/onboarding\/verify/, { timeout: 20_000 });
-    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('lioris.sessionUser') || '{}'));
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('lioris.sessionUser.core') || '{}'));
     expect(stored.onboardingComplete).toBe(false);
     expect(stored.onboardingStep).toBe('/(auth)/onboarding/verify');
     await page.reload();
