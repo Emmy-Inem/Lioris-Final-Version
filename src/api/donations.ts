@@ -11,7 +11,10 @@ export interface GivingCampaign {
   currency: string;
   givingUrl: string;
   coverImageUrl: string | null;
+  /** Total confirmed by an administrator. Owners cannot write it. */
   confirmedTotal: number;
+  /** Total as REPORTED by the organiser - unverified. */
+  reportedTotal: number;
   reviewStatus: 'pending' | 'approved' | 'rejected';
   reviewNote: string | null;
   isClosed: boolean;
@@ -31,6 +34,7 @@ function mapCampaign(row: any): GivingCampaign {
     givingUrl: row.giving_url,
     coverImageUrl: row.cover_image_url ?? null,
     confirmedTotal: Number(row.confirmed_total ?? 0),
+    reportedTotal: Number(row.reported_total ?? 0),
     reviewStatus: row.review_status,
     reviewNote: row.review_note ?? null,
     isClosed: !!row.is_closed,
@@ -175,18 +179,24 @@ export async function updateGivingCampaignTotal(campaignId: string, confirmedTot
 // --- Owner self-service (direct table writes - RLS + the moderation trigger
 // let the campaign's own creator do these without going through an admin) ---
 
-/** The signed-in owner updates their own campaign's manually-confirmed total. */
-export async function updateMyCampaignTotal(campaignId: string, confirmedTotal: number): Promise<void> {
+/**
+ * The signed-in owner reports their campaign's running total. This is the organiser's own,
+ * UNVERIFIED figure (reported_total); only an administrator can set the confirmed total.
+ */
+export async function updateMyCampaignReportedTotal(campaignId: string, reportedTotal: number): Promise<void> {
+  if (!Number.isFinite(reportedTotal) || reportedTotal < 0) {
+    throw new Error('Enter a total of 0 or more.');
+  }
   const { data, error } = await supabase
     .from('giving_campaigns')
-    .update({ confirmed_total: confirmedTotal })
+    .update({ reported_total: reportedTotal })
     .eq('id', campaignId)
     .select('id');
   if (error) {
-    throw new Error(getFriendlyErrorMessage(error, 'Could not update your confirmed total. Please try again.'));
+    throw new Error(getFriendlyErrorMessage(error, 'Could not update your reported total. Please try again.'));
   }
   if (!data || data.length === 0) {
-    throw new Error('Could not update your confirmed total: campaign was not found or you do not have permission.');
+    throw new Error('Could not update your reported total: campaign was not found or you do not have permission.');
   }
 }
 

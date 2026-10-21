@@ -104,6 +104,7 @@ export function PaymentReviewSheet({ eventId, onClose }: { eventId: string | nul
         note: note.trim() || undefined,
         overrideLinkCheck: kind === 'override',
         publish: kind !== 'reject' && waitingApproval && publish,
+        expectedPaymentUrl: row.paymentUrl,
       });
       haptics.success();
       await refresh();

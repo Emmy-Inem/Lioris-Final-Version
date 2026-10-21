@@ -48,6 +48,11 @@ interface Body {
   note?: unknown;
   overrideLinkCheck?: unknown;
   publish?: unknown;
+  /** What the admin was looking at when they decided; the database refuses a stale decision. */
+  expectedPaymentUrl?: unknown;
+  expectedUpdatedAt?: unknown;
+  /** Super Admin only: allow deciding a payment review that is no longer pending. */
+  allowRereview?: unknown;
   status?: unknown;
   organiserName?: unknown;
   organiserContact?: unknown;
@@ -68,20 +73,87 @@ function str(v: unknown, max: number): string | null {
   return t.length === 0 ? null : t.slice(0, max);
 }
 
+/** A finite number, or a string that fully matches `pattern` (plain digits). Everything else is null. */
+function parseNumber(v: unknown, pattern: RegExp): number | null {
+  if (typeof v === 'number') return Number.isFinite(v) && v >= 0 ? v : null;
+  if (typeof v === 'string' && pattern.test(v.trim())) return Number(v.trim());
+  return null;
+}
+
 const onList = (host: string, list: string[]) => list.some((d) => host === d || host.endsWith('.' + d));
 
-function isPrivateIp(ip: string): boolean {
-  const lower = ip.toLowerCase();
-  if (lower.includes(':')) {
-    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(lower);
-    if (mapped) return isPrivateIp(mapped[1]);
-    return lower === '::' || lower === '::1' || /^f[cd]/.test(lower) || /^fe[89ab]/.test(lower) || lower.startsWith('ff');
+/** Parse an IPv6 literal into eight 16-bit groups, or null when it is not a valid address. Handles "::" and a dotted-quad tail. */
+function parseIpv6(raw: string): number[] | null {
+  let s = raw.toLowerCase();
+  const zone = s.indexOf('%');
+  if (zone >= 0) s = s.slice(0, zone);
+  if (s.startsWith('[') && s.endsWith(']')) s = s.slice(1, -1);
+  if (!s.includes(':')) return null;
+
+  // dotted-quad tail (::ffff:1.2.3.4, ::1.2.3.4, 64:ff9b::1.2.3.4) becomes two hex groups
+  const tail = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(s);
+  if (tail) {
+    const o = tail.slice(1, 5).map(Number);
+    if (o.some((n) => n > 255)) return null;
+    s = s.slice(0, tail.index) + ((o[0] << 8) | o[1]).toString(16) + ':' + ((o[2] << 8) | o[3]).toString(16);
   }
+
+  const halves = s.split('::');
+  if (halves.length > 2) return null;
+  const parse = (part: string): number[] | null => {
+    if (part === '') return [];
+    const groups = part.split(':');
+    const out: number[] = [];
+    for (const g of groups) {
+      if (!/^[0-9a-f]{1,4}$/.test(g)) return null;
+      out.push(parseInt(g, 16));
+    }
+    return out;
+  };
+  const head = parse(halves[0]);
+  const rest = halves.length === 2 ? parse(halves[1]) : [];
+  if (!head || !rest) return null;
+  if (halves.length === 1) return head.length === 8 ? head : null;
+  const missing = 8 - head.length - rest.length;
+  if (missing < 1) return null;
+  return [...head, ...new Array<number>(missing).fill(0), ...rest];
+}
+
+/**
+ * True for any address an organiser-supplied link must never reach: loopback, private, link-local,
+ * CGNAT, multicast, reserved ranges, and every IPv6 form that smuggles an IPv4 address
+ * (IPv4-mapped ::ffff:a.b.c.d / ::ffff:7f00:1, IPv4-compatible ::a.b.c.d, NAT64 64:ff9b::/96, 6to4 2002::/16).
+ * Anything that does not parse is treated as private (fail closed).
+ */
+function isPrivateIp(ip: string): boolean {
+  const lower = ip.trim().toLowerCase();
+  if (lower.includes(':')) {
+    const g = parseIpv6(lower);
+    if (!g) return true;
+    const embedded = (hi: number, lo: number) => isPrivateIp(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`);
+    const firstSixZero = g.slice(0, 6).every((n) => n === 0);
+    if (g.slice(0, 7).every((n) => n === 0) && (g[7] === 0 || g[7] === 1)) return true; // :: and ::1
+    if (g.slice(0, 5).every((n) => n === 0) && g[5] === 0xffff) return embedded(g[6], g[7]); // IPv4-mapped
+    if (g.slice(0, 4).every((n) => n === 0) && g[4] === 0xffff && g[5] === 0) return embedded(g[6], g[7]); // IPv4-translated ::ffff:0:a.b.c.d
+    if (firstSixZero) return true; // IPv4-compatible ::a.b.c.d (deprecated, never legitimate) incl. ::7f00:1
+    if (g[0] === 0x64 && g[1] === 0xff9b) return true; // NAT64 64:ff9b::/96 and 64:ff9b:1::/48
+    if (g[0] === 0x2002) return true; // 6to4 2002::/16 embeds an arbitrary IPv4 address
+    if (g[0] === 0x2001 && g[1] === 0) return true; // Teredo 2001::/32
+    if (g[0] === 0x2001 && g[1] === 0x0db8) return true; // documentation 2001:db8::/32
+    if (g[0] === 0x0100 && g[1] === 0 && g[2] === 0 && g[3] === 0) return true; // discard 100::/64
+    if ((g[0] & 0xfe00) === 0xfc00) return true; // unique local fc00::/7
+    if ((g[0] & 0xffc0) === 0xfe80) return true; // link-local fe80::/10
+    if ((g[0] & 0xffc0) === 0xfec0) return true; // site-local fec0::/10
+    if ((g[0] & 0xff00) === 0xff00) return true; // multicast ff00::/8
+    return false;
+  }
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(lower)) return true;
   const p = lower.split('.').map(Number);
-  if (p.length !== 4 || p.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
-  const [a, b] = p;
+  if (p.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  const [a, b, c] = p;
   return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0) || (a === 198 && (b === 18 || b === 19)) || a >= 224;
+    (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0) || (a === 192 && b === 88 && c === 99) ||
+    (a === 198 && (b === 18 || b === 19)) || (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113) || a >= 224;
 }
 
 async function resolveAll(host: string): Promise<string[] | null> {
@@ -152,12 +224,12 @@ async function checkLink(rawUrl: string): Promise<LinkCheck> {
     } catch {
       return fail(`Could not look up ${host} in DNS.`);
     }
-    if (addresses !== null) {
-      if (addresses.length === 0) return fail(`${host} does not exist in DNS.`);
-      if (addresses.some(isPrivateIp)) return fail(`${host} points at a private network address.`);
-    } else {
-      result.warnings.push('DNS could not be checked from the server.');
-    }
+    // Fail CLOSED: with no DNS answer we cannot tell whether the host points inside our network, and
+    // fetching it anyway is exactly the SSRF this check exists to prevent. Every redirect hop goes
+    // through this same check (hostProblem + DNS) before it is requested.
+    if (addresses === null) return fail('The server cannot resolve DNS here, so the link could not be vetted safely. Check it manually.');
+    if (addresses.length === 0) return fail(`${host} does not exist in DNS.`);
+    if (addresses.some(isPrivateIp)) return fail(`${host} points at a private network address.`);
 
     let res: Response;
     try {
@@ -252,11 +324,15 @@ Deno.serve(async (req: Request) => {
       const { data: ev, error: evErr } = await admin.from('events').select('id, campus_code').eq('id', eventId).maybeSingle();
       if (evErr) throw new Fail(500, 'db_error', 'Could not verify event permissions.');
       if (!ev) throw new Fail(404, 'not_found', 'That paid event does not exist.');
+      // Fail CLOSED: GLOBAL / NULL events (and GLOBAL / campus-less admins) are Super Admin only.
       if (
         !callerCampus ||
-        (ev.campus_code && ev.campus_code !== 'GLOBAL' && ev.campus_code !== callerCampus)
+        callerCampus === 'GLOBAL' ||
+        !ev.campus_code ||
+        ev.campus_code === 'GLOBAL' ||
+        ev.campus_code !== callerCampus
       ) {
-        throw new Fail(403, 'forbidden', 'Campus Admins can only review events within their registered campus node.');
+        throw new Fail(403, 'forbidden', 'Campus Admins can only review events of their own campus. Global events are reviewed by a Super Admin.');
       }
     }
 
@@ -291,6 +367,10 @@ Deno.serve(async (req: Request) => {
         p_note: str(b.note, 500),
         p_override_link_check: b.overrideLinkCheck === true,
         p_publish: b.publish === true,
+        // stale-review guards: the desk sends what it was looking at; the database refuses if it changed
+        p_expected_payment_url: typeof b.expectedPaymentUrl === 'string' ? b.expectedPaymentUrl : null,
+        p_expected_updated_at: typeof b.expectedUpdatedAt === 'string' && !Number.isNaN(Date.parse(b.expectedUpdatedAt)) ? b.expectedUpdatedAt : null,
+        p_allow_rereview: isSuper && b.allowRereview === true,
       });
       if (error) throw mapDbError(error.message);
       return jsonResponse(req, { success: true, event: data }, 200);
@@ -301,10 +381,13 @@ Deno.serve(async (req: Request) => {
     if (status !== 'none' && status !== 'proposed' && status !== 'agreed' && status !== 'ended') {
       throw new Fail(400, 'bad_request', 'status must be none, proposed, agreed or ended.');
     }
-    const fee = b.fee === null || b.fee === undefined || b.fee === '' ? null : Number(b.fee);
-    if (fee !== null && (!Number.isFinite(fee) || fee < 0 || fee > 1_000_000)) throw new Fail(422, 'invalid_input', 'The fee must be an amount in naira between 0 and 1,000,000.');
-    const days = b.disputeWindowDays === undefined || b.disputeWindowDays === null ? 7 : Number(b.disputeWindowDays);
-    if (!Number.isInteger(days) || days < 1 || days > 90) throw new Fail(422, 'invalid_input', 'The dispute window must be between 1 and 90 days.');
+    // Only a real number or a plain numeric string: Number(true) === 1, Number([]) === 0 and Number('  ') === 0 must not slip through.
+    const fee = b.fee === null || b.fee === undefined || b.fee === '' ? null : parseNumber(b.fee, /^\d{1,7}(\.\d{1,2})?$/);
+    if (b.fee !== null && b.fee !== undefined && b.fee !== '' && (fee === null || fee > 1_000_000)) {
+      throw new Fail(422, 'invalid_input', 'The fee must be an amount in naira between 0 and 1,000,000.');
+    }
+    const days = b.disputeWindowDays === undefined || b.disputeWindowDays === null ? 7 : parseNumber(b.disputeWindowDays, /^\d{1,3}$/);
+    if (days === null || !Number.isInteger(days) || days < 1 || days > 90) throw new Fail(422, 'invalid_input', 'The dispute window must be between 1 and 90 days.');
     const { data, error } = await admin.rpc('admin_save_partnership', {
       p_event: eventId,
       p_actor: caller.id,

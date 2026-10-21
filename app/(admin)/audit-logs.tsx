@@ -34,12 +34,14 @@ const CATEGORIES: Array<{ label: string; match?: (action: AuditLogAction) => boo
       a.startsWith('community_') ||
       a.startsWith('event_') ||
       a.startsWith('giving_campaign_') ||
+      a === 'giving_total_confirmed' ||
+      a.startsWith('announcement_') ||
       a === 'item_moderated',
   },
   { label: 'Verification', match: (a) => a.startsWith('verification_') },
   {
     label: 'Accounts',
-    match: (a) => a.startsWith('user_') || a.startsWith('impersonation_') || a === 'profile_updated',
+    match: (a) => a.startsWith('user_') || a.startsWith('impersonation_') || a.startsWith('profile_'),
   },
   { label: 'Support', match: (a) => a.startsWith('support_ticket_') },
   {
@@ -50,6 +52,7 @@ const CATEGORIES: Array<{ label: string; match?: (action: AuditLogAction) => boo
       a === 'institution_provisioned' ||
       a === 'platform_config_updated' ||
       a === 'global_push_broadcast' ||
+      a === 'broadcast_sent' ||
       a === 'maintenance_mode_toggled' ||
       a === 'storage_quotas_enforced' ||
       a === 'system_cleanup_executed' ||
@@ -102,6 +105,11 @@ const ACTION_TONE: Partial<Record<AuditLogAction, 'success' | 'critical' | 'warn
   giving_campaign_approved: 'success',
   giving_campaign_rejected: 'neutral',
   giving_campaign_total_updated: 'brand',
+  giving_total_confirmed: 'brand',
+  user_verified: 'success',
+  broadcast_sent: 'critical',
+  announcement_updated: 'brand',
+  announcement_deleted: 'warning',
 };
 
 const PAGE_SIZE = 100;
@@ -157,14 +165,20 @@ export default function AuditLogsScreen() {
     setPage(0);
   }, [filterKey]);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['audit-log', filterKey, page, lockedCampus],
     queryFn: () => listAuditLogEntriesPage({ since, until, actorSearch: trimmedActorSearch || undefined, institutionCode: lockedCampus, page, pageSize: PAGE_SIZE }),
   });
 
   useEffect(() => {
     if (!data) return;
-    setAccumulated((prev) => (page === 0 ? data.entries : [...prev, ...data.entries]));
+    // De-duplicate by id: a refetch of an already-loaded page (focus, retry, filter bounce) must not
+    // append the same entries a second time (duplicate React keys + inflated counts).
+    setAccumulated((prev) => {
+      const base = page === 0 ? [] : prev;
+      const seen = new Set(base.map((e) => e.id));
+      return [...base, ...data.entries.filter((e) => !seen.has(e.id))];
+    });
   }, [data, page]);
 
   const category = CATEGORIES.find((c) => c.label === filter) ?? CATEGORIES[0];
@@ -293,6 +307,22 @@ export default function AuditLogsScreen() {
         ) : null}
       </View>
 
+      {isError ? (
+        <SolidCard radius={16} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.critical}55` }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+            <Ionicons name="alert-circle-outline" size={20} color={colors.critical} />
+            <View style={{ flex: 1, minWidth: 160 }}>
+              <AppText weight="bold" variant="bodySmall">Could not load the audit log</AppText>
+              <AppText tone="secondary" variant="caption">
+                {(error as Error | null)?.message || 'Something went wrong while loading entries.'}
+                {accumulated.length > 0 ? ' The entries below are from an earlier load and may be incomplete.' : ''}
+              </AppText>
+            </View>
+            <AppButton label="Retry" variant="secondary" size="sm" loading={isFetching} onPress={() => void refetch()} />
+          </View>
+        </SolidCard>
+      ) : null}
+
       <FlatList
         style={{ flex: 1, minHeight: 0 }}
         data={filtered}
@@ -337,7 +367,7 @@ export default function AuditLogsScreen() {
           </View>
         )}
         ListEmptyComponent={
-          !isLoading ? (
+          !isLoading && !isError ? (
             <EmptyState
               title="No audit entries"
               description={filter === 'All' ? 'System actions will be recorded here automatically.' : `No ${filter.toLowerCase()} entries yet.`}

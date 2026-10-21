@@ -17,7 +17,6 @@ import {
   updateGivingCampaignTotal,
   listGivingCampaigns,
 } from '@/api/donations';
-import { recordAuditLogEntry } from '@/api/auditLog';
 import { haptics } from '@/utils/haptics';
 
 function formatNaira(amount: number): string {
@@ -39,7 +38,9 @@ function ClickCount({ campaignId }: { campaignId: string }) {
 
 function TotalEditor({ campaign, onSaved }: { campaign: GivingCampaign; onSaved: () => void }) {
   const { spacing } = useTheme();
-  const [value, setValue] = useState(String(campaign.confirmedTotal));
+  // Start from what the organiser reported when nothing has been confirmed yet - the admin is expected
+  // to verify it against the organiser's own giving platform before saving.
+  const [value, setValue] = useState(String(campaign.confirmedTotal || campaign.reportedTotal));
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -47,15 +48,7 @@ function TotalEditor({ campaign, onSaved }: { campaign: GivingCampaign; onSaved:
     if (!Number.isFinite(num) || num < 0) return;
     setSaving(true);
     try {
-      const previousTotal = campaign.confirmedTotal;
       await updateGivingCampaignTotal(campaign.id, num);
-      recordAuditLogEntry({
-        action: 'giving_campaign_total_updated',
-        summary: `Updated confirmed total for giving campaign: "${campaign.title}" (${formatNaira(previousTotal)} -> ${formatNaira(num)})`,
-        targetType: 'giving_campaign',
-        targetId: campaign.id,
-        reason: `Confirmed total changed from ${formatNaira(previousTotal)} to ${formatNaira(num)}`,
-      });
       onSaved();
     } catch (err: any) {
       Alert.alert('Could not update total', err?.message || 'Please try again.');
@@ -67,7 +60,7 @@ function TotalEditor({ campaign, onSaved }: { campaign: GivingCampaign; onSaved:
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, marginTop: spacing.sm }}>
       <View style={{ flex: 1 }}>
-        <AppTextField label="Confirmed Total (₦)" value={value} onChangeText={(t) => setValue(t.replace(/[^0-9.]/g, ''))} keyboardType="numeric" />
+        <AppTextField label="Confirmed Total (₦) - admin-verified" value={value} onChangeText={(t) => setValue(t.replace(/[^0-9.]/g, ''))} keyboardType="numeric" />
       </View>
       <AppButton label="Save" variant="secondary" size="sm" loading={saving} onPress={save} />
     </View>
@@ -104,13 +97,6 @@ export function DonationsModerationTab() {
     setActingId(c.id);
     try {
       await reviewGivingCampaign(c.id, 'approve');
-      recordAuditLogEntry({
-        action: 'giving_campaign_approved',
-        summary: `Approved giving campaign: "${c.title}"`,
-        targetType: 'giving_campaign',
-        targetId: c.id,
-        reason: 'Giving page reviewed and approved',
-      });
       refreshAll();
       Alert.alert('Campaign Approved', `"${c.title}" is now visible to alumni.`);
     } catch (err: any) {
@@ -130,13 +116,6 @@ export function DonationsModerationTab() {
       setActingId(c.id);
       try {
         await reviewGivingCampaign(c.id, 'reject', reason);
-        recordAuditLogEntry({
-          action: 'giving_campaign_rejected',
-          summary: `Rejected giving campaign: "${c.title}"`,
-          targetType: 'giving_campaign',
-          targetId: c.id,
-          reason,
-        });
         refreshAll();
         Alert.alert('Campaign Rejected', 'The creator will see this was declined.');
       } catch (err: any) {
@@ -206,13 +185,6 @@ export function DonationsModerationTab() {
     for (const campaign of targets) {
       try {
         await reviewGivingCampaign(campaign.id, 'approve');
-        recordAuditLogEntry({
-          action: 'giving_campaign_approved',
-          summary: `Approved giving campaign: "${campaign.title}" (bulk action)`,
-          targetType: 'giving_campaign',
-          targetId: campaign.id,
-          reason: 'Giving page reviewed and approved',
-        });
         succeeded += 1;
       } catch {
         failed += 1;
@@ -241,13 +213,6 @@ export function DonationsModerationTab() {
       for (const campaign of targets) {
         try {
           await reviewGivingCampaign(campaign.id, 'reject', reason);
-          recordAuditLogEntry({
-            action: 'giving_campaign_rejected',
-            summary: `Rejected giving campaign: "${campaign.title}" (bulk action)`,
-            targetType: 'giving_campaign',
-            targetId: campaign.id,
-            reason,
-          });
           succeeded += 1;
         } catch {
           failed += 1;
@@ -371,7 +336,10 @@ export function DonationsModerationTab() {
           )}
 
           <AppText variant="caption" tone="secondary" style={{ marginTop: spacing.sm }}>
-            {formatNaira(c.confirmedTotal)} confirmed{c.goalAmount ? ` of ${formatNaira(c.goalAmount)} goal` : ''}
+            {formatNaira(c.confirmedTotal)} confirmed by admin
+            {c.goalAmount ? ` of ${formatNaira(c.goalAmount)} goal` : ''}
+            {' - '}
+            {formatNaira(c.reportedTotal)} reported by the organiser (unverified)
           </AppText>
           <ClickCount campaignId={c.id} />
 

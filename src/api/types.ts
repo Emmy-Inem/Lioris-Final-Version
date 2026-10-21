@@ -495,6 +495,11 @@ export type AuditLogAction =
  | 'giving_campaign_approved'
  | 'giving_campaign_rejected'
  | 'giving_campaign_total_updated'
+ | 'giving_total_confirmed'
+ | 'user_verified'
+ | 'broadcast_sent'
+ | 'announcement_updated'
+ | 'announcement_deleted'
  | 'rate_limit_exceeded';
 
 export interface AuditLogEntry {
@@ -504,7 +509,7 @@ export interface AuditLogEntry {
  actorRole: UserRole;
  action: AuditLogAction;
  summary: string;
- targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'community' | 'resource' | 'platform_config' | 'notifications' | 'portal_link' | 'institution' | 'support_ticket' | 'system' | 'job' | 'giving_campaign' | 'marketplace_listing' | 'pod_post';
+ targetType: 'report' | 'event' | 'verification_request' | 'user' | 'escrow' | 'post' | 'community' | 'resource' | 'platform_config' | 'notifications' | 'portal_link' | 'institution' | 'support_ticket' | 'system' | 'job' | 'giving_campaign' | 'marketplace_listing' | 'pod_post' | 'announcement';
  targetId: string;
  reason?: string;
  institutionCode?: string;
