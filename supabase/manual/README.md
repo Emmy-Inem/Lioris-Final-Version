@@ -9,8 +9,8 @@ Run them **in this order**, each as one paste-and-Run:
 | # | File | What it does | Changes data? |
 |---|------|--------------|---------------|
 | 1 | `01_diagnostics_before.sql` | Reads the live database and reports which audit findings are present. Save the result grid. | No (read-only) |
-| 2 | `02_apply_all.sql` | Applies every migration from 20261028 to the latest, in order, each in its own transaction, with a lock timeout and a chain guard. | Yes - schema, policies, functions, a few one-off backfills |
-| 3 | `03_verify_after.sql` | The same report plus: which parts are recorded as applied, which are missing (expect 0), and which security-definer functions anonymous callers can still run (expect only `check_username_available`). | No |
+| 2 | `02_apply_all.sql` | Applies every migration from 20261028 to the latest (16 parts: the last two add the age/guardian rules, server-sent event reminders and signed-out page views), in order, each in its own transaction, with a lock timeout and a chain guard. | Yes - schema, policies, functions, a few one-off backfills |
+| 3 | `03_verify_after.sql` | The same report plus: which parts are recorded as applied, which are missing (expect 0), and which security-definer functions anonymous callers can still run (expect exactly `check_username_available` and `record_public_page_view`). | No |
 
 ## Before step 2
 1. **Off-peak.** Some parts take short locks on `profiles` and chat tables. The script sets `lock_timeout = 8s`: if the
