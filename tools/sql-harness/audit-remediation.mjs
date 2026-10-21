@@ -721,6 +721,11 @@ await check('conversation summaries: one row per channel with last message and u
     assert(!r.ok, 'anon could call the summaries function');
   });
 });
+await check('integration: helper functions that migrations call actually exist (is_feature_enabled, 4-arg mentorship_notify)', async () => {
+  const r = await db.query(`SELECT to_regprocedure('public.is_feature_enabled(text)') IS NOT NULL a, to_regprocedure('public.mentorship_notify(uuid,text,text,text)') IS NOT NULL b`);
+  assert(r.rows[0].a, 'is_feature_enabled(text) missing');
+  assert(r.rows[0].b, 'mentorship_notify(uuid,text,text,text) missing');
+});
 await check('storage: résumés are not readable by an admin of another campus', async () => {
   await as(CAU, async (c) => { eq(await names(c, 'resumes'), [], 'UNILAG admin read a UI résumé'); });
   await as({ sub: id(9), email: 'campadmin.i@school.test' }, async (c) => { eq(await names(c, 'resumes'), [`${U.verI}/cv.pdf`]); });

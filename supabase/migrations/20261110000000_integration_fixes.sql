@@ -156,6 +156,24 @@ $$;
 REVOKE ALL ON FUNCTION public.can_read_media_object(text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.can_read_media_object(text) TO authenticated, service_role;
 
+-- 3. 20261102 request_mentorship calls public.mentorship_notify(recipient, title, body, url) with FOUR arguments but
+--    only the five-argument version (with a sender) exists, so every mentorship request failed with
+--    "function does not exist". Add the four-argument overload: the sender is the caller.
+DO $m$
+BEGIN
+  IF to_regprocedure('public.mentorship_notify(uuid,uuid,text,text,text)') IS NOT NULL THEN
+    EXECUTE $f$
+      CREATE OR REPLACE FUNCTION public.mentorship_notify(p_recipient uuid, p_title text, p_body text, p_action_url text)
+      RETURNS void
+      LANGUAGE sql SECURITY DEFINER
+      SET search_path = public, pg_temp
+      AS 'SELECT public.mentorship_notify(p_recipient, auth.uid(), p_title, p_body, p_action_url)'
+    $f$;
+    REVOKE ALL ON FUNCTION public.mentorship_notify(uuid, text, text, text) FROM PUBLIC, anon, authenticated;
+  END IF;
+END
+$m$;
+
 NOTIFY pgrst, 'reload schema';
 
 COMMIT;
