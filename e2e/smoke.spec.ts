@@ -87,7 +87,7 @@ test.describe('legal pages', () => {
 });
 
 test.describe('registration guard rails', () => {
-  test('submit is blocked until the age-eligibility and terms checkboxes are ticked', async ({ page }) => {
+  test('submit is blocked until a valid date of birth, its confirmation and the terms are given', async ({ page }) => {
     const signupRequests: string[] = [];
     page.on('request', (req) => {
       if (/\/auth\/v1\/signup/.test(req.url()) || /functions\/v1\/.*(register|signup)/.test(req.url())) {
@@ -105,12 +105,25 @@ test.describe('registration guard rails', () => {
 
     const submit = page.getByRole('button', { name: 'Configure & Join' });
 
-    // Neither box ticked: the age gate is checked first.
+    // No date of birth yet: it is checked first.
     await submit.click();
-    await expect(page.getByText(/Confirm that you are 18\+/)).toBeVisible();
+    await expect(page.getByText(/Enter your date of birth/)).toBeVisible();
 
-    // Age ticked, terms not: the terms message appears.
-    await page.getByRole('checkbox', { name: /I am 18 or older/ }).click();
+    // Under 13 cannot register.
+    const year = new Date().getFullYear();
+    await page.getByLabel('Day of birth').fill('15');
+    await page.getByLabel('Month of birth').fill('06');
+    await page.getByLabel('Year of birth').fill(String(year - 10));
+    await submit.click();
+    await expect(page.getByText(/at least 13 years old to create a Lioris account/)).toBeVisible();
+
+    // An adult date of birth, but not confirmed as theirs: the confirmation message appears.
+    await page.getByLabel('Year of birth').fill(String(year - 25));
+    await submit.click();
+    await expect(page.getByText(/Confirm that the date of birth you entered is yours/)).toBeVisible();
+
+    // Confirmed, terms not: the terms message appears.
+    await page.getByRole('checkbox', { name: /date of birth I entered is mine/ }).click();
     await submit.click();
     await expect(page.getByText(/Please accept the Terms of Service/)).toBeVisible();
 

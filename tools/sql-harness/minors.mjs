@@ -165,7 +165,7 @@ await check('every new function has the intended grants (nothing for anon except
   ];
   for (const [fn, a, au, s] of want) eq([await priv(fn, 'anon'), await priv(fn, 'authenticated'), await priv(fn, 'service_role')], [a, au, s], fn);
   const anonDefiner = (await db.query(`SELECT COALESCE(string_agg(p.proname, ',' ORDER BY p.proname), '') s FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace AND n.nspname='public' WHERE p.prosecdef AND has_function_privilege('anon', p.oid, 'EXECUTE')`)).rows[0].s;
-  eq(anonDefiner, 'check_username_available', 'anon-callable SECURITY DEFINER functions (the manual-apply gate expects exactly this)');
+  eq(anonDefiner, 'check_username_available,record_public_page_view', 'anon-callable SECURITY DEFINER functions (the manual-apply gate expects exactly this)');
 });
 await check('every SECURITY DEFINER function in public / lioris_internal that this migration added pins its search_path', async () => {
   const bad = (await db.query(`SELECT n.nspname||'.'||p.proname n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
