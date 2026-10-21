@@ -100,7 +100,7 @@ export function DesktopSidebar() {
   const isSuperAdmin = isSuperAdminIdentity(user);
   const rawAdminNavItems: (NavItem & { flagKey?: FeatureKey; superAdminOnly?: boolean })[] = [
     { id: 'home', label: 'Overview', href: '/(admin)/dashboard', icon: 'grid', match: ['/dashboard'] },
-    { id: 'people', label: 'People', href: '/(admin)/user-directory', icon: 'people', match: ['/user-directory', '/verification-requests', '/support-desk'] },
+    { id: 'people', label: 'People', href: '/(admin)/user-directory', icon: 'people', match: ['/user-directory', '/verification-requests', '/support-desk', '/minors-consent'] },
     { id: 'content', label: 'Content', href: '/(admin)/content-desk', icon: 'layers', match: ['/content-desk', '/forum', '/events-list', '/events'] },
     { id: 'safety', label: 'Safety', href: '/(admin)/moderation-queue', icon: 'shield-checkmark', match: ['/moderation-queue', '/takedown-requests', '/audit-logs'] },
     { id: 'platform', label: 'Platform', href: '/(admin)/platform-config', icon: 'settings', match: ['/platform-config', '/feature-controls', '/role-permissions', '/super-admin-config', '/system-health', '/analytics'], superAdminOnly: true },

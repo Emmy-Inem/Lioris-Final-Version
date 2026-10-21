@@ -5,7 +5,7 @@
   "description": "Executes the Lioris Supabase SQL migrations against an in-memory Postgres (PGlite) and runs behaviour assertions. No real database is touched.",
   "type": "module",
   "scripts": {
-    "test": "node run.mjs && node audit-remediation.mjs && node access-control.mjs && node lifecycle.mjs && node edge-support.mjs && node admin-workflow.mjs && node manual-apply.mjs",
+    "test": "node run.mjs && node audit-remediation.mjs && node access-control.mjs && node lifecycle.mjs && node minors.mjs && node edge-support.mjs && node admin-workflow.mjs && node manual-apply.mjs",
     "parse": "node parse-check.mjs",
     "audit": "node audit-remediation.mjs",
     "audit:before": "node audit-remediation.mjs --before"

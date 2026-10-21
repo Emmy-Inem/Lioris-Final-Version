@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 // @ts-ignore TS5097
-import { getFriendlyErrorMessage, isCredentialError, isNetworkError } from './errors.ts';
+import { getFriendlyErrorMessage, isCredentialError, isMinorRestrictedError, isNetworkError } from './errors.ts';
 
 test('translates invalid login credentials to clear incorrect password message', () => {
   const result = getFriendlyErrorMessage(new Error('Invalid login credentials'));
@@ -77,4 +77,25 @@ test('preserves approaching limit warnings and lockout countdowns intact', () =>
 
   const lockMsg = 'Too many failed login attempts. Account temporarily locked for security. Please try again in 54s.';
   assert.equal(getFriendlyErrorMessage(new Error(lockMsg)), lockMsg);
+});
+
+test('age-rule refusals from the database show their own sentence, even with the generic permission code', () => {
+  const restricted = { code: '42501', message: 'MINOR_RESTRICTED: Members under 18 cannot create marketplace listings.' };
+  assert.equal(getFriendlyErrorMessage(restricted), 'Members under 18 cannot create marketplace listings.');
+  assert.equal(isMinorRestrictedError(restricted), true);
+  assert.equal(isMinorRestrictedError(new Error('new row violates row-level security policy')), false);
+  assert.equal(
+    getFriendlyErrorMessage({ message: 'AGE_UNDER_13: You must be at least 13 years old to create a Lioris account.' }),
+    'You must be at least 13 years old to create a Lioris account.',
+  );
+  assert.equal(
+    getFriendlyErrorMessage(new Error('DOB_LOCKED: Your date of birth is already on record and cannot be changed. Contact support to correct a mistake.')),
+    'Your date of birth is already on record and cannot be changed. Contact support to correct a mistake.',
+  );
+  assert.equal(
+    getFriendlyErrorMessage({ code: 'P0001', message: 'GUARDIAN_INVALID: Enter your parent or guardian\'s full name.' }),
+    "Enter your parent or guardian's full name.",
+  );
+  // an ordinary row-level-security failure keeps the generic wording
+  assert.match(getFriendlyErrorMessage({ code: '42501', message: 'permission denied for table x' }), /permission/);
 });

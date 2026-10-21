@@ -9,7 +9,9 @@ import { markAuthLinkExpected } from '../auth/authLinkMarker';
 import { unregisterDevicePushToken } from './notifications';
 import { checkPassword, isPasswordValid, isValidEmailFormat } from '../utils/validation';
 import { getFriendlyErrorMessage } from '../utils/errors';
-import { SUSPENSION_APPEAL_EMAIL } from '../constants/legal';
+import { MIN_AGE, SUSPENSION_APPEAL_EMAIL } from '../constants/legal';
+import { parseIsoDob } from '../utils/age';
+import { checkSignupDob } from './minors';
 import {
   checkLoginRateLimit,
   recordLoginFailure,
@@ -60,8 +62,10 @@ export interface RegisterPayload {
  botField?: string;
  /** Version of the Terms/Privacy the user accepted at sign-up (stored as auth metadata). */
  acceptedTermsVersion?: string;
- /** User confirmed they are 18+, or an admitted student aged 16–17 with guardian authorisation. */
+ /** User confirmed the date of birth they entered is their own (and, if under 18, that they will give a guardian's details). */
  confirmedAgeEligible?: boolean;
+ /** yyyy-mm-dd. Under 13 is refused (here and by the sign-up trigger); 13-17 becomes a minor with a guardian record. */
+ dateOfBirth?: string;
  captchaToken?: string;
 }
 
@@ -337,13 +341,20 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   // Fetch verified user profile from Supabase profiles table with targeted column projection
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, username, role, campus_code, is_suspended')
+    .select('id, full_name, username, role, campus_code, is_suspended, suspension_reason')
     .eq('id', signInData.user.id)
     .maybeSingle();
 
   // Enforce server-side account suspension check
   if (profile?.is_suspended) {
     await supabase.auth.signOut();
+    // The age block (a date of birth under 13) has its own explanation; everything else is a moderation suspension.
+    if (typeof profile.suspension_reason === 'string' && profile.suspension_reason.startsWith('AGE_UNDER_13:')) {
+      throw new Error(
+        `You must be at least ${MIN_AGE} years old to use Lioris, so this account is blocked. ` +
+          `If the date of birth on it was entered by mistake, email ${SUSPENSION_APPEAL_EMAIL} from the address on your account and an administrator can correct it.`,
+      );
+    }
     // A suspended profile is signed out above, before this message ever
     // reaches the screen - so "Settings → Support" (the normal appeal path
     // community-rules.tsx points to) is unreachable: it requires a live
@@ -402,6 +413,14 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
   const assignedRole: UserRole = payload.userType === 'alumni' ? 'alumni' : 'student';
   const detectedCampus = payload.campusCode || getInstitutionForEmail(cleanEmail)?.code || null;
 
+  // Age rules: say so BEFORE an account is attempted. The sign-up trigger refuses an under-13 date as well, but
+  // all GoTrue can report for that is "Database error saving new user".
+  if (payload.dateOfBirth) {
+    const dobCheck = await checkSignupDob(payload.dateOfBirth);
+    if (dobCheck === 'under_13') throw new Error(`You must be at least ${MIN_AGE} years old to create a Lioris account.`);
+    if (dobCheck === 'invalid') throw new Error('Enter your real date of birth to create an account.');
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email: cleanEmail,
     password: payload.password,
@@ -414,6 +433,7 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
         terms_version: payload.acceptedTermsVersion ?? null,
         terms_accepted_at: payload.acceptedTermsVersion ? new Date().toISOString() : null,
         age_eligibility_confirmed: payload.confirmedAgeEligible === true,
+        date_of_birth: payload.dateOfBirth ?? null,
       },
       captchaToken: payload.captchaToken,
       // Without this the confirmation e-mail's link falls back to the project's Site URL (often a
@@ -423,6 +443,10 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
   });
 
   if (error || !data?.user) {
+    // The trigger's own refusal is hidden behind GoTrue's generic message: recognise it from the date we sent.
+    if (payload.dateOfBirth && /database error saving new user/i.test(error?.message ?? '') && parseIsoDob(payload.dateOfBirth).status === 'under_13') {
+      throw new Error(`You must be at least ${MIN_AGE} years old to create a Lioris account.`);
+    }
     throw new Error(getFriendlyErrorMessage(error, 'Unable to register account. Please check your details.'));
   }
 

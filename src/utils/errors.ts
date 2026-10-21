@@ -13,6 +13,19 @@ export interface ErrorShape {
 }
 
 /**
+ * Codes the database puts in front of a member-facing sentence when an age rule refuses something:
+ * MINOR_RESTRICTED (a feature that is limited for members under 18), AGE_UNDER_13, DOB_LOCKED / DOB_INVALID
+ * (date of birth), GUARDIAN_INVALID / GUARDIAN_NOT_NEEDED (guardian details), CONSENT_INVALID (admin decisions).
+ */
+const AGE_RULE_MESSAGE_RE = /\b(MINOR_RESTRICTED|AGE_UNDER_13|DOB_LOCKED|DOB_INVALID|GUARDIAN_INVALID|GUARDIAN_NOT_NEEDED|CONSENT_INVALID):\s*(.+)$/;
+
+/** True when the error is the database refusing something because of the member's age (a limited minor account). */
+export function isMinorRestrictedError(error: unknown): boolean {
+  const msg = typeof error === 'string' ? error : (error as any)?.message ?? '';
+  return /\bMINOR_RESTRICTED:/.test(String(msg));
+}
+
+/**
  * Converts any unknown error, exception, or API response into a clear,
  * human-readable message.
  */
@@ -42,6 +55,12 @@ export function getFriendlyErrorMessage(error: unknown, fallback?: string): stri
   ) {
     return rawMsg;
   }
+
+  // Refusals raised by the age rules (migration 20261111000000) are "<CODE>: <a sentence written for the member>".
+  // The sentence is already the friendly message, and it must win over the generic "no permission" wording below
+  // (they arrive with SQLSTATE 42501).
+  const ageRule = AGE_RULE_MESSAGE_RE.exec(rawMsg);
+  if (ageRule) return ageRule[2].trim();
 
   const msg = rawMsg.toLowerCase().trim();
   const code = rawCode.toLowerCase().trim();

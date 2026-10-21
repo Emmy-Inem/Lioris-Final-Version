@@ -3,6 +3,7 @@ import { listReports } from '@/api/moderation';
 import { listVerificationRequests } from '@/api/verification';
 import { getAllSupportTickets } from '@/api/supportTickets';
 import { listTakedownRequests } from '@/api/takedown';
+import { listMinors } from '@/api/adminMinors';
 import { useAuth } from '@/auth/AuthContext';
 
 /**
@@ -42,10 +43,19 @@ export function useAdminBadges() {
     refetchInterval: BADGE_REFETCH_INTERVAL_MS,
   });
 
+  const minors = useQuery({
+    queryKey: ['admin-minors', 'pending-count', campusFilter || 'all'],
+    queryFn: () => listMinors('pending', campusFilter),
+    // Refused for anyone who is not a campus administrator / Super Admin, and absent before the migration: 0 is fine.
+    retry: false,
+    refetchInterval: BADGE_REFETCH_INTERVAL_MS,
+  });
+
   return {
     reports: reports.data?.length ?? 0,
     verification: verification.data?.length ?? 0,
     support: support.data?.length ?? 0,
     takedowns: takedowns.data?.length ?? 0,
+    minors: minors.data?.length ?? 0,
   };
 }

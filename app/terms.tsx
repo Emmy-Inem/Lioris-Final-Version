@@ -144,9 +144,11 @@ export default function TermsOfServiceScreen() {
             <LegalSection title="1. Acceptance of Terms & Eligibility">
               <LegalParagraph>
                 By creating an account or using Lioris you agree to these Terms of Service, the Privacy Policy and the
-                Community Rules. You must be at least {INDEPENDENT_AGE} years old, or an admitted university student
-                aged {MIN_AGE}–17 whose parent or legal guardian has authorised the account. Users under {MIN_AGE} may
-                not register. Access to institutional spaces requires active affiliation
+                Community Rules. You must be at least {INDEPENDENT_AGE} years old, or aged {MIN_AGE}–17 with the
+                knowledge of a parent or legal guardian whose details you give us and whose consent an administrator
+                records; until it is recorded, and permanently for marketplace listings and giving, some features are
+                limited for members under {INDEPENDENT_AGE} (see the Privacy Policy, section 8). Users under {MIN_AGE} may
+                not register, and we ask for your date of birth to apply these rules. Access to institutional spaces requires active affiliation
                 (as an enrolled student, staff member, or verified alumnus) verified via institutional domain email or accredited
                 registrar documents. Other users may join the general network and apply for verification afterwards.
               </LegalParagraph>

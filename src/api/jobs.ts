@@ -7,6 +7,7 @@ import { isUserBlocked, isUserMuted } from './connections';
 import { getInstitutionForEmail } from './institutions';
 import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
 import { inferWorkplaceType, inferExperienceLevel } from '../utils/careerFilters';
+import { getFriendlyErrorMessage, isMinorRestrictedError } from '../utils/errors';
 
 export { inferWorkplaceType, inferExperienceLevel };
 
@@ -270,6 +271,8 @@ export async function createJob(payload: CreateJobPayload): Promise<JobListing> 
 
   if (error) {
     console.warn('[Jobs] Supabase insert error:', error.message);
+    // A limited minor account is told why (and what unlocks it) instead of being asked to retry.
+    if (isMinorRestrictedError(error)) throw new Error(getFriendlyErrorMessage(error));
     throw new Error('Could not publish this opportunity. Please try again.');
   }
 

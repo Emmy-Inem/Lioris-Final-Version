@@ -1,4 +1,4 @@
-import { isPermissionRefusal, refusalMessage } from '../utils/permissionErrors';
+import { isPermissionRefusal, refusalMessageFor } from '../utils/permissionErrors';
 import { supabase } from './supabase';
 import { Conversation, Message } from './types';
 import { generateUUID } from '../utils/uuid';
@@ -8,6 +8,7 @@ import { isUserBlocked } from './connections';
 import { assertSafeHttpUrl } from '../utils/safeUrl';
 import { storagePathFor } from './signedUrls';
 import { escapePostgrestLike } from '../utils/postgrest';
+import { getFriendlyErrorMessage, isMinorRestrictedError } from '../utils/errors';
 
 function toPreviewText(content: string | undefined | null): string {
   if (!content) return 'Started conversation';
@@ -407,7 +408,7 @@ export async function getOrCreateConversationWithUser(
     // Signed in: a refused insert (blocked, suspended, permission off) is a real failure. Opening a "ghost"
     // chat that can never deliver anything is worse than saying so.
     if (channelError && currentUserId) {
-      throw new Error('Could not start this conversation right now. Please try again.');
+      throw new Error(isMinorRestrictedError(channelError) ? getFriendlyErrorMessage(channelError) : 'Could not start this conversation right now. Please try again.');
     }
 
     // 2. Enroll both members in chat_channel_members
@@ -421,7 +422,9 @@ export async function getOrCreateConversationWithUser(
         .upsert(memberRows, { onConflict: 'channel_id,user_id', ignoreDuplicates: true });
       if (memberError) {
         console.warn('[Messaging] Channel member enrollment warning:', memberError.message);
-        if (currentUserId) throw new Error('Could not start this conversation right now. Please try again.');
+        if (currentUserId) {
+          throw new Error(isMinorRestrictedError(memberError) ? getFriendlyErrorMessage(memberError) : 'Could not start this conversation right now. Please try again.');
+        }
       }
     }
   } catch (err) {
@@ -647,7 +650,7 @@ export async function sendMessage(
 
     if (msgError) {
       console.warn('[Messaging] Supabase persistence error:', msgError.message);
-      if (isPermissionRefusal(msgError)) throw new Error(refusalMessage('Messaging'));
+      if (isPermissionRefusal(msgError)) throw new Error(refusalMessageFor(msgError, 'Messaging'));
       throw new Error('Message could not be sent. Check your connection and try again.');
     }
 

@@ -8,7 +8,13 @@ import type { UserRole } from '@/api/types';
  * 3. verify: Prove campus membership with one photo. Always skippable - it is also reachable
  *    later from the profile and the home-screen notice, so it never blocks first-time onboarding.
  * 4. get-started: Campus welcome and seamless launch to dashboard.
+ *
+ * A member aged 13-17 who has not given a guardian yet gets ONE extra step straight after build-profile
+ * (GUARDIAN_STEP). It is not in the lists below: adults never see it, and it is always skippable (the account just
+ * stays limited until the guardian's consent is confirmed - see MinorConsentBanner).
  */
+export const GUARDIAN_STEP = '/(auth)/onboarding/guardian-details';
+
 export const ONBOARDING_STEPS: Record<Extract<UserRole, 'student' | 'alumni'>, string[]> = {
   student: [
     '/(auth)/onboarding/build-profile',
@@ -33,13 +39,16 @@ export function firstOnboardingStep(role?: UserRole): string {
  * the role; a retired path would redirect to a route that no longer exists.
  */
 export function resolveOnboardingStep(role: UserRole | undefined, step?: string | null): string {
-  if (role && (role === 'student' || role === 'alumni') && step && ONBOARDING_STEPS[role].includes(step)) return step;
+  if (role && (role === 'student' || role === 'alumni') && step && (ONBOARDING_STEPS[role].includes(step) || step === GUARDIAN_STEP)) return step;
   return firstOnboardingStep(role);
 }
 
-export function nextOnboardingStep(role: UserRole, currentPath: string): string | null {
+export function nextOnboardingStep(role: UserRole, currentPath: string, options: { needsGuardian?: boolean } = {}): string | null {
   if (role !== 'student' && role !== 'alumni') return null;
   const steps = ONBOARDING_STEPS[role];
+
+  if (options.needsGuardian && currentPath === steps[0]) return GUARDIAN_STEP;
+  if (currentPath === GUARDIAN_STEP) return steps[1];
 
   const index = steps.indexOf(currentPath);
   if (index === -1 || index === steps.length - 1) return null;

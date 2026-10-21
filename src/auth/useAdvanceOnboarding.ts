@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useAuth } from './AuthContext';
-import { nextOnboardingStep } from './onboardingSteps';
+import { firstOnboardingStep, nextOnboardingStep } from './onboardingSteps';
+import { getMyMinorStatus } from '@/api/minors';
 import { useToast } from '@/context/ToastContext';
 
 /**
@@ -18,8 +19,15 @@ export function useAdvanceOnboarding(currentPath: string) {
 
   return async function advance(): Promise<boolean> {
     const userRole = user?.role || 'student';
-    const next = nextOnboardingStep(userRole, currentPath);
     try {
+      // Right after the profile step, a member aged 13-17 with no guardian on file is taken to the guardian step.
+      // Best effort: if the status cannot be read the flow simply carries on (the banner asks again later).
+      let needsGuardian = false;
+      if (currentPath === firstOnboardingStep(userRole)) {
+        const minor = await getMyMinorStatus();
+        needsGuardian = !!minor && minor.isMinor && !minor.isUnder13 && minor.consentStatus === 'missing';
+      }
+      const next = nextOnboardingStep(userRole, currentPath, { needsGuardian });
       if (next) {
         await setOnboardingStep(next);
         router.replace(next as any);
