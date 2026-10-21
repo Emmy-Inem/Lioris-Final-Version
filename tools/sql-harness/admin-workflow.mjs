@@ -312,6 +312,17 @@ await check('S5: a campus admin broadcast reaches only their campus, excludes su
     denied(await c.t(`SELECT public.admin_broadcast_notification('x','y','announcement','{"campus":"ALL"}'::jsonb)`), /Super Admin/, 'all campuses');
     denied(await c.t(`SELECT public.admin_broadcast_notification('x','y','bogus_type')`), /unsupported/, 'type');
   });
+  await as(ADMIN_U, async (c) => {
+    // dry run: same audience, nothing written, no audit row, no rate-limit slot used
+    const before = (await c.su(`SELECT (SELECT count(*) FROM public.notifications)::int n, (SELECT count(*) FROM public.audit_logs WHERE action='broadcast_sent')::int a`)).rows[0];
+    const dry = await c.t(`SELECT public.admin_broadcast_notification('preview','preview','announcement','{"roles":["student"]}'::jsonb, NULL, NULL, true) n`);
+    assert(dry.ok, dry.err?.message);
+    const exp = (await c.su(`SELECT count(*)::int n FROM public.profiles WHERE campus_code='UNILAG' AND role::text='student' AND NOT COALESCE(is_suspended,false) AND NOT COALESCE(is_bot,false)`)).rows[0].n;
+    eq(dry.rows[0].n, exp, 'dry-run count');
+    const after = (await c.su(`SELECT (SELECT count(*) FROM public.notifications)::int n, (SELECT count(*) FROM public.audit_logs WHERE action='broadcast_sent')::int a`)).rows[0];
+    eq(after, before, 'a dry run must write nothing');
+    denied(await c.t(`SELECT public.admin_broadcast_notification('x','y','announcement','{"campus":"UI"}'::jsonb, NULL, NULL, true)`), /own campus/, 'dry run is scoped like the real send');
+  });
   await as(U.stuU, async (c) => { denied(await c.t(`SELECT public.admin_broadcast_notification('x','y','announcement')`), /not_allowed/, 'student'); });
   await as(SUPER, async (c) => {
     const all = (await c.su(`SELECT count(*)::int n FROM public.profiles WHERE NOT COALESCE(is_suspended,false) AND NOT COALESCE(is_bot,false)`)).rows[0].n;

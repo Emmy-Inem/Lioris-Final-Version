@@ -26,7 +26,11 @@ export async function listAnnouncements(options?: { campusCode?: string; [key: s
       : undefined;
 
     if (targetCampus && targetCampus !== 'ALL') {
-      q = q.or(`campus_code.eq.${targetCampus},campus_code.eq.GLOBAL,campus_code.is.null`);
+      // Campus codes are plain identifiers: strip anything else before it goes into a PostgREST filter string.
+      const safeCampus = escapePostgrestLike(targetCampus).replace(/[^A-Za-z0-9_-]/g, '');
+      q = safeCampus
+        ? q.or(`campus_code.eq.${safeCampus},campus_code.eq.GLOBAL,campus_code.is.null`)
+        : q.or('campus_code.eq.GLOBAL,campus_code.is.null');
     }
 
     const { data, error } = await q;

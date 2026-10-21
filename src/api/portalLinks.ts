@@ -215,8 +215,12 @@ export async function updatePortalLink(id: string, patch: Partial<PortalLink>): 
 }
 
 export async function deletePortalLink(id: string): Promise<void> {
-  const { error } = await supabase.from('portal_links').delete().eq('id', id);
+  const { data, error } = await supabase.from('portal_links').delete().eq('id', id).select('id');
   if (error) throw friendlyPortalError(error, 'Could not delete this link. Please try again.');
+  // RLS hides a row the caller may not delete instead of raising an error: zero rows means nothing was deleted.
+  if (!data || data.length === 0) {
+    throw new Error('This link could not be deleted - it no longer exists, or you do not have permission to remove it.');
+  }
 }
 
 /** Adds the curated links a launch campus ships with that the database does not have yet. Returns how many were added. */

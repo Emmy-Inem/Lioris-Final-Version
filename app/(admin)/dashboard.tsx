@@ -75,18 +75,14 @@ export default function AdminOverviewScreen() {
   const { data: activeRealUsers = 0 } = useQuery({
     queryKey: ['admin', 'active-real-users-count', user?.campusCode, user?.isCampusAdmin],
     queryFn: async () => {
-      const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-      let query = supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .gte('last_active_at', fifteenMinsAgo)
-        .eq('is_bot', false);
-      if (user?.isCampusAdmin && user?.campusCode) {
-        query = query.eq('campus_code', user.campusCode);
-      }
-      const { count, error } = await query;
+      // admin_active_users_count(): campus-scoped by the database for Campus Admins (the old direct read of
+      // profiles.last_active_at is not granted to the admin role and always came back as 0).
+      const { data, error } = await supabase.rpc('admin_active_users_count', {
+        p_minutes: 15,
+        p_campus: user?.isCampusAdmin && user?.campusCode ? user.campusCode : null,
+      });
       if (error) return 0;
-      return count ?? 0;
+      return typeof data === 'number' ? data : 0;
     },
     staleTime: 30_000,
     refetchInterval: 30_000,

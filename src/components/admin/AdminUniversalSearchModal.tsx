@@ -21,6 +21,7 @@ import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
+import { escapePostgrestLike } from '@/utils/postgrest';
 import { useAuth } from '@/auth/AuthContext';
 
 interface AdminUniversalSearchModalProps {
@@ -181,15 +182,18 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
 
     const timer = setTimeout(async () => {
       try {
+        // Free text is escaped before it goes into a PostgREST filter: a raw ',', '(', ')' or '"' would add
+        // conditions of the caller's choosing to the .or() string, and '%' / '_' would act as wildcards.
+        const safeLike = escapePostgrestLike(trimmed);
         let postsQuery = supabase
           .from('posts')
           .select('id, title, category, author_name, campus_code')
-          .ilike('title', `%${trimmed}%`)
+          .ilike('title', `%${safeLike}%`)
           .limit(5);
         let resourcesQuery = supabase
           .from('resources')
           .select('id, title, course_code, file_format, campus_code')
-          .or(`title.ilike.%${trimmed}%,course_code.ilike.%${trimmed}%`)
+          .or(`title.ilike.%${safeLike}%,course_code.ilike.%${safeLike}%`)
           .limit(5);
 
         if (campusAdminCampus) {
