@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeImageForUpload, resizePickedAsset } from '@/utils/pickImage';
 import { useQuery } from '@tanstack/react-query';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
@@ -247,8 +248,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
           continue;
         }
         const reader = new FileReader();
-        reader.onload = (ev) => {
-          const dataUrl = ev.target?.result as string;
+        reader.onload = async (ev) => {
+          const dataUrl = await resizeImageForUpload(ev.target?.result as string);
           if (dataUrl) {
             setCustomMediaUris((prev) => (prev.length >= MAX_IMAGES ? prev : [...prev, dataUrl]));
             haptics.light();
@@ -286,7 +287,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
           haptics.error();
           return;
         }
-        setCustomMediaUris((prev) => [...prev, ...picked.map((a) => a.uri)].slice(0, MAX_IMAGES));
+        const resized = await Promise.all(picked.map((a) => resizePickedAsset(a)));
+        setCustomMediaUris((prev) => [...prev, ...resized.map((a) => a.uri)].slice(0, MAX_IMAGES));
         haptics.light();
       }
     } catch {

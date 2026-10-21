@@ -3,6 +3,7 @@ import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, View, Keyboa
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeImageForUpload, resizePickedAsset } from '@/utils/pickImage';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
@@ -125,8 +126,8 @@ export function SellItemModal({ visible, onClose, onPublish, listing, onUpdated 
         if (files.length === 0) return;
         files.forEach((file) => {
           const reader = new FileReader();
-          reader.onload = (ev) => {
-            const dataUrl = ev.target?.result as string;
+          reader.onload = async (ev) => {
+            const dataUrl = await resizeImageForUpload(ev.target?.result as string);
             if (dataUrl) {
               setPhotos((prev) => (prev.length >= MAX_PHOTOS ? prev : [...prev, dataUrl]));
               haptics.light();
@@ -149,7 +150,8 @@ export function SellItemModal({ visible, onClose, onPublish, listing, onUpdated 
       quality: 0.8,
     });
     if (!result.canceled && result.assets.length > 0) {
-      const picked = result.assets.slice(0, remaining).map((a) => a.uri);
+      const resized = await Promise.all(result.assets.slice(0, remaining).map((a) => resizePickedAsset(a)));
+      const picked = resized.map((a) => a.uri);
       setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
       haptics.light();
     }

@@ -56,6 +56,7 @@ import { EventTicketPanel } from './events/EventTicketPanel';
 import { EventDoorDesk } from './events/EventDoorDesk';
 import { TicketSettingsFields } from './events/TicketSettingsFields';
 import { PaymentReviewSheet } from './admin/PaymentReviewSheet';
+import { ErrorStateView } from './ErrorStateView';
 import { getEventPaymentDetails, saveEventPaymentDetails } from '@/api/paidEvents';
 import { EMPTY_TICKET_FORM, TicketFormValues, paidLabel, parsePrice, registeredBadge, validateTicketForm } from '@/utils/paidEvents';
 
@@ -100,7 +101,7 @@ export function EventDetailScreen() {
   const [icsExported, setIcsExported] = useState(false);
 
   // Data fetching
-  const { data: event, isLoading } = useQuery({
+  const { data: event, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['events', 'detail', id],
     queryFn: () => getEvent(id),
     enabled: !!id,
@@ -647,6 +648,15 @@ export function EventDetailScreen() {
       haptics.error();
       toast.error('Could not export this event as a calendar file.');
     }
+  }
+
+  // A failed load must not sit on "Loading..." forever.
+  if (!event && isError) {
+    return (
+      <ScreenContainer>
+        <ErrorStateView subject="this event" error={error} onRetry={refetch} />
+      </ScreenContainer>
+    );
   }
 
   if (isLoading || !event) {

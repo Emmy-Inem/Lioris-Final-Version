@@ -8,6 +8,7 @@ import { ScreenContainer } from './ScreenContainer';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
 import { EmptyState } from './EmptyState';
+import { ErrorStateView } from './ErrorStateView';
 import { PostCard } from './PostCard';
 import { EventCard } from './EventCard';
 import { ResourceCard } from './ResourceCard';
@@ -31,6 +32,7 @@ import { useCampusScope } from '@/hooks/useCampusScope';
 import { useForumScope } from '@/hooks/useForumScope';
 import { useCampusRegistry } from '@/hooks/useCampusRegistry';
 import { isSuperAdminIdentity } from '@/utils/campusAccess';
+import { queryErrorMode } from '@/utils/queryError';
 
 type SearchTab = 'posts' | 'events' | 'resources' | 'jobs' | 'alumni' | 'marketplace';
 
@@ -99,7 +101,7 @@ export function SearchScreen() {
   const tab: SearchTab = visibleTabs.includes(selectedTab) ? selectedTab : (visibleTabs[0] ?? 'alumni');
   const canBrowseBySchool = isSuperAdmin && (tab === 'events' || tab === 'resources');
 
-  const { data: posts, isLoading: postsLoading } = useQuery({
+  const postsQuery = useQuery({
     queryKey: ['search', 'posts', debouncedTrimmed, campusCode, forumScope],
     // Same rules as the Forum: own campus only, plus global posts only while the Global toggle is on -
     // a bare search used to return every post the database would let this account read.
@@ -112,36 +114,55 @@ export function SearchScreen() {
       }),
     enabled: tab === 'posts' && active,
   });
+  const { data: posts, isLoading: postsLoading } = postsQuery;
 
-  const { data: events, isLoading: eventsLoading } = useQuery({
+  const eventsQuery = useQuery({
     queryKey: ['search', 'events', debouncedTrimmed, searchCampus],
     queryFn: () => listEvents({ q: debouncedTrimmed || undefined, campusCode: searchCampus, scope: isSuperAdmin ? 'all' : undefined }),
     enabled: tab === 'events' && (active || canBrowseBySchool),
   });
+  const { data: events, isLoading: eventsLoading } = eventsQuery;
 
-  const { data: resources, isLoading: resourcesLoading } = useQuery({
+  const resourcesQuery = useQuery({
     queryKey: ['search', 'resources', debouncedTrimmed, searchCampus],
     queryFn: () => listResources({ q: debouncedTrimmed || undefined, campusCode: searchCampus }),
     enabled: tab === 'resources' && (active || canBrowseBySchool),
   });
+  const { data: resources, isLoading: resourcesLoading } = resourcesQuery;
 
-  const { data: jobs, isLoading: jobsLoading } = useQuery({
+  const jobsQuery = useQuery({
     queryKey: ['search', 'jobs', debouncedTrimmed, campusCode],
     queryFn: () => listJobs({ q: debouncedTrimmed, campusCode }),
     enabled: tab === 'jobs' && active,
   });
+  const { data: jobs, isLoading: jobsLoading } = jobsQuery;
 
-  const { data: alumni, isLoading: alumniLoading } = useQuery({
+  const alumniQuery = useQuery({
     queryKey: ['search', 'alumni', debouncedTrimmed],
     queryFn: () => searchAlumniDirectory({ q: debouncedTrimmed }),
     enabled: tab === 'alumni' && active,
   });
+  const { data: alumni, isLoading: alumniLoading } = alumniQuery;
 
-  const { data: marketplaceItems, isLoading: marketplaceLoading } = useQuery({
+  const marketplaceQuery = useQuery({
     queryKey: ['search', 'marketplace', debouncedTrimmed, campusCode],
     queryFn: () => listMarketplaceListings({ q: debouncedTrimmed, campusCode }),
     enabled: tab === 'marketplace' && active,
   });
+  const { data: marketplaceItems, isLoading: marketplaceLoading } = marketplaceQuery;
+
+  // A failed search must not read as "No results": show the error, or a notice above the results already on screen.
+  const searchQueries = {
+    posts: postsQuery,
+    events: eventsQuery,
+    resources: resourcesQuery,
+    jobs: jobsQuery,
+    alumni: alumniQuery,
+    marketplace: marketplaceQuery,
+  };
+  const activeSearch = searchQueries[tab];
+  const searchErrorMode = queryErrorMode(activeSearch);
+  const searchSubject = `${TAB_LABEL[tab].toLowerCase()} results`;
 
   const isLoading: Record<SearchTab, boolean> = {
     posts: postsLoading,
@@ -232,8 +253,21 @@ export function SearchScreen() {
         </ScrollView>
       ) : null}
 
+      {searchErrorMode === 'inline' && (
+        <ErrorStateView
+          compact
+          subject={searchSubject}
+          title="Couldn't refresh results"
+          error={activeSearch.error}
+          onRetry={() => activeSearch.refetch()}
+          style={{ marginBottom: spacing.md }}
+        />
+      )}
+
       {trimmed.length === 0 && !canBrowseBySchool ? (
         <EmptyState title="Search Campus Knowledge" description="Find forum threads, events, jobs, alumni, marketplace listings, and academic past questions." />
+      ) : searchErrorMode === 'blocking' ? (
+        <ErrorStateView subject={searchSubject} error={activeSearch.error} onRetry={() => activeSearch.refetch()} />
       ) : tab === 'posts' ? (
         <FlatList
           data={posts ?? []}

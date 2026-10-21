@@ -16,6 +16,8 @@ import { AppButton } from '@/components/AppButton';
 import { Badge } from '@/components/Badge';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { UnverifiedAccountNotice } from '@/components/UnverifiedAccountNotice';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { refetchFailedQueries, summarizeQueryErrors } from '@/utils/queryError';
 import { Avatar } from '@/components/Avatar';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { EmptyState } from '@/components/EmptyState';
@@ -74,33 +76,43 @@ export default function AlumniDashboard() {
 
   const { showBots, isBotPost } = useBotVisibility();
 
-  const { data: posts } = useQuery({
+  const postsQuery = useQuery({
     queryKey: ['feed', 'alumni-dash', effectiveCampus, showBots],
     queryFn: () => listFeedPosts({ scope: 'global', viewerInstitutionCode: effectiveCampus === 'ALL' ? undefined : (effectiveCampus || undefined), viewScope: effectiveCampus && effectiveCampus !== 'ALL' ? 'campus' : 'global', showBots }),
   });
+  const posts = postsQuery.data;
 
-  const { data: jobs, isLoading: jobsLoading } = useQuery({
+  const jobsQuery = useQuery({
     queryKey: ['jobs', 'alumni-dash', effectiveCampus],
     queryFn: () => listJobs({ campusCode: effectiveCampus || undefined }),
     enabled: isFeatureEnabled('career_page'),
   });
+  const jobs = jobsQuery.data;
+  const jobsLoading = jobsQuery.isLoading;
 
-  const { data: mentorships } = useQuery({
+  const mentorshipsQuery = useQuery({
     queryKey: ['mentorships', 'alumni-dash'],
     queryFn: () => listMentorships(),
     enabled: isFeatureEnabled('alumni_mentorship'),
   });
+  const mentorships = mentorshipsQuery.data;
 
-  const { data: events } = useQuery({
+  const eventsQuery = useQuery({
     queryKey: ['events', 'alumni-dash', effectiveCampus],
     queryFn: () => listEvents({ scope: isSuperAdmin ? 'all' : 'alumni', campusCode: effectiveCampus }),
     enabled: isFeatureEnabled('campus_events'),
   });
+  const events = eventsQuery.data;
 
   const { data: portalLinks } = useQuery({
     queryKey: ['portal-links', 'alumni-dash', effectiveCampus],
     queryFn: () => listPortalLinks(effectiveCampus),
   });
+
+  // A failed load must not read as "nothing here": show an error (or a small notice if other sections loaded).
+  const mainQueries = [postsQuery, jobsQuery, mentorshipsQuery, eventsQuery];
+  const loadErrors = summarizeQueryErrors(mainQueries);
+  const loadBlocked = loadErrors.mode === 'blocking';
 
   const fullName = profile?.fullName ?? user?.fullName ?? 'Alumni Fellow';
 
@@ -310,6 +322,16 @@ export default function AlumniDashboard() {
         {/* Verification Notice for unverified personal email accounts */}
         <UnverifiedAccountNotice />
 
+        {loadErrors.mode === 'inline' && (
+          <ErrorStateView
+            compact
+            subject="your dashboard"
+            title="Some sections couldn't refresh"
+            error={loadErrors.error}
+            onRetry={() => refetchFailedQueries(mainQueries)}
+          />
+        )}
+
         
 
         {/* 2. Quick Alumni Action Hub (Clean 4-Item Grid) */}
@@ -499,8 +521,12 @@ export default function AlumniDashboard() {
         {/* 3. Official Campus & Alumni Bulletins */}
         <AnnouncementsWidget scope="alumni" />
 
+        {loadBlocked && (
+          <ErrorStateView subject="your dashboard" error={loadErrors.error} onRetry={() => refetchFailedQueries(mainQueries)} />
+        )}
+
         {/* 4. Career & Talent Opportunities (Live Job Board) */}
-        {isFeatureEnabled('career_page') && (
+        {!loadBlocked && isFeatureEnabled('career_page') && (
           <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
@@ -541,7 +567,7 @@ export default function AlumniDashboard() {
         )}
 
         {/* 5. Student Mentorship Requests & Impact */}
-        {isFeatureEnabled('alumni_mentorship') && (
+        {!loadBlocked && isFeatureEnabled('alumni_mentorship') && (
           <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
@@ -602,7 +628,7 @@ export default function AlumniDashboard() {
         )}
 
         {/* 6. Alumni Reunions & Events */}
-        {isFeatureEnabled('campus_events') && (
+        {!loadBlocked && isFeatureEnabled('campus_events') && (
           <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>

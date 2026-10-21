@@ -9,6 +9,7 @@ import { AppButton } from '@/components/AppButton';
 import { Badge } from '@/components/Badge';
 import { DirectoryCard } from '@/components/DirectoryCard';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { SolidCard } from '@/components/SolidCard';
 import { ListItemSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -22,6 +23,7 @@ import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { useToast } from '@/context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import { haptics } from '@/utils/haptics';
+import { queryErrorMode } from '@/utils/queryError';
 
 interface SuggestedChapter {
   key: string;
@@ -63,7 +65,7 @@ export default function AlumniNetworkScreen() {
     return Array.from({ length: 12 }, (_, i) => current - i);
   }, []);
 
-  const { data: alumniList, isLoading } = useQuery({
+  const { data: alumniList, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['alumni', 'directory', searchQuery, selectedYear, selectedIndustry],
     queryFn: () =>
       searchAlumniDirectory({
@@ -73,6 +75,9 @@ export default function AlumniNetworkScreen() {
       }),
     enabled: isEnabled,
   });
+
+  // A failed load must not read as "No alumni found": show the error, or a notice above the cached list.
+  const directoryErrorMode = queryErrorMode({ isError, data: alumniList });
 
   const { data: myProfile } = useQuery({
     queryKey: ['profile', 'me', user?.id],
@@ -371,8 +376,21 @@ export default function AlumniNetworkScreen() {
         })}
       </ScrollView>
 
+      {directoryErrorMode === 'inline' && (
+        <ErrorStateView
+          compact
+          subject="the alumni directory"
+          title="Couldn't refresh the directory"
+          error={error}
+          onRetry={refetch}
+          style={{ marginBottom: spacing.sm }}
+        />
+      )}
+
       {isLoading ? (
         <ListItemSkeletonList count={6} />
+      ) : directoryErrorMode === 'blocking' ? (
+        <ErrorStateView subject="the alumni directory" error={error} onRetry={refetch} />
       ) : (
         <FlatList
           data={alumniList ?? []}

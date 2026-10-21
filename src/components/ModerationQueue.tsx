@@ -10,6 +10,8 @@ import { AppButton } from'./AppButton';
 import { AppTextField } from'./AppTextField';
 import { ChipSelect } from'./ChipSelect';
 import { EmptyState } from'./EmptyState';
+import { ErrorStateView } from './ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { QueueItemSkeletonList } from './Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -91,7 +93,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  const [adminModNote, setAdminModNote] = useState('');
  const [applyingPenalty, setApplyingPenalty] = useState(false);
 
- const { data: reports, isLoading } = useQuery({
+ const { data: reports, isLoading, isError, error, refetch } = useQuery({
  queryKey: ['reports', 'open', institutionCode ?? 'all'],
  queryFn: () => listReports({ status: 'open', institutionCode }),
  // A screen left open otherwise never sees a new report land, or notices
@@ -99,6 +101,8 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  // sync with its own optimistic-concurrency guard in resolveReport().
  refetchInterval: 30_000,
  });
+
+ const reportsErrorMode = queryErrorMode({ isError, data: reports });
 
  const filteredReports = (reports ?? []).filter((r) => {
  if (filterType === 'Posts') return r.targetType === 'post';
@@ -433,8 +437,22 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         </SolidCard>
       )}
 
+      {reportsErrorMode === 'inline' && (
+        <ErrorStateView
+          compact
+          subject="reports"
+          title="Couldn't refresh reports"
+          error={error}
+          onRetry={refetch}
+          style={{ marginBottom: spacing.sm }}
+        />
+      )}
+
       {isLoading ? (
         <QueueItemSkeletonList count={4} />
+      ) : reportsErrorMode === 'blocking' ? (
+        // An empty "queue is clear" on a failed load would hide reports that still need action.
+        <ErrorStateView subject="reports" error={error} onRetry={refetch} />
       ) : isDesktop ? (
         <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>

@@ -29,6 +29,7 @@ import { useSignedUrl } from '@/api/signedUrls';
 import { getMyProfile } from '@/api/profile';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { VerificationRequiredGate } from './VerificationRequiredGate';
+import { ErrorStateView } from './ErrorStateView';
 import { haptics } from '@/utils/haptics';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 
@@ -129,7 +130,7 @@ export function PostDetailScreen() {
   }, []);
   const queryClient = useQueryClient();
 
-  const { data: post, isLoading: postLoading } = useQuery({
+  const { data: post, isLoading: postLoading, isError: postFailed, error: postError, refetch: refetchPost } = useQuery({
     queryKey: ['post', id],
     queryFn: () => (id ? getPost(id) : Promise.resolve(null)),
     enabled: !!id,
@@ -303,7 +304,7 @@ export function PostDetailScreen() {
  const [reportOpen, setReportOpen] = useState(false);
  const [reportReason, setReportReason] = useState('');
 
- const { data: comments, refetch: refetchComments, isLoading: commentsLoading } = useQuery({
+ const { data: comments, refetch: refetchComments, isLoading: commentsLoading, isError: commentsFailed, error: commentsError } = useQuery({
  queryKey: ['post-comments', id],
  queryFn: () => id ? listPostComments(id) : Promise.resolve([]),
  enabled: !!id,
@@ -516,6 +517,16 @@ export function PostDetailScreen() {
           <View style={{ width: 200, height: 16, borderRadius: 8, backgroundColor: colors.surface, opacity: 0.6 }} />
           <View style={{ width: 140, height: 12, borderRadius: 6, backgroundColor: colors.surface, opacity: 0.4 }} />
         </View>
+      </ScreenContainer>
+    );
+  }
+
+  // A failed load is not "Thread Not Found": offer a retry instead of claiming the thread was removed.
+  if (!post && postFailed) {
+    return (
+      <ScreenContainer glow={true}>
+        <AppHeader />
+        <ErrorStateView subject="this thread" error={postError} onRetry={refetchPost} secondaryActionLabel="Go Back" onSecondaryAction={handleGoBack} />
       </ScreenContainer>
     );
   }
@@ -987,6 +998,8 @@ export function PostDetailScreen() {
  );
  })}
  </View>
+ ) : commentsFailed ? (
+ <ErrorStateView compact subject="replies" error={commentsError} onRetry={refetchComments} />
  ) : (
  <SolidCard frosted style={{ alignItems: 'center', padding: spacing.lg }}>
  <AppText tone="secondary" variant="bodySmall">No replies yet. Join the conversation below!</AppText>

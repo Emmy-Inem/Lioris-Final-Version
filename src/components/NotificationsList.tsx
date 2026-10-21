@@ -11,6 +11,7 @@ import { AppText } from './AppText';
 import { SolidCard } from './SolidCard';
 import { Badge } from './Badge';
 import { AppButton } from './AppButton';
+import { ErrorStateView } from './ErrorStateView';
 import { SuggestedConnectionCard } from './SuggestedConnectionCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -26,6 +27,7 @@ import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { AppNotification } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
 import { resolveNotificationRoute, getFeedRoute } from '@/utils/notificationRouter';
+import { queryErrorMode, refetchFailedQueries, summarizeQueryErrors } from '@/utils/queryError';
 
 const NOTIFICATION_ICONS: Record<
  AppNotification['type'],
@@ -62,18 +64,20 @@ export function NotificationsScreen() {
   const [tab, setTab] = useState<'Alerts' | 'Connections'>('Alerts');
   const [filter, setFilter] = useState<'all' | 'unread' | 'announcements' | 'academic'>('all');
 
-  const { data: notifications, isLoading } = useQuery({
+  const { data: notifications, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => listNotifications(),
   });
-  const { data: incomingRequests } = useQuery({
+  const incomingQuery = useQuery({
     queryKey: ['connections', 'incoming'],
     queryFn: listIncomingConnectionRequests,
   });
-  const { data: suggestions } = useQuery({
+  const incomingRequests = incomingQuery.data;
+  const suggestionsQuery = useQuery({
     queryKey: ['connections', 'people-you-may-know'],
     queryFn: listSuggestedConnections,
   });
+  const suggestions = suggestionsQuery.data;
 
   async function handlePress(notification: AppNotification) {
     if (!notification.openedAt) {
@@ -104,6 +108,11 @@ export function NotificationsScreen() {
   const handleReadAll = () => runMutation(() => markAllNotificationsRead());
   const handleClear = () => runMutation(() => clearAllNotifications());
 
+  // A failed load must not read as "You're all caught up": show the error, or a notice above the cached list.
+  const alertsErrorMode = queryErrorMode({ isError, data: notifications });
+  const connectionQueries = [incomingQuery, suggestionsQuery];
+  const connectionErrors = summarizeQueryErrors(connectionQueries);
+
   const unreadCount = notifications?.filter((n) => !n.openedAt).length ?? 0;
 
   const filteredNotifications = (notifications ?? []).filter((item) => {
@@ -115,6 +124,20 @@ export function NotificationsScreen() {
 
   const renderAlertsSection = () => (
     <View style={{ flex: 1 }}>
+      {alertsErrorMode === 'inline' && (
+        <ErrorStateView
+          compact
+          subject="notifications"
+          title="Couldn't refresh notifications"
+          error={error}
+          onRetry={refetch}
+          style={{ marginBottom: 12 }}
+        />
+      )}
+      {alertsErrorMode === 'blocking' ? (
+        <ErrorStateView subject="notifications" error={error} onRetry={refetch} />
+      ) : (
+      <>
       {/* Category Filter Pills */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
         {[
@@ -336,6 +359,8 @@ export function NotificationsScreen() {
           </View>
         ) : null}
       </SolidCard>
+      </>
+      )}
     </View>
   );
 
@@ -370,6 +395,17 @@ export function NotificationsScreen() {
         </View>
       </SolidCard>
 
+      {connectionErrors.mode === 'inline' && (
+        <ErrorStateView
+          compact
+          subject="connections"
+          title="Couldn't refresh connections"
+          error={connectionErrors.error}
+          onRetry={() => refetchFailedQueries(connectionQueries)}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       {incomingRequests && incomingRequests.length > 0 ? (
         <View style={{ marginBottom: 16, gap: 10 }}>
           <AppText variant="caption" weight="bold" tone="brand" style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>
@@ -398,6 +434,9 @@ export function NotificationsScreen() {
       </View>
 
       {/* Full-width Responsive Connections List */}
+      {connectionErrors.mode === 'blocking' && (
+        <ErrorStateView subject="connections" error={connectionErrors.error} onRetry={() => refetchFailedQueries(connectionQueries)} />
+      )}
       <View style={{ width: '100%' }}>
         {suggestions?.map((person, index) => (
           <SuggestedConnectionCard key={person.id} person={person} index={index} />

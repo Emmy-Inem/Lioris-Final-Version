@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeImageForUpload, resizePickedAsset } from '@/utils/pickImage';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingShell } from '@/components/OnboardingShell';
 import { AppTextField } from '@/components/AppTextField';
@@ -129,9 +130,9 @@ export default function BuildProfileScreen() {
         document.body.removeChild(input);
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
           const dataUrl = ev.target?.result as string;
-          if (dataUrl) setPhotoUri(dataUrl);
+          if (dataUrl) setPhotoUri(await resizeImageForUpload(dataUrl));
         };
         reader.readAsDataURL(file);
       };
@@ -149,9 +150,10 @@ export default function BuildProfileScreen() {
       base64: true,
     });
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
-      if (result.assets[0].base64) {
-        setPhotoBase64(result.assets[0].base64);
+      const photo = await resizePickedAsset(result.assets[0], { base64: true });
+      setPhotoUri(photo.uri);
+      if (photo.base64) {
+        setPhotoBase64(photo.base64);
       }
     }
   }

@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeImageForUpload, resizePickedAsset } from '@/utils/pickImage';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
@@ -353,13 +354,14 @@ export function AICopilotModal({
         document.body.removeChild(input);
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
           const dataUrl = ev.target?.result as string;
           if (dataUrl) {
+            const resizedUrl = await resizeImageForUpload(dataUrl);
             setAttachedImage({
-              base64: dataUrl,
-              mimeType: file.type || 'image/jpeg',
-              previewUri: dataUrl,
+              base64: resizedUrl,
+              mimeType: resizedUrl !== dataUrl ? 'image/jpeg' : file.type || 'image/jpeg',
+              previewUri: resizedUrl,
             });
             haptics.light();
             toast.info('Attached image for multimodal analysis');
@@ -380,7 +382,8 @@ export function AICopilotModal({
         base64: true,
       });
       if (!res.canceled && res.assets[0]) {
-        const asset = res.assets[0];
+        // The base64 is what gets sent to the model, so it has to be the resized picture's, with the matching mime type.
+        const asset = await resizePickedAsset(res.assets[0], { base64: true });
         setAttachedImage({
           base64: asset.base64 || '',
           mimeType: asset.mimeType || 'image/jpeg',
