@@ -141,6 +141,18 @@ export async function listTakedownRequests(status: 'pending' | 'decided' = 'pend
   }));
 }
 
+/**
+ * The decision was saved and the resource row is gone, but its file is still in Storage (the bucket
+ * refused the delete, e.g. the admin may not delete that object). Callers treat this as "decided, needs
+ * follow-up", not as a failed decision.
+ */
+export class TakedownFileNotRemovedError extends Error {
+  constructor(message = 'The resource was removed, but its stored file could not be deleted. Delete it from the resources bucket.') {
+    super(message);
+    this.name = 'TakedownFileNotRemovedError';
+  }
+}
+
 /** Uphold = remove the resource for good (row + stored file); reject = put it back online. */
 export async function resolveTakedownRequest(
   request: TakedownRequest,
@@ -159,10 +171,21 @@ export async function resolveTakedownRequest(
   const filePath = (data as { file_path?: string | null } | null)?.file_path;
   let fileRemoved = true;
   if (decision === 'uphold' && filePath) {
-    const { error: removeError } = await supabase.storage.from('resources').remove([decodeURIComponent(filePath)]);
+    let storagePath = filePath;
+    try {
+      storagePath = decodeURIComponent(filePath);
+    } catch {
+      // keep the raw path
+    }
+    // Storage answers a delete it is not allowed to make with NO error and an EMPTY result - so an error
+    // check alone reports success while the file stays online. Success means the object came back in `data`.
+    const { data: removed, error: removeError } = await supabase.storage.from('resources').remove([storagePath]);
     if (removeError) {
       fileRemoved = false;
       console.warn('[Takedown] Could not delete the stored file:', removeError.message);
+    } else if (!removed || removed.length === 0) {
+      fileRemoved = false;
+      console.warn('[Takedown] Storage removed nothing for', storagePath, '(missing or not permitted).');
     }
   }
 
@@ -177,6 +200,6 @@ export async function resolveTakedownRequest(
   }).catch(() => {});
 
   if (!fileRemoved) {
-    throw new Error('The resource was removed, but its stored file could not be deleted. Delete it from the resources bucket.');
+    throw new TakedownFileNotRemovedError();
   }
 }

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Alert, Platform, View } from 'react-native';
+import { Alert, Modal, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SolidCard } from '@/components/SolidCard';
 import { AppText } from '@/components/AppText';
 import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
+import { AppTextField } from '@/components/AppTextField';
 import { EmptyState } from '@/components/EmptyState';
 import { useTheme } from '@/theme/ThemeProvider';
 import { endMentorship, listMentorshipsForAdmin } from '@/api/mentorship';
@@ -28,50 +29,43 @@ export function MentorshipModerationTab() {
     queryFn: () => listMentorshipsForAdmin('active'),
   });
 
+  // The reason goes to BOTH participants, so it must be written for this pairing: no pre-filled
+  // default (a one-tap "End Pairing" used to send the same stock accusation every time) and no
+  // Alert.prompt (iOS only). A small modal with a real text field works on every platform.
+  const [endTarget, setEndTarget] = useState<(typeof mentorships)[number] | null>(null);
+  const [endReason, setEndReason] = useState('');
+  const END_REASON_MIN = 10;
+
   function handleEndConfirm(m: (typeof mentorships)[number]) {
     haptics.error();
-    const doEnd = async (reason?: string) => {
-      setActingId(m.id);
-      try {
-        await endMentorship(m.id, 'end', reason || 'Ended by campus staff');
-        recordAuditLogEntry({
-          action: 'item_moderated',
-          summary: `Ended mentorship pairing between ${m.studentName} and ${m.mentorName}`,
-          targetType: 'user',
-          targetId: m.studentId,
-          reason: reason || 'Ended by campus staff',
-        });
-        await queryClient.invalidateQueries({ queryKey: ['mentorships'] });
-        await refetch();
-        Alert.alert('Mentorship Ended', 'Both participants have been notified.');
-      } catch (err: any) {
-        Alert.alert('Could Not End Mentorship', err?.message || 'Please try again.');
-      } finally {
-        setActingId(null);
-      }
-    };
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.prompt === 'function') {
-      const reason = window.prompt(`Give a reason for ending the pairing between ${m.studentName} and ${m.mentorName}:`, 'Violation of community guidelines reported by a participant.');
-      if (reason === null) return;
-      void doEnd(reason.trim() || 'Ended by campus staff');
-      return;
-    }
-    if (Alert.prompt) {
-      Alert.prompt(
-        'End this mentorship?',
-        `Give a reason for ending the pairing between ${m.studentName} and ${m.mentorName}:`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'End Pairing', style: 'destructive', onPress: (reason?: string) => doEnd(reason) },
-        ],
-        'plain-text',
-        'Violation of community guidelines reported by a participant.',
-      );
-    } else {
-      Alert.alert('End this mentorship?', `End the pairing between ${m.studentName} and ${m.mentorName}?`, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'End Pairing', style: 'destructive', onPress: () => doEnd() },
-      ]);
+    setEndReason('');
+    setEndTarget(m);
+  }
+
+  async function doEnd() {
+    const m = endTarget;
+    const reason = endReason.trim();
+    if (!m || reason.length < END_REASON_MIN) return;
+    setEndTarget(null);
+    setActingId(m.id);
+    try {
+      await endMentorship(m.id, 'end', reason);
+      recordAuditLogEntry({
+        action: 'item_moderated',
+        summary: `Ended mentorship pairing between ${m.studentName} and ${m.mentorName}`,
+        targetType: 'user',
+        targetId: m.studentId,
+        reason,
+        institutionCode: m.campusCode ?? undefined,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['mentorships'] });
+      await refetch();
+      Alert.alert('Mentorship Ended', 'Both participants have been notified.');
+    } catch (err: any) {
+      Alert.alert('Could Not End Mentorship', err?.message || 'Please try again.');
+    } finally {
+      setActingId(null);
+      setEndReason('');
     }
   }
 
@@ -118,6 +112,36 @@ export function MentorshipModerationTab() {
           </View>
         </SolidCard>
       ))}
+
+      <Modal visible={!!endTarget} transparent animationType="fade" onRequestClose={() => setEndTarget(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: spacing.lg }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: spacing.lg, maxWidth: 480, width: '100%', alignSelf: 'center' }}>
+            <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+              End this mentorship?
+            </AppText>
+            <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.md }}>
+              {endTarget ? `${endTarget.studentName} and ${endTarget.mentorName} will both be notified, and they will both see the reason you write below. ` : ''}
+              It is also recorded in the audit log.
+            </AppText>
+            <AppTextField
+              label={`Reason (min. ${END_REASON_MIN} characters)`}
+              value={endReason}
+              onChangeText={setEndReason}
+              placeholder="What happened, in words both people can read"
+              multiline
+              numberOfLines={3}
+            />
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <AppButton label="Cancel" variant="secondary" onPress={() => setEndTarget(null)} fullWidth />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppButton label="End Pairing" onPress={doEnd} disabled={endReason.trim().length < END_REASON_MIN} fullWidth />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {!isLoading && mentorships.length === 0 ? (
         <EmptyState icon="people-outline" title="No active mentorships" description="Nothing needs your attention right now." />

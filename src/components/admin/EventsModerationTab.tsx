@@ -353,12 +353,18 @@ export function EventsModerationTab() {
  if (input.trim()) revokeReason = input.trim();
  }
  await revokeEventApproval(event.id, revokeReason);
- Alert.alert('Approval Revoked', `"${event.title}"has been taken down from public event listings.`);
+ Alert.alert('Approval Revoked', `"${event.title}" has been taken down from public event listings.`);
  } else {
  await approveEvent(event.id);
- Alert.alert('Event Approved & Live', `"${event.title}"is now published to all student feeds.`);
+ Alert.alert('Event Approved & Live', `"${event.title}" is now published to all student feeds.`);
  }
  queryClient.invalidateQueries({ queryKey: ['events'] });
+ await refetch();
+ } catch (err: any) {
+ // approveEvent / revokeEventApproval throw when the database changed zero rows (no permission, or the
+ // event is gone): say so instead of leaving an unhandled rejection and no feedback.
+ haptics.error();
+ Alert.alert(isApproved ? 'Could not take the event down' : 'Could not approve the event', err?.message || 'Nothing was changed. Please try again.');
  await refetch();
  } finally {
  setActingId(null);
@@ -491,6 +497,9 @@ export function EventsModerationTab() {
  queryClient.invalidateQueries({ queryKey: ['events'] });
  await refetch();
  Alert.alert('Event Purged', 'The event and RSVPs have been wiped from the database.');
+ } catch (err: any) {
+ haptics.error();
+ Alert.alert('Could not purge the event', err?.message || 'Nothing was deleted. Please try again.');
  } finally {
  setActingId(null);
  }

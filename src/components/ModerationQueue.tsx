@@ -139,15 +139,8 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  haptics.light();
  setSubmittingId(report.id);
  try {
- await resolveReport(report.id, 'dismissed');
- recordAuditLogEntry({
- action: 'report_dismissed',
- summary: `Dismissed report #${report.id.substring(0, 8)} (${report.targetType}) - Marked as false positive`,
- targetType: 'report',
- targetId: report.id,
- institutionCode: report.institutionCode,
- reason: 'Content complies with university community guidelines',
- });
+ // resolveReport() writes the (single) audit entry and notifies the reporter.
+ await resolveReport(report.id, 'dismissed', 'Content complies with university community guidelines');
  queryClient.invalidateQueries({ queryKey: ['reports'] });
  queryClient.invalidateQueries({ queryKey: ['notifications'] });
  } catch (err) {
@@ -180,15 +173,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
  let failed = 0;
  for (const report of targets) {
  try {
- await resolveReport(report.id, 'dismissed');
- recordAuditLogEntry({
- action: 'report_dismissed',
- summary: `Dismissed report #${report.id.substring(0, 8)} (${report.targetType}) - Marked as false positive (bulk action)`,
- targetType: 'report',
- targetId: report.id,
- institutionCode: report.institutionCode,
- reason: 'Content complies with university community guidelines',
- });
+ await resolveReport(report.id, 'dismissed', 'Content complies with university community guidelines (bulk dismiss)');
  succeeded += 1;
  } catch (err) {
  if (err instanceof ReportAlreadyHandledError) alreadyHandled += 1;
@@ -226,6 +211,11 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
 
     const shouldPurgeContent = punishmentType === 'takedown' || punishmentType === 'permaban' || punishmentType === 'shadowban';
 
+    // The irreversible deletes below are only QUEUED here and run after the account sanction succeeded:
+    // when the sanction RPC refuses (scope, hierarchy...), nothing has been deleted and the report stays open.
+    let purgeContent: (() => Promise<void>) | null = null;
+    let purgeLabel: string | null = null;
+
     setApplyingPenalty(true);
     try {
       const { supabase } = await import('@/api/supabase');
@@ -242,8 +232,9 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         }
 
         if (shouldPurgeContent) {
-          await deletePost(report.targetId);
-          actionLabel = 'Post purged from campus feed';
+          const id = report.targetId;
+          purgeContent = () => deletePost(id);
+          purgeLabel = 'Post purged from campus feed';
         }
       }
 
@@ -259,8 +250,9 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         }
 
         if (shouldPurgeContent) {
-          await deletePodPost(report.targetId);
-          actionLabel = 'Study pod post removed';
+          const id = report.targetId;
+          purgeContent = () => deletePodPost(id);
+          purgeLabel = 'Study pod post removed';
         }
       }
 
@@ -276,8 +268,9 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         }
 
         if (shouldPurgeContent) {
-          await purgeEvent(report.targetId);
-          actionLabel = 'Event purged from campus calendar';
+          const id = report.targetId;
+          purgeContent = () => purgeEvent(id);
+          purgeLabel = 'Event purged from campus calendar';
         }
       }
 
@@ -293,8 +286,9 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         }
 
         if (shouldPurgeContent) {
-          await deleteMessageAsAdmin(report.targetId);
-          actionLabel = 'Message removed from the conversation';
+          const id = report.targetId;
+          purgeContent = () => deleteMessageAsAdmin(id);
+          purgeLabel = 'Message removed from the conversation';
         }
       }
 
@@ -310,8 +304,10 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         }
 
         if (shouldPurgeContent) {
-          await takedownListing(report.targetId, adminModNote.trim() || `Removed following a user report: ${report.reason}`);
-          actionLabel = 'Listing removed from the marketplace';
+          const id = report.targetId;
+          const note = adminModNote.trim() || `Removed following a user report: ${report.reason}`;
+          purgeContent = () => takedownListing(id, note);
+          purgeLabel = 'Listing removed from the marketplace';
         }
       }
 
@@ -327,8 +323,10 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         }
 
         if (shouldPurgeContent) {
-          await rejectJob(report.targetId, adminModNote.trim() || `Removed following a user report: ${report.reason}`);
-          actionLabel = 'Job posting removed from the career board';
+          const id = report.targetId;
+          const note = adminModNote.trim() || `Removed following a user report: ${report.reason}`;
+          purgeContent = () => rejectJob(id, note);
+          purgeLabel = 'Job posting removed from the career board';
         }
       }
 
@@ -341,6 +339,12 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         } else if (punishmentType === 'takedown' && report.targetType === 'user' && canPermaban) {
           await applyModerationSanction(targetUserId, 'permaban', sanctionReason);
         }
+      }
+
+      // Sanction (if any) succeeded - only now remove the reported content.
+      if (purgeContent) {
+        await purgeContent();
+        if (purgeLabel) actionLabel = purgeLabel;
       }
 
       if (punishmentType === 'warn') {
@@ -363,14 +367,17 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
         });
       }
 
-      recordAuditLogEntry({
-        action: punishmentType === 'escalate' ? 'item_moderated' : 'report_resolved',
-        summary: `Moderation Action on #${report.id.substring(0, 8)} (${report.targetType}): ${actionLabel}`,
-        targetType: 'report',
-        targetId: report.id,
-        institutionCode: report.institutionCode,
-        reason: adminModNote.trim() || `Violation of guidelines: ${report.reason}`,
-      });
+      // resolveReport() above already recorded report_resolved; only an escalation (which does not resolve) needs its own row.
+      if (punishmentType === 'escalate') {
+        recordAuditLogEntry({
+          action: 'item_moderated',
+          summary: `Moderation Action on #${report.id.substring(0, 8)} (${report.targetType}): ${actionLabel}`,
+          targetType: 'report',
+          targetId: report.id,
+          institutionCode: report.institutionCode,
+          reason: adminModNote.trim() || `Violation of guidelines: ${report.reason}`,
+        });
+      }
 
       queryClient.invalidateQueries({ queryKey: ['reports'] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
