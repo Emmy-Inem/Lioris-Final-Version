@@ -42,7 +42,7 @@ await check('02_apply_all.sql applies in one paste, records every part, and a se
   const second = (await db.query('SELECT count(*)::int n FROM public._manual_migration_log')).rows[0].n;
   assert(second === expected, `second run logged ${second}`);
   const anon = (await db.query(`SELECT COALESCE(string_agg(p.proname, ',' ORDER BY p.proname), '') s FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace AND n.nspname='public' WHERE p.prosecdef AND has_function_privilege('anon', p.oid, 'EXECUTE')`)).rows[0].s;
-  assert(anon === 'check_username_available', `anon-callable definer functions: ${anon}`);
+  assert(anon === 'check_username_available,record_public_page_view', `anon-callable definer functions: ${anon}`);
 });
 
 await check('chain guard: when a part is missing, the parts after it refuse to run', async () => {

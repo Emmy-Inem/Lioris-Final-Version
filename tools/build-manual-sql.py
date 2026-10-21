@@ -75,7 +75,7 @@ SELECT 'EXPECT 0: parts of 02_apply_all.sql missing' AS check_name,
        (SELECT count(*) FROM (VALUES {','.join("('%s')" % f.name[:14] for f in files)}) v(version)
          WHERE NOT EXISTS (SELECT 1 FROM public._manual_migration_log l WHERE l.version = v.version))::text AS value;
 
-SELECT 'EXPECT only check_username_available: SECURITY DEFINER functions anonymous callers can run' AS check_name,
+SELECT 'EXPECT only check_username_available, record_public_page_view: SECURITY DEFINER functions anonymous callers can run' AS check_name,
        COALESCE(string_agg(p.proname, ', ' ORDER BY p.proname), '(none)') AS value
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace AND n.nspname = 'public'
