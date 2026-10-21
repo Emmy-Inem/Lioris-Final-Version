@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import {
+  Alert,
   ScrollView,
   View,
   Pressable,
@@ -18,7 +19,7 @@ import { Badge } from '@/components/Badge';
 import { SuperAdminGate } from '@/auth/SuperAdminGate';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { fetchSystemHealth, cleanupOrphanedRecords, SystemHealthReport } from '@/api/systemHealth';
+import { fetchSystemHealth, cleanupOrphanedRecords, CLEANUP_DESCRIPTION, SystemHealthReport } from '@/api/systemHealth';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/api/supabase';
 import { haptics } from '@/utils/haptics';
@@ -126,6 +127,15 @@ export default function SystemHealthScreen() {
     queryFn: fetchClientErrors,
     refetchInterval: 60000,
   });
+
+  /** Deleting is irreversible: say exactly what will be deleted and ask first. */
+  function confirmCleanup() {
+    haptics.medium();
+    Alert.alert('Run sync cleanup?', `${CLEANUP_DESCRIPTION}\n\nThis cannot be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete now', style: 'destructive', onPress: () => void handleRunCleanup() },
+    ]);
+  }
 
   async function handleRunCleanup() {
     haptics.medium();
@@ -345,13 +355,13 @@ export default function SystemHealthScreen() {
             <View>
               <AppText variant="h3" weight="bold">Sync Integrity & Hygiene</AppText>
               <AppText tone="secondary" variant="caption">
-                Scans for dangling records, unlinked threads, and stale moderation rows.
+                {CLEANUP_DESCRIPTION}
               </AppText>
             </View>
             <AppButton
               label={cleaning ? 'Optimizing...' : 'Run Sync Cleanup'}
               size="sm"
-              onPress={handleRunCleanup}
+              onPress={confirmCleanup}
               loading={cleaning}
             />
           </View>

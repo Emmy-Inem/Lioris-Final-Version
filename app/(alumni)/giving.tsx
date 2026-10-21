@@ -24,7 +24,7 @@ import {
   listGivingCampaigns,
   listMyGivingCampaigns,
   openGivingPage,
-  updateMyCampaignTotal,
+  updateMyCampaignReportedTotal,
 } from '@/api/donations';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
@@ -59,8 +59,13 @@ function CampaignCard({ campaign, onGive }: { campaign: GivingCampaign; onGive: 
 
       <View style={{ marginTop: spacing.sm }}>
         <AppText weight="bold" tone="brand" variant="bodySmall">
-          {formatNaira(campaign.confirmedTotal)} raised{campaign.goalAmount ? ` of ${formatNaira(campaign.goalAmount)} goal` : ''}
+          {formatNaira(campaign.confirmedTotal)} confirmed{campaign.goalAmount ? ` of ${formatNaira(campaign.goalAmount)} goal` : ''}
         </AppText>
+        {campaign.reportedTotal > campaign.confirmedTotal && (
+          <AppText variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+            {formatNaira(campaign.reportedTotal)} reported by the organiser (not verified by Lioris)
+          </AppText>
+        )}
         {progress !== null && (
           <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.divider, marginTop: 6, overflow: 'hidden' }}>
             <View style={{ height: '100%', width: `${Math.round(progress * 100)}%`, backgroundColor: colors.brandPrimary }} />
@@ -79,12 +84,12 @@ function CampaignCard({ campaign, onGive }: { campaign: GivingCampaign; onGive: 
   );
 }
 
-/** Owner-only controls shown under "My Campaigns": update the confirmed
- * total, close the campaign, and see how many people clicked through. */
+/** Owner-only controls shown under "My Campaigns": report the running
+ * total (unverified - an admin confirms it), close the campaign, and see how many people clicked through. */
 function MyCampaignOwnerPanel({ campaign, onGive, onChanged }: { campaign: GivingCampaign; onGive: (c: GivingCampaign) => void; onChanged: () => void }) {
   const { colors, spacing } = useTheme();
   const toast = useToast();
-  const [totalInput, setTotalInput] = useState(String(campaign.confirmedTotal));
+  const [totalInput, setTotalInput] = useState(String(campaign.reportedTotal));
   const [savingTotal, setSavingTotal] = useState(false);
   const [closing, setClosing] = useState(false);
 
@@ -96,19 +101,19 @@ function MyCampaignOwnerPanel({ campaign, onGive, onChanged }: { campaign: Givin
   async function saveTotal() {
     const num = Number(totalInput.replace(/[^0-9.]/g, ''));
     if (!Number.isFinite(num) || num < 0) {
-      toast.error('Enter a valid confirmed total (0 or more).');
+      toast.error('Enter a valid total (0 or more).');
       return;
     }
     haptics.light();
     setSavingTotal(true);
     try {
-      await updateMyCampaignTotal(campaign.id, num);
+      await updateMyCampaignReportedTotal(campaign.id, num);
       haptics.success();
-      toast.success('Confirmed total updated.');
+      toast.success('Reported total updated. An administrator confirms the official figure.');
       onChanged();
     } catch (err: any) {
       haptics.error();
-      toast.error(err?.message || 'Could not update the confirmed total.');
+      toast.error(err?.message || 'Could not update the reported total.');
     } finally {
       setSavingTotal(false);
     }
@@ -146,13 +151,13 @@ function MyCampaignOwnerPanel({ campaign, onGive, onChanged }: { campaign: Givin
       <CampaignCard campaign={campaign} onGive={onGive} />
       <SolidCard radius={18} style={{ padding: spacing.md, marginTop: spacing.xs }}>
         <AppText variant="caption" tone="secondary">
-          {typeof clickCount === 'number' ? `${clickCount} click${clickCount === 1 ? '' : 's'}` : '…'} {'→'} {formatNaira(campaign.confirmedTotal)} confirmed
+          {typeof clickCount === 'number' ? `${clickCount} click${clickCount === 1 ? '' : 's'}` : '…'} {'→'} {formatNaira(campaign.reportedTotal)} reported by you, {formatNaira(campaign.confirmedTotal)} confirmed by Lioris
         </AppText>
 
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, marginTop: spacing.sm }}>
           <View style={{ flex: 1 }}>
             <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: 6 }}>
-              Update Confirmed Total (₦)
+              Update Reported Total (₦) - organiser-reported
             </AppText>
             <TextInput
               value={totalInput}

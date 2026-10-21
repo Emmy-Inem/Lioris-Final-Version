@@ -16,10 +16,12 @@ import { QueueItemSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/auth/AuthContext';
 import { haptics } from '@/utils/haptics';
 import {
   listTakedownRequests,
   resolveTakedownRequest,
+  TakedownFileNotRemovedError,
   TAKEDOWN_CLAIM_OPTIONS,
   TakedownRequest,
 } from '@/api/takedown';
@@ -33,6 +35,12 @@ export default function TakedownRequestsScreen() {
   const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const toast = useToast();
+  const { user: authUser } = useAuth();
+  const scopeLabel = authUser?.isSuperAdmin
+    ? 'all campuses'
+    : authUser?.campusCode
+    ? `${authUser.campusCode} only`
+    : 'your campus only';
   const queryClient = useQueryClient();
 
   const [tab, setTab] = useState<'pending' | 'decided'>('pending');
@@ -81,12 +89,15 @@ export default function TakedownRequestsScreen() {
     setBulkProcessing(true);
     let succeeded = 0;
     let failed = 0;
+    let fileLeft = 0;
     for (const request of targets) {
       try {
         await resolveTakedownRequest(request, bulkDeciding, notes);
         succeeded += 1;
-      } catch {
-        failed += 1;
+      } catch (err) {
+        // Decided, but the stored file is still in the bucket: not "failed", but never "success" either.
+        if (err instanceof TakedownFileNotRemovedError) fileLeft += 1;
+        else failed += 1;
       }
     }
     setBulkProcessing(false);
@@ -95,9 +106,13 @@ export default function TakedownRequestsScreen() {
     clearSelection();
     await queryClient.invalidateQueries({ queryKey: ['takedown-requests'] });
     await queryClient.invalidateQueries({ queryKey: ['resources'] });
-    if (failed > 0) {
+    if (failed > 0 || fileLeft > 0) {
       haptics.error();
-      toast.error(`${succeeded} ${bulkDeciding === 'uphold' ? 'removed' : 'declined'}, ${failed} failed. Retry the failed ones individually.`);
+      toast.error(
+        `${succeeded} ${bulkDeciding === 'uphold' ? 'fully removed' : 'declined'}` +
+          (fileLeft > 0 ? `, ${fileLeft} removed but their files could NOT be deleted from storage (delete them from the resources bucket)` : '') +
+          (failed > 0 ? `, ${failed} failed - retry those individually.` : '.'),
+      );
     } else {
       haptics.success();
       toast.success(bulkDeciding === 'uphold' ? `${succeeded} removed. Resources and their files are deleted.` : `${succeeded} declined and restored.`);
@@ -114,7 +129,11 @@ export default function TakedownRequestsScreen() {
     } catch (err: any) {
       // The decision itself may still have been saved (e.g. only the stored file could not be deleted).
       haptics.error();
-      toast.error(err?.message || 'Could not record the decision.');
+      toast.error(
+        err instanceof TakedownFileNotRemovedError
+          ? 'Decision saved and the resource is offline, but its file could not be removed from storage. Delete it from the resources bucket.'
+          : err?.message || 'Could not record the decision.',
+      );
     } finally {
       setSaving(false);
       setDeciding(null);
@@ -137,6 +156,9 @@ export default function TakedownRequestsScreen() {
         </AppText>
         <AppText tone="secondary" variant="caption">
           Copyright and content reports on shared resources. Rights-holder requests hide the file until you decide.
+        </AppText>
+        <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>
+          Showing requests for: {scopeLabel}
         </AppText>
       </View>
 

@@ -105,7 +105,8 @@ function mapAuditLogRow(row: any): AuditLogEntry {
  targetType: row.entity_type as AuditLogEntry['targetType'],
  targetId: row.entity_id || row.metadata?.targetIdRaw || '',
  reason: row.metadata?.reason,
- institutionCode: row.metadata?.institutionCode,
+ // DB-trigger rows carry targetCampus (stamped by audit_logs_stamp_target_campus) instead of institutionCode.
+ institutionCode: row.metadata?.institutionCode ?? row.metadata?.targetCampus,
  createdAt: row.created_at,
  };
 }
@@ -142,7 +143,12 @@ export async function listAuditLogEntriesPage(query: AuditLogQuery = {}): Promis
  queryBuilder = queryBuilder.eq('entity_type', query.targetType);
  }
  if (query.institutionCode) {
- queryBuilder = queryBuilder.eq('metadata->>institutionCode', query.institutionCode);
+ // Rows written by the app carry institutionCode, rows written by database triggers / RPCs carry
+ // targetCampus - a campus filter has to match either, or trigger rows vanish from the campus view.
+ const code = query.institutionCode;
+ queryBuilder = /^[A-Za-z0-9_-]{1,32}$/.test(code)
+ ? queryBuilder.or(`metadata->>institutionCode.eq.${code},metadata->>targetCampus.eq.${code}`)
+ : queryBuilder.eq('metadata->>institutionCode', code);
  }
  if (query.since) {
  queryBuilder = queryBuilder.gte('created_at', query.since);
@@ -161,8 +167,9 @@ export async function listAuditLogEntriesPage(query: AuditLogQuery = {}): Promis
  const total = count ?? entries.length;
  return { entries, total, hasMore: offset + entries.length < total };
  } catch (err) {
+ // Throw instead of returning an empty page: "No audit entries" must never be shown for a failed load.
  console.error('[AuditLog] Failed to load audit entries:', err);
- return { entries: [], total: 0, hasMore: false };
+ throw new Error('Could not load the audit log. Please check your connection and try again.');
  }
 }
 

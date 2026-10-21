@@ -125,14 +125,14 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
   }
 
   try {
-    const { data: analyticsSummary, error: analyticsError } = await supabase.rpc('get_scoped_admin_analytics_summary', {
-      p_days: 1,
-      p_campus_code: null,
-    });
-    if (!analyticsError && analyticsSummary) {
-      counts.activeSessions = Number(analyticsSummary.active_15m ?? 0);
-    } else if (analyticsError) {
-      console.warn('[SystemHealth] get_admin_analytics_summary RPC error:', analyticsError.message);
+    // admin_active_users_count(): members active in the last 15 minutes (bots excluded), campus-scoped
+    // for Campus Admins by the database. (It replaces a read of last_active_at / an analytics summary the
+    // admin role was not granted, which silently showed 0.)
+    const { data: activeNow, error: activeError } = await supabase.rpc('admin_active_users_count', { p_minutes: 15 });
+    if (!activeError && typeof activeNow === 'number') {
+      counts.activeSessions = activeNow;
+    } else if (activeError) {
+      console.warn('[SystemHealth] admin_active_users_count RPC error:', activeError.message);
     }
   } catch (err) {
     console.warn('[SystemHealth] Active sessions RPC error:', err);
@@ -188,9 +188,23 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
   };
 }
 
+/** Closed support tickets are kept for a year before cleanup may delete them (appeals are never deleted here). */
+export const CLOSED_TICKET_RETENTION_DAYS = 365;
+
+/**
+ * What this cleanup does, in plain words (shown to the admin before they run it):
+ *  - deletes comments whose discussion no longer exists (up to 200 checked per run);
+ *  - deletes support tickets that were CLOSED more than 365 days ago.
+ * It never deletes appeals, open or recently closed tickets, or anything else.
+ */
+export const CLEANUP_DESCRIPTION =
+  `Deletes comments whose discussion no longer exists, and support tickets closed more than ${CLOSED_TICKET_RETENTION_DAYS} days ago. Appeals and newer tickets are never deleted.`;
+
 export async function cleanupOrphanedRecords(): Promise<{ success: boolean; prunedCount: number; message: string }> {
   try {
     let pruned = 0;
+    let prunedComments = 0;
+    let prunedTickets = 0;
 
     // 1. Prune orphaned post_comments referencing deleted posts
     const { data: recentComments } = await supabase
@@ -213,26 +227,29 @@ export async function cleanupOrphanedRecords(): Promise<{ success: boolean; prun
           .select('id');
         if (deletedComments) {
           pruned += deletedComments.length;
+          prunedComments = deletedComments.length;
         }
       }
     }
 
-    // 2. Prune closed support tickets older than 90 days
-    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: oldClosedTickets } = await supabase
+    // 2. Prune support tickets that were closed more than a year ago (never newer ones, never appeals)
+    const cutoff = new Date(Date.now() - CLOSED_TICKET_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const { data: oldClosedTickets, error: ticketError } = await supabase
       .from('support_tickets')
       .delete()
       .eq('status', 'closed')
-      .lt('updated_at', ninetyDaysAgo)
+      .lt('updated_at', cutoff)
       .select('id');
+    if (ticketError) throw ticketError;
 
     if (oldClosedTickets) {
       pruned += oldClosedTickets.length;
+      prunedTickets = oldClosedTickets.length;
     }
 
     await recordAuditLogEntry({
-      action: 'policy_updated',
-      summary: `Admin executed database sync integrity cleanup: ${pruned} stale rows pruned.`,
+      action: 'system_cleanup_executed',
+      summary: `Admin ran the database cleanup: deleted ${prunedComments} orphaned comment(s) and ${prunedTickets} support ticket(s) closed over ${CLOSED_TICKET_RETENTION_DAYS} days ago.`,
       targetType: 'system',
       targetId: 'db-cleanup',
     });
@@ -240,7 +257,10 @@ export async function cleanupOrphanedRecords(): Promise<{ success: boolean; prun
     return {
       success: true,
       prunedCount: pruned,
-      message: pruned > 0 ? `Successfully pruned ${pruned} stale records.` : 'Database sync is already optimal. No orphaned records found.',
+      message:
+        pruned > 0
+          ? `Deleted ${prunedComments} orphaned comment${prunedComments === 1 ? '' : 's'} and ${prunedTickets} support ticket${prunedTickets === 1 ? '' : 's'} closed over ${CLOSED_TICKET_RETENTION_DAYS} days ago.`
+          : 'Nothing to clean up: no orphaned comments and no support tickets closed over a year ago.',
     };
   } catch (err: any) {
     console.error('[SystemHealth] cleanup failed:', err);

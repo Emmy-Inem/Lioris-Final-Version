@@ -117,10 +117,20 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  // (approved postings to everyone in scope, plus a poster's own row regardless
  // of status, plus staff/admin see everything) - see 20261001000000_workflow_gaps.sql.
  // Filtering client-side instead lets a poster see their own pending posting.
+ // Filter in the database where it is simple, so the page is not capped on rows the client throws away:
+ // open (not closed), not expired, and approved or the viewer's own posting. (The client-side filters below
+ // stay as defence in depth.)
  let req = supabase
  .from('jobs')
  .select('*, poster:profiles!jobs_poster_id_fkey(full_name, role, avatar_url, campus_code)')
+ .eq('is_closed', false)
+ .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
  .order('created_at', { ascending: false });
+ if (authData?.user?.id && /^[0-9a-f-]{36}$/i.test(authData.user.id)) {
+ req = req.or(`is_approved.eq.true,poster_id.eq.${authData.user.id}`);
+ } else {
+ req = req.eq('is_approved', true);
+ }
 
  if (query.type) {
  req = req.eq('type', query.type);
@@ -174,8 +184,10 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
 
  return filterJobs(merged, scopedQuery);
  } catch (err) {
- console.warn('[Jobs] Supabase listJobs error, showing local pool only:', err);
- return filterJobs(getLocalPool(), query);
+ // A real failure is rethrown: showing only this session's local pool as if it were the whole board made
+ // "the query failed" look identical to "there are no jobs". Callers render an error state with Retry.
+ console.warn('[Jobs] Supabase listJobs error:', err);
+ throw new Error('Could not load opportunities. Please check your connection and try again.');
  }
 }
 
@@ -430,6 +442,9 @@ export async function listPendingJobs(): Promise<JobListing[]> {
     .from('jobs')
     .select('*, poster:profiles!jobs_poster_id_fkey(full_name)')
     .eq('is_approved', false)
+    // A rejected posting carries rejected_at and leaves the queue; it comes back only when its poster
+    // edits it (the moderation trigger clears rejected_at on a resubmission).
+    .is('rejected_at', null)
     .order('created_at', { ascending: true });
   if (error) {
     console.warn('[Jobs] listPendingJobs error:', error.message);
@@ -442,7 +457,7 @@ export async function approveJob(id: string): Promise<void> {
   const { data: authData } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from('jobs')
-    .update({ is_approved: true, approved_by: authData?.user?.id ?? null, approved_at: new Date().toISOString(), rejection_reason: null })
+    .update({ is_approved: true, approved_by: authData?.user?.id ?? null, approved_at: new Date().toISOString(), rejection_reason: null, rejected_at: null })
     .eq('id', id)
     .select('id, poster_id, title')
     .maybeSingle();
@@ -473,7 +488,7 @@ export async function rejectJob(id: string, reason?: string): Promise<void> {
   const cleanReason = reason || 'Did not meet posting standards.';
   const { data, error } = await supabase
     .from('jobs')
-    .update({ is_approved: false, rejection_reason: cleanReason })
+    .update({ is_approved: false, rejection_reason: cleanReason, rejected_at: new Date().toISOString(), approved_by: null, approved_at: null })
     .eq('id', id)
     .select('id, poster_id, title')
     .maybeSingle();

@@ -315,6 +315,8 @@ export async function adminReviewPayment(input: {
   overrideLinkCheck?: boolean;
   /** Also publish the event (when it is still waiting for approval) */
   publish?: boolean;
+  /** The payment link the admin was looking at; the server refuses the decision if the organiser changed it meanwhile. */
+  expectedPaymentUrl?: string | null;
 }): Promise<{ status: string; paymentReviewStatus: string }> {
   const data = await callReviewFunction({ action: 'review', ...input });
   return { status: data.event?.status, paymentReviewStatus: data.event?.payment_review_status };

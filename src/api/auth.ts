@@ -1034,11 +1034,36 @@ export async function adminTriggerPasswordReset(email: string): Promise<{ succes
   }
 }
 
+/**
+ * Columns the signed-in admin may read back (profiles has column-level SELECT grants - asking RETURNING for
+ * an ungranted column such as student_id_number would fail the whole statement with "permission denied").
+ */
+const READBACK_PROFILE_COLUMNS = new Set([
+  'full_name', 'username', 'role', 'admin_role', 'campus_code', 'department', 'verification_status', 'is_suspended',
+  'suspension_reason', 'muted_until', 'trust_score', 'is_campus_ambassador', 'bio', 'avatar_url',
+]);
+
+/** Normalises a column value so "same value, different spelling" (null vs undefined, padding) does not read as a mismatch. */
+function sameProfileValue(a: unknown, b: unknown): boolean {
+  const norm = (v: unknown) => (v === undefined || v === null || v === '' ? null : typeof v === 'string' ? v.trim() : v);
+  return norm(a) === norm(b);
+}
+
+/**
+ * Admin edit of one profile. Callers must send ONLY the fields that actually changed (never a whole
+ * form from a possibly stale list: that can silently undo a suspension or verification another admin
+ * just made). The updated row is read back and compared, so a field the campus-security trigger
+ * quietly reverted (e.g. a campus transfer by a Campus Admin) is reported instead of shown as saved.
+ * `row` carries the values the database actually stored for the requested fields.
+ */
 export async function adminUpdateUserProfile(
   userId: string,
   updates: Record<string, any>,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; row?: Record<string, any>; notApplied?: string[] }> {
   try {
+    const fields = Object.keys(updates);
+    if (fields.length === 0) return { success: true, row: {}, notApplied: [] };
+
     const { data, error } = await supabase
       .from('profiles')
       .update({
@@ -1046,19 +1071,33 @@ export async function adminUpdateUserProfile(
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
-      .select('id');
+      .select(['id', ...fields.filter((f) => READBACK_PROFILE_COLUMNS.has(f))].join(','));
 
     if (error) throw error;
-    if (!data || data.length === 0) throw new Error('Profile update was rejected by campus security policies.');
+    const row = (data as unknown as Record<string, any>[] | null)?.[0];
+    if (!row) throw new Error('Profile update was rejected by campus security policies.');
 
-    await recordAuditLogEntry({
-      action: 'profile_updated',
-      summary: `Admin updated profile records for user ${userId}: ${Object.keys(updates).join(', ')}`,
-      targetType: 'user',
-      targetId: userId,
-    });
+    const notApplied = fields.filter((f) => READBACK_PROFILE_COLUMNS.has(f) && !sameProfileValue(row[f], updates[f]));
+    const applied = fields.filter((f) => !notApplied.includes(f));
 
-    return { success: true };
+    if (applied.length > 0) {
+      await recordAuditLogEntry({
+        action: 'profile_updated',
+        summary: `Admin updated profile records for user ${userId}: ${applied.join(', ')}`,
+        targetType: 'user',
+        targetId: userId,
+      });
+    }
+
+    if (notApplied.length > 0) {
+      return {
+        success: false,
+        row,
+        notApplied,
+        error: `The database did not apply: ${notApplied.join(', ')}. You may not have permission to change ${notApplied.length === 1 ? 'it' : 'them'}.`,
+      };
+    }
+    return { success: true, row, notApplied: [] };
   } catch (err: any) {
     console.error('[Auth] adminUpdateUserProfile failed:', err);
     return { success: false, error: err.message || 'Failed to update user profile.' };

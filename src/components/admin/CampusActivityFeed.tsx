@@ -46,6 +46,8 @@ export function CampusActivityFeed() {
       <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.border, gap: spacing.sm }}>
         {feed.isLoading ? (
           <AppText variant="caption" tone="secondary">Loading recent changes…</AppText>
+        ) : feed.isError ? (
+          <AppText variant="caption" tone="critical">Could not load recent campus changes. Pull to refresh or try again shortly.</AppText>
         ) : entries.length === 0 ? (
           <AppText variant="caption" tone="secondary">No campus changes recorded yet. Adding, editing, switching off or deleting a campus shows up here.</AppText>
         ) : (

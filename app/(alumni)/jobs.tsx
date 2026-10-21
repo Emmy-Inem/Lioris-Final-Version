@@ -118,7 +118,7 @@ export default function AlumniJobsScreen() {
     };
   }, [debouncedQuery, campusCode, selectedWorkplace, selectedJobType, selectedExperience, selectedDatePosted, savedOnly]);
 
-  const { data: jobs = [], isLoading, isError, refetch, isFetching } = useQuery({
+  const { data: jobs = [], isLoading, isError, error: jobsError, refetch, isFetching } = useQuery({
     queryKey: ['jobs', 'alumni-portal', queryParams],
     queryFn: () => listJobs(queryParams),
   });
@@ -487,6 +487,9 @@ export default function AlumniJobsScreen() {
         {/* Job Listings List */}
         {isLoading || (isFetching && jobs.length === 0) ? (
           <JobCardSkeletonList count={4} />
+        ) : isError && jobs.length === 0 ? (
+          // A failed load is not "no jobs": say so and offer a retry.
+          <ErrorStateView title="Could not load opportunities" error={jobsError} onRetry={refetch} />
         ) : jobs.length === 0 ? (
           <EmptyState
             icon="briefcase-outline"

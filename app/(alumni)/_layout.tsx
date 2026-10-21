@@ -1,6 +1,6 @@
 import React from 'react';
 import { Platform, View } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleGate } from '@/auth/RoleGate';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -10,10 +10,30 @@ import { FloatingLiquidGlassTabBar, FloatingLiquidGlassTabBarView } from '@/comp
 import { BlurredTabsHost } from '@/components/BlurredTabsHost';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 
+/** The module (admin feature flag) behind each alumni route. A disabled module must not be reachable by link. */
+const ROUTE_FLAG: Record<string, string> = {
+  jobs: 'career_page',
+  forum: 'discussion_workspaces',
+  post: 'discussion_workspaces',
+  'events-list': 'campus_events',
+  events: 'campus_events',
+  mentorship: 'alumni_mentorship',
+  'mentorship-space': 'alumni_mentorship',
+  messages: 'e2ee_messaging',
+  network: 'alumni_network',
+  giving: 'donations',
+};
+
 export default function AlumniLayout() {
   const { colors, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
+  const segments = useSegments();
+  // Hiding a tab only hid the button: notification links, search results and typed URLs still opened the module.
+  const routeFlag = ROUTE_FLAG[String((segments as string[])[1] ?? '')];
+  if (routeFlag && !isFeatureEnabled(routeFlag as any)) {
+    return <Redirect href="/(alumni)/dashboard" />;
+  }
 
  const tabsContent = (
  <BlurredTabsHost renderTabBar={(p, t) => <FloatingLiquidGlassTabBarView {...p} blurTarget={t} />}>

@@ -15,8 +15,7 @@ import { LiquidGlassCustomizerModal } from '@/components/admin/LiquidGlassCustom
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listCampuses } from '@/api/institutions';
-import { createNotification } from '@/api/notifications';
-import { recordAuditLogEntry } from '@/api/auditLog';
+import { broadcastNotification } from '@/api/notifications';
 import { haptics } from '@/utils/haptics';
 
 /**
@@ -64,25 +63,25 @@ export default function PlatformConsoleScreen() {
     setSending(true);
     haptics.medium();
     try {
-      await createNotification({
+      // The database function resolves the audience, writes the audit entry in the same transaction and
+      // reports how many members it really reached - the message below never claims more than that.
+      const { recipients } = await broadcastNotification({
         type: 'announcement',
         title: title.trim(),
         body: body.trim(),
         deepLinkPath: '/dashboard',
         campusCode: audience,
       });
-      await recordAuditLogEntry({
-        action: 'global_push_broadcast',
-        summary: `Broadcast sent: "${title.trim()}" to ${audience === 'ALL' ? 'all campuses' : audienceLabel}`,
-        targetType: 'platform_config',
-        targetId: 'broadcast',
-        reason: `Audience: ${audienceLabel}`,
-      });
       haptics.success();
       setTitle('');
       setBody('');
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      Alert.alert('Alert sent', `Delivered to ${audience === 'ALL' ? 'all members' : `members at ${audienceLabel}`}.`);
+      Alert.alert(
+        recipients > 0 ? 'Alert sent' : 'Nobody to notify',
+        recipients > 0
+          ? `Delivered to ${recipients} member${recipients === 1 ? '' : 's'} (${audience === 'ALL' ? 'all campuses' : audienceLabel}). Suspended accounts and members who muted announcements are skipped.`
+          : `No member matched ${audience === 'ALL' ? 'the audience' : audienceLabel}, so nothing was delivered.`,
+      );
     } catch (err: any) {
       haptics.error();
       Alert.alert('Could not send', err?.message || 'Please try again.');

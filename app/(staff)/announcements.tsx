@@ -18,6 +18,7 @@ import { useCampusScope } from '@/hooks/useCampusScope';
 import {
   listAnnouncements,
   publishAnnouncement,
+  previewAnnouncementAudience,
   updateAnnouncement,
   deleteAnnouncement,
   PublishAnnouncementPayload,
@@ -83,10 +84,44 @@ export default function StaffAnnouncementsScreen() {
     return parsed ? parsed.toISOString() : undefined;
   }
 
+  /** Publishing notifies real people and cannot be recalled: show how many, and ask first. Edits go straight through. */
   async function handlePublish() {
+    if (editingId) {
+      await submit();
+      return;
+    }
+    haptics.medium();
+    setSubmitting(true);
+    let reach: number;
+    try {
+      reach = await previewAnnouncementAudience(
+        { audienceScope: audience, campusCode: campusCode && campusCode !== 'ALL' ? campusCode : undefined },
+        user?.campusCode ?? undefined,
+      );
+    } catch (err: any) {
+      setSubmitting(false);
+      Alert.alert('Cannot publish', getFriendlyErrorMessage(err, 'Could not work out who this announcement would reach. Please try again.'));
+      return;
+    }
+    setSubmitting(false);
+    const where = campusCode && campusCode !== 'ALL' ? `at ${campusCode}` : 'across all campuses';
+    Alert.alert(
+      'Publish this announcement?',
+      reach === 0
+        ? `"${title}" would not notify anyone right now (no ${audience} members ${where} can receive it). It will still be listed as an announcement.`
+        : `"${title}" will notify ${reach} ${audience} member${reach === 1 ? '' : 's'} ${where} straight away. A published announcement cannot be recalled from their notifications.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: reach === 0 ? 'Publish anyway' : `Notify ${reach}`, style: 'destructive', onPress: () => void submit() },
+      ],
+    );
+  }
+
+  async function submit() {
     haptics.medium();
     setSubmitting(true);
     try {
+      let notifyNote: string | null = null;
       if (editingId) {
         await updateAnnouncement(editingId, {
           title,
@@ -96,12 +131,16 @@ export default function StaffAnnouncementsScreen() {
           expiresAt: resolveExpiresAt(),
         });
       } else {
-        await publishAnnouncement({ title, content, audienceScope: audience, priority, expiresAt: resolveExpiresAt() ?? undefined, campusCode: campusCode && campusCode !== 'ALL' ? campusCode : undefined });
+        const published = await publishAnnouncement({ title, content, audienceScope: audience, priority, expiresAt: resolveExpiresAt() ?? undefined, campusCode: campusCode && campusCode !== 'ALL' ? campusCode : undefined });
+        notifyNote = published.notifyError
+          ? `The announcement is published, but its notifications were NOT sent: ${published.notifyError}`
+          : `Notified ${published.notifiedCount} member${published.notifiedCount === 1 ? '' : 's'}.`;
       }
       queryClient.invalidateQueries({ queryKey: ['announcements'] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       resetForm();
       setComposing(false);
+      if (notifyNote) Alert.alert(notifyNote.startsWith('The announcement is published') ? 'Published, notifications failed' : 'Published', notifyNote);
     } catch (err: any) {
       Alert.alert(
         editingId ? 'Could not save changes' : 'Could not publish',

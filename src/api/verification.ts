@@ -622,17 +622,41 @@ async function respondToVerificationRequestLegacy(
   return updated;
 }
 
+function friendlyAdminVerifyError(message: string): string {
+  if (/unauthorized_campus_scope/i.test(message)) return 'You can only verify members of your own campus (administrators: Super Admin only).';
+  if (/permission_disabled/i.test(message)) return 'ID verification is switched off for your role by the Super Admin.';
+  if (/conflict_of_interest/i.test(message)) return 'You cannot verify your own account.';
+  if (/not_found/i.test(message)) return 'That member no longer exists.';
+  if (/not_authenticated/i.test(message)) return 'Please sign in again.';
+  return 'The verification could not be saved. Please try again.';
+}
+
+/**
+ * Verifies a member through admin_verify_user(): campus scope, the "can_verify_students" permission,
+ * closing any pending request and the audit entry all happen in one database transaction, and the
+ * member is notified by the database (so nothing is audited or notified from here).
+ * Throws a readable Error on refusal; resolves `changed: false` when they were already verified.
+ */
+export async function adminVerifyUser(userId: string, note?: string): Promise<{ changed: boolean }> {
+  const { data, error } = await supabase.rpc('admin_verify_user', { p_user_id: userId, p_note: note?.trim() || null });
+  if (error) throw new Error(friendlyAdminVerifyError(error.message ?? ''));
+  invalidateProfileCache(userId);
+  return { changed: (data as { changed?: boolean } | null)?.changed !== false };
+}
+
 export async function adminDirectVerifyUser(userId: string, isVerified: boolean): Promise<boolean> {
   try {
-    // 'none' is not a member of verification_status_type ('unverified','pending','verified',
-    // 'rejected') - see the explanation above respondToVerificationRequest. Writing it silently
-    // fails the UPDATE, leaving the profile's status unchanged while the admin UI reports success.
-    const status = isVerified ? 'verified' : 'unverified';
+    if (isVerified) {
+      await adminVerifyUser(userId);
+      return true;
+    }
+
+    // Revoking has no dedicated RPC: a direct update, which RLS and the profile guard trigger scope
+    // by campus. 'none' is not a member of verification_status_type ('unverified','pending',
+    // 'verified','rejected'), so 'unverified' is the revoked state.
     const { data, error } = await supabase
       .from('profiles')
-      .update({
-        verification_status: status,
-      })
+      .update({ verification_status: 'unverified' })
       .eq('id', userId)
       .select('id');
 
@@ -643,8 +667,8 @@ export async function adminDirectVerifyUser(userId: string, isVerified: boolean)
     invalidateProfileCache(userId);
 
     await recordAuditLogEntry({
-      action: isVerified ? 'verification_approved' : 'verification_rejected',
-      summary: `Admin manually ${isVerified ? 'granted' : 'revoked'} verification status for user ${userId}`,
+      action: 'verification_rejected',
+      summary: `Admin manually revoked verification status for user ${userId}`,
       targetType: 'user',
       targetId: userId,
     });
@@ -652,10 +676,8 @@ export async function adminDirectVerifyUser(userId: string, isVerified: boolean)
     await createNotification({
       recipientId: userId,
       type: 'system',
-      title: isVerified ? 'Account Verified' : 'Verification Status Updated',
-      body: isVerified
-        ? 'A platform administrator has verified your account. Your profile now proudly displays the verification badge!'
-        : 'Your account verification status has been updated by an administrator.',
+      title: 'Verification Status Updated',
+      body: 'Your account verification status has been updated by an administrator.',
       deepLinkPath: '/profile',
     });
 

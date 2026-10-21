@@ -3,6 +3,8 @@ import { getSessionUser } from '../auth/tokenStorage';
 import { Announcement } from './types';
 import { generateUUID } from '../utils/uuid';
 import { escapePostgrestLike } from '../utils/postgrest';
+import { broadcastNotification } from './notifications';
+import { recordAuditLogEntry } from './auditLog';
 
 // Announcements this session has *successfully* written to Supabase, kept
 // here only so they render instantly before the next refetch. Never mixed
@@ -24,7 +26,11 @@ export async function listAnnouncements(options?: { campusCode?: string; [key: s
       : undefined;
 
     if (targetCampus && targetCampus !== 'ALL') {
-      q = q.or(`campus_code.eq.${targetCampus},campus_code.eq.GLOBAL,campus_code.is.null`);
+      // Campus codes are plain identifiers: strip anything else before it goes into a PostgREST filter string.
+      const safeCampus = escapePostgrestLike(targetCampus).replace(/[^A-Za-z0-9_-]/g, '');
+      q = safeCampus
+        ? q.or(`campus_code.eq.${safeCampus},campus_code.eq.GLOBAL,campus_code.is.null`)
+        : q.or('campus_code.eq.GLOBAL,campus_code.is.null');
     }
 
     const { data, error } = await q;
@@ -66,6 +72,43 @@ export interface PublishAnnouncementPayload {
  expiresAt?: string;
 }
 
+/** The saved announcement plus what the notification fan-out really did. */
+export type PublishedAnnouncement = Announcement & {
+ /** How many members were notified (0 when the fan-out failed - see notifyError). */
+ notifiedCount: number;
+ /** Set when the announcement was saved but its notifications could not be sent. */
+ notifyError?: string;
+};
+
+/** Maps an announcement's scope + campus onto the broadcast audience (GLOBAL announcements reach every campus). */
+function audienceFor(
+ scope: Announcement['audienceScope'],
+ campus: string,
+): { campusCode: string; roles?: Array<'student' | 'alumni' | 'staff'> } {
+ const roles = scope === 'student' || scope === 'alumni' || scope === 'staff' ? [scope] : undefined;
+ return { campusCode: !campus || campus === 'GLOBAL' ? 'ALL' : campus, roles };
+}
+
+/**
+ * How many members an announcement would reach right now (same authority checks and filters as the
+ * real send, nothing is sent). Used by the composer's confirmation dialog. Throws when the sender is
+ * not allowed to reach that audience.
+ */
+export async function previewAnnouncementAudience(
+ payload: Pick<PublishAnnouncementPayload, 'audienceScope' | 'campusCode'>,
+ fallbackCampus?: string,
+): Promise<number> {
+ const campus = payload.campusCode || fallbackCampus || 'GLOBAL';
+ const { recipients } = await broadcastNotification({
+ ...audienceFor(payload.audienceScope, campus),
+ type: 'announcement',
+ title: 'preview',
+ body: 'preview',
+ dryRun: true,
+ });
+ return recipients;
+}
+
 /**
  * Throws if there's no authenticated author or the Supabase insert fails,
  * instead of quietly reporting a campus-wide announcement as published
@@ -74,7 +117,7 @@ export interface PublishAnnouncementPayload {
  */
 export async function publishAnnouncement(
  payload: PublishAnnouncementPayload,
-): Promise<Announcement> {
+): Promise<PublishedAnnouncement> {
  const announcementId = generateUUID();
 
  const { data: authData } = await supabase.auth.getUser();
@@ -113,74 +156,26 @@ export async function publishAnnouncement(
  throw new Error('Could not publish this announcement. Please try again.');
  }
 
- // Target audience-scoped push notifications - best-effort, doesn't block
- // the announcement itself from being reported as published, since the
- // announcement row above is what actually matters and already succeeded.
- try {
- // Paginate through every matching profile (instead of a single capped
- // page) so campuses with more matching users than one page don't
- // silently lose everyone past the old hardcoded cap.
- const pageSize = 1000;
- let offset = 0;
- const targetIds: string[] = [];
- for (;;) {
- let query = supabase.from('profiles').select('id');
- if (userCampus && userCampus !== 'GLOBAL') {
- const safeCampus = escapePostgrestLike(String(userCampus)).replace(/[^A-Za-z0-9_-]/g, '');
- if (safeCampus) {
- query = query.or(`campus_code.eq.${safeCampus},campus_code.eq.GLOBAL`);
- } else {
- query = query.eq('campus_code', 'GLOBAL');
- }
- }
- if (payload.audienceScope === 'student') {
- query = query.eq('role', 'student');
- } else if (payload.audienceScope === 'alumni') {
- query = query.eq('role', 'alumni');
- } else if (payload.audienceScope === 'staff') {
- query = query.eq('role', 'staff');
- }
- const { data: page, error: pageError } = await query.range(offset, offset + pageSize - 1);
- if (pageError) {
- console.warn('[Announcements] Target profile page fetch error:', pageError.message);
- break;
- }
- if (!page || page.length === 0) break;
- targetIds.push(...page.map((u: any) => u.id));
- if (page.length < pageSize) break;
- offset += pageSize;
- }
-
+ // Notify the audience through admin_broadcast_notification(): the database resolves the audience
+ // (suspended / bot accounts and members who muted announcements are skipped), checks that the sender
+ // may reach it, rate limits, links the notifications to this announcement (deleting the announcement
+ // removes them) and writes the audit entry in the same transaction. The announcement row above is
+ // already saved, so a failure here does not undo it - but it is REPORTED, never swallowed.
  let notifiedCount = 0;
- if (targetIds.length > 0) {
- const notifs = targetIds.map((id) => ({
- recipient_id: id,
+ let notifyError: string | undefined;
+ try {
+ const result = await broadcastNotification({
+ ...audienceFor(payload.audienceScope, userCampus),
  type: 'announcement',
- title: payload.priority === 'critical' ? `⚠️ ${payload.title}` : payload.title,
+ title: payload.priority === 'critical' ? `\u26A0\uFE0F ${payload.title}` : payload.title,
  body: payload.content,
- action_url: '/dashboard',
- is_read: false,
- }));
- // Still bulk-insert (not one row at a time), just chunked so a single
- // request doesn't try to carry every recipient across every page.
- const insertChunkSize = 500;
- for (let i = 0; i < notifs.length; i += insertChunkSize) {
- const chunk = notifs.slice(i, i + insertChunkSize);
- const { error: insertError } = await supabase.from('notifications').insert(chunk);
- if (insertError) {
- console.warn('[Announcements] Fan-out insert chunk error:', insertError.message);
- } else {
- notifiedCount += chunk.length;
- }
- }
- }
- // Kept as a console.warn (this fan-out must never throw and block the
- // already-saved announcement above), but now reports how many of the
- // matched recipients actually got notified vs. how many were attempted,
- // instead of only surfacing raw errors with no sense of overall impact.
- console.warn(`[Announcements] Notification fan-out: ${notifiedCount}/${targetIds.length} recipients notified.`);
+ deepLinkPath: '/dashboard',
+ announcementId,
+ });
+ notifiedCount = result.recipients;
  } catch (err) {
- console.warn('[Announcements] Failed to fan out notifications:', err);
+ notifyError = err instanceof Error ? err.message : 'The notifications could not be sent.';
+ console.warn('[Announcements] Notification fan-out failed:', err);
  }
 
  const created: Announcement = {
@@ -193,7 +188,7 @@ export async function publishAnnouncement(
  };
 
  locallyCreatedAnnouncements = [created, ...locallyCreatedAnnouncements];
- return created;
+ return { ...created, notifiedCount, notifyError };
 }
 
 export interface UpdateAnnouncementPayload {
@@ -234,6 +229,13 @@ export async function updateAnnouncement(
  throw new Error('This announcement could not be updated. You may not have permission to edit it.');
  }
 
+ void recordAuditLogEntry({
+ action: 'announcement_updated',
+ summary: `Edited announcement${updates.title ? `: "${updates.title}"` : ''} (${Object.keys(dbPayload).join(', ')})`,
+ targetType: 'announcement',
+ targetId: announcementId,
+ });
+
  locallyCreatedAnnouncements = locallyCreatedAnnouncements.map((a) =>
  a.id === announcementId
  ? {
@@ -259,6 +261,7 @@ export async function deleteAnnouncement(announcementId: string): Promise<void> 
  locallyCreatedAnnouncements = locallyCreatedAnnouncements.filter((a) => a.id !== announcementId);
 
  try {
+ const { data: before } = await supabase.from('announcements').select('title, campus_code').eq('id', announcementId).maybeSingle();
  const { data, error } = await supabase.from('announcements').delete().eq('id', announcementId).select('id');
  if (error) throw error;
 
@@ -268,6 +271,15 @@ export async function deleteAnnouncement(announcementId: string): Promise<void> 
  locallyCreatedAnnouncements = previous;
  throw new Error('This announcement could not be deleted. You may not have permission to remove it.');
  }
+ } else {
+ // The notifications that were sent for it (linked by announcement_id) are removed with it by the database.
+ void recordAuditLogEntry({
+ action: 'announcement_deleted',
+ summary: `Deleted announcement${before?.title ? `: "${before.title}"` : ''}`,
+ targetType: 'announcement',
+ targetId: announcementId,
+ institutionCode: before?.campus_code ?? undefined,
+ });
  }
  } catch (err) {
  if (err instanceof Error && /could not be deleted/.test(err.message)) throw err;

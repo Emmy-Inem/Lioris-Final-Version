@@ -29,7 +29,9 @@ function mapApplication(row: any): JobApplication {
     reviewedAt: row.reviewed_at ?? null,
     jobTitle: row.job?.title,
     company: row.job?.company,
-    applicantName: row.applicant?.full_name,
+    // The profile embed is null when RLS hides the applicant's profile (e.g. another campus): fall back to a
+    // neutral, stable label from the application row instead of a blank "Applicant" for everyone.
+    applicantName: row.applicant?.full_name || (row.applicant_id ? `Applicant ${String(row.applicant_id).slice(0, 4).toUpperCase()}` : undefined),
     applicantAvatarUrl: row.applicant?.avatar_url,
     applicantDepartment: row.applicant?.department,
   };
@@ -156,9 +158,13 @@ export async function listJobApplicants(jobId: string): Promise<JobApplication[]
 
 /** Moves an application through its pipeline. Only the job's poster or an admin can do this (RLS-enforced). */
 export async function updateApplicationStatus(applicationId: string, status: JobApplicationStatus): Promise<void> {
-  const { error } = await supabase.from('job_applications').update({ status }).eq('id', applicationId);
+  const { data, error } = await supabase.from('job_applications').update({ status }).eq('id', applicationId).select('id');
   if (error) {
     throw new Error(getFriendlyErrorMessage(error, 'Could not update this application. Please try again.'));
+  }
+  // RLS hides a row the caller may not change instead of raising an error: zero rows means nothing changed.
+  if (!data || data.length === 0) {
+    throw new Error('This application could not be updated - it may have been withdrawn, or you may not be allowed to change it.');
   }
 }
 

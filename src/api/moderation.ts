@@ -445,3 +445,32 @@ export async function submitReport(payload: {
  locallyCreatedReports = [created, ...locallyCreatedReports];
  return created;
 }
+
+// --- Account suspension (database RPCs: campus scope, hierarchy and audit are enforced there) ---
+
+/** suspend_user_account() / unsuspend_user_account() raise plain sentences - show them, they are meant for the admin. */
+function suspensionErrorMessage(message: string | undefined, fallback: string): string {
+  const m = (message ?? '').trim();
+  return m && m.length < 200 && !/^(PGRST|permission denied|JWT)/i.test(m) ? m : fallback;
+}
+
+/** Suspends an account. Throws when the database refuses (scope, hierarchy, last admin...). */
+export async function suspendUserAccount(userId: string, reason: string): Promise<void> {
+  const cleanReason = reason.trim();
+  if (cleanReason.length < 5) throw new Error('A suspension needs a reason (at least 5 characters).');
+  const { error } = await supabase.rpc('suspend_user_account', { p_target_user_id: userId, p_reason: cleanReason });
+  if (error) {
+    console.warn('[Moderation] suspend_user_account failed:', error.message);
+    throw new Error(suspensionErrorMessage(error.message, 'Could not suspend this account.'));
+  }
+}
+
+/** Lifts a suspension via unsuspend_user_account() (campus scoped; only a Super Admin may unsuspend an admin). Audited by the database. */
+export async function unsuspendUserAccount(userId: string, reason?: string): Promise<{ changed: boolean }> {
+  const { data, error } = await supabase.rpc('unsuspend_user_account', { p_user_id: userId, p_reason: reason?.trim() || null });
+  if (error) {
+    console.warn('[Moderation] unsuspend_user_account failed:', error.message);
+    throw new Error(suspensionErrorMessage(error.message, 'Could not restore this account.'));
+  }
+  return { changed: (data as { changed?: boolean } | null)?.changed !== false };
+}

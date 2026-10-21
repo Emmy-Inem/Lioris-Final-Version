@@ -10,7 +10,7 @@
 //
 // Actions (POST { action, campaignId, ... }):
 //   review        approve | reject a proposed campaign (rejecting needs a note).
-//   update_total  record the org's own manually-reported running total.
+//   update_total  an administrator confirms the running total (owners only REPORT theirs, in reported_total).
 //
 // The database functions this calls (admin_review_giving_campaign /
 // admin_update_giving_total) are granted to service_role only, so the
@@ -34,6 +34,8 @@ interface Body {
   decision?: unknown;
   note?: unknown;
   confirmedTotal?: unknown;
+  /** Super Admin only: allow deciding a campaign that was already approved / rejected. */
+  allowRereview?: unknown;
 }
 
 class Fail extends Error {
@@ -48,6 +50,19 @@ function str(v: unknown, max: number): string | null {
   return t.length === 0 ? null : t.slice(0, max);
 }
 
+/**
+ * A money amount from JSON: a finite number, or a plain numeric string ("1500", "1500.50").
+ * Number('') / Number(null) / Number([]) / Number(true) all coerce to 0 or 1 - those are rejected here
+ * instead of silently becoming a total. Returns null when the value is not a valid non-negative amount.
+ */
+function parseMoney(v: unknown): number | null {
+  let n: number;
+  if (typeof v === 'number') n = v;
+  else if (typeof v === 'string' && /^\d{1,12}(\.\d{1,2})?$/.test(v.trim())) n = Number(v.trim());
+  else return null;
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
+}
+
 /** "<code>: sentence" errors raised by the database functions become HTTP failures. */
 function mapDbError(message: string): Fail {
   const m = /^([a-z_]+)(?::\s*([\s\S]*))?$/.exec(message.trim());
@@ -55,6 +70,8 @@ function mapDbError(message: string): Fail {
   const code = m[1];
   const text = (m[2] ?? '').trim() || code.replace(/_/g, ' ');
   if (['note_required', 'invalid_total'].includes(code)) return new Fail(422, code, text);
+  if (code === 'not_allowed') return new Fail(403, code, text);
+  if (code === 'not_found') return new Fail(404, code, text);
   return new Fail(409, code, text);
 }
 
@@ -95,11 +112,16 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       if (campError) throw new Fail(500, 'db_error', 'Could not verify giving campaign permissions.');
       if (!campaign) throw new Fail(404, 'not_found', 'Giving campaign not found.');
+      // Fail CLOSED: a GLOBAL / NULL campaign (or a GLOBAL / campus-less admin) is Super Admin only.
+      // The database function enforces the same rule; this just answers early with a clear 403.
       if (
         !callerCampus ||
-        (campaign.campus_code && campaign.campus_code !== 'GLOBAL' && campaign.campus_code !== callerCampus)
+        callerCampus === 'GLOBAL' ||
+        !campaign.campus_code ||
+        campaign.campus_code === 'GLOBAL' ||
+        campaign.campus_code !== callerCampus
       ) {
-        throw new Fail(403, 'forbidden', 'Campus Admins can only review giving campaigns within their registered campus node.');
+        throw new Fail(403, 'forbidden', 'Campus Admins can only review giving campaigns of their own campus. Global campaigns are reviewed by a Super Admin.');
       }
     }
 
@@ -111,22 +133,30 @@ Deno.serve(async (req: Request) => {
       if (b.decision !== 'approve' && b.decision !== 'reject') throw new Fail(400, 'bad_request', 'decision must be approve or reject.');
       const note = str(b.note, 500);
       if (b.decision === 'reject' && (!note || note.length < 5)) throw new Fail(422, 'note_required', 'A rejection needs a short reason (5+ characters).');
-      const { error } = await admin.rpc('admin_review_giving_campaign', {
+      // The database function records the reviewer (p_actor), checks scope + that the campaign is
+      // still pending, and writes the audit row in the same transaction - so there is no client audit.
+      const { data, error } = await admin.rpc('admin_review_giving_campaign', {
         p_campaign: campaignId,
         p_approve: b.decision === 'approve',
         p_note: note,
+        p_actor: caller.id,
+        p_allow_rereview: isSuper && b.allowRereview === true,
       });
       if (error) throw mapDbError(error.message);
-      return jsonResponse(req, { success: true }, 200);
+      return jsonResponse(req, { success: true, campaign: data }, 200);
     }
 
-    const total = Number(b.confirmedTotal);
-    if (!Number.isFinite(total) || total < 0 || total > 1_000_000_000) {
-      throw new Fail(422, 'invalid_total', 'The confirmed total must be a non-negative amount.');
+    const total = parseMoney(b.confirmedTotal);
+    if (total === null || total > 1_000_000_000) {
+      throw new Fail(422, 'invalid_total', 'The confirmed total must be a non-negative amount (numbers only, up to 2 decimals).');
     }
-    const { error } = await admin.rpc('admin_update_giving_total', { p_campaign: campaignId, p_confirmed_total: total });
+    const { data, error } = await admin.rpc('admin_update_giving_total', {
+      p_campaign: campaignId,
+      p_confirmed_total: total,
+      p_actor: caller.id,
+    });
     if (error) throw mapDbError(error.message);
-    return jsonResponse(req, { success: true }, 200);
+    return jsonResponse(req, { success: true, campaign: data }, 200);
   } catch (err) {
     if (err instanceof Fail) return jsonResponse(req, { error: err.code, message: err.message }, err.status);
     console.error('[admin-review-giving-campaign] Unexpected error:', err instanceof Error ? err.message : 'unknown');

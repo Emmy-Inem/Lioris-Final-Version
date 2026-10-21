@@ -63,6 +63,61 @@ export interface CreateNotificationPayload {
  campusCode?: string;
 }
 
+export interface BroadcastNotificationPayload {
+ type: AppNotification['type'];
+ title: string;
+ body: string;
+ deepLinkPath?: string;
+ /** One campus code, or omit / 'ALL' for every campus (Super Admin only - campus admins and staff are always limited to their own campus). */
+ campusCode?: string;
+ /** Limit to these roles; omit for everyone. */
+ roles?: Array<'student' | 'alumni' | 'staff' | 'admin'>;
+ /** Also reach members whose campus is GLOBAL (Super Admin only). */
+ includeGlobal?: boolean;
+ /** Links the notifications to an announcement so deleting it removes them too. */
+ announcementId?: string;
+ /** Count the audience only (same authority checks and filters): nothing is sent, recorded or rate limited. */
+ dryRun?: boolean;
+}
+
+/** Turns the database's "<code>: sentence" refusals into something an admin can act on. */
+function broadcastErrorMessage(message: string | undefined): string {
+ const m = (message ?? '').trim();
+ if (/rate_limited/i.test(m)) return 'You have sent too many broadcasts recently. Try again in a while.';
+ if (/permission_disabled/i.test(m)) return 'Broadcasting is switched off for your role.';
+ if (/not_allowed/i.test(m)) return m.replace(/^not_allowed:\s*/i, '') || 'You are not allowed to broadcast to that audience.';
+ if (/invalid_input/i.test(m)) return m.replace(/^invalid_input:\s*/i, '') || 'The alert is not valid.';
+ return 'The broadcast could not be sent. Nothing was delivered.';
+}
+
+/**
+ * Sends a notification to an audience through admin_broadcast_notification() and returns how many
+ * members it was REALLY delivered to (suspended and bot accounts and members who muted the category are
+ * excluded server-side). Throws when nothing was sent - never report success after a failure.
+ */
+export async function broadcastNotification(payload: BroadcastNotificationPayload): Promise<{ recipients: number }> {
+ const campus = payload.campusCode && payload.campusCode !== 'ALL' ? payload.campusCode : null;
+ const audience: Record<string, unknown> = {};
+ if (campus) audience.campus = campus;
+ else if (payload.campusCode === 'ALL') audience.campus = 'ALL';
+ if (payload.roles && payload.roles.length > 0) audience.roles = payload.roles;
+ if (payload.includeGlobal) audience.includeGlobal = true;
+ const { data, error } = await supabase.rpc('admin_broadcast_notification', {
+ p_title: payload.title,
+ p_body: payload.body,
+ p_type: payload.type || 'system_announcement',
+ p_audience: audience,
+ p_action_url: payload.deepLinkPath ?? null,
+ p_announcement_id: payload.announcementId ?? null,
+ p_dry_run: payload.dryRun === true,
+ });
+ if (error) {
+ console.warn('[Notifications] admin_broadcast_notification failed:', error.message);
+ throw new Error(broadcastErrorMessage(error.message));
+ }
+ return { recipients: Number(data ?? 0) };
+}
+
 export async function createNotification(payload: CreateNotificationPayload): Promise<AppNotification> {
  const notifId = generateUUID();
  const now = new Date().toISOString();
@@ -121,77 +176,21 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
  }
  }
  } else {
- // Broadcast to all active profiles - paginate through every page of
- // profiles (instead of a single capped page) so campuses with more
- // than one page of users don't silently lose everyone past the cap.
- const pageSize = 1000;
- let offset = 0;
- const allProfileIds: string[] = [];
- for (;;) {
- let pageQuery = supabase.from('profiles').select('id');
- if (payload.campusCode && payload.campusCode !== 'ALL') {
- pageQuery = pageQuery.eq('campus_code', payload.campusCode);
- }
- const { data: page, error: pageError } = await pageQuery.range(offset, offset + pageSize - 1);
- if (pageError) {
- console.warn('[Notifications] Broadcast profile page fetch error:', pageError.message);
- break;
- }
- if (!page || page.length === 0) break;
- allProfileIds.push(...page.map((p) => p.id));
- if (page.length < pageSize) break;
- offset += pageSize;
- }
-
- // Drop anyone who has muted this category before building rows, so a
- // broadcast respects notification_preferences the same way a direct,
- // single-recipient call now does.
- const broadcastColumn = PREFERENCE_GATED_TYPES[payload.type || 'system_announcement'];
- let recipientIds = allProfileIds;
- if (broadcastColumn && allProfileIds.length > 0) {
- const mutedIds = new Set<string>();
- const lookupChunkSize = 500;
- for (let i = 0; i < allProfileIds.length; i += lookupChunkSize) {
- const chunk = allProfileIds.slice(i, i + lookupChunkSize);
- const { data: mutedRows, error: mutedError } = await supabase
- .from('notification_preferences')
- .select(`user_id, ${broadcastColumn}`)
- .in('user_id', chunk)
- .eq(broadcastColumn, false);
- if (mutedError) {
- console.warn('[Notifications] Broadcast preference lookup error:', mutedError.message);
- continue;
- }
- for (const row of mutedRows ?? []) {
- mutedIds.add((row as { user_id: string }).user_id);
- }
- }
- if (mutedIds.size > 0) {
- recipientIds = allProfileIds.filter((id) => !mutedIds.has(id));
- }
- }
-
- if (recipientIds.length > 0) {
- const rows = recipientIds.map((id) => ({
- recipient_id: id,
- sender_id: notificationSenderId,
+ // Broadcast: the database function admin_broadcast_notification() does the audience resolution,
+ // the authority check (Super Admin: any audience; campus admin/staff: own campus only), the
+ // suspended/bot/preference filtering, the audit row and the rate limit in ONE transaction.
+ // This helper stays fire-and-forget; callers that must report the real recipient count or a
+ // failure use broadcastNotification() directly.
+ try {
+ await broadcastNotification({
+ type: payload.type,
  title: payload.title,
  body: payload.body,
- type: payload.type || 'system_announcement',
- action_url: payload.deepLinkPath,
- is_read: false,
- }));
- // Still bulk-insert (not one row at a time), just chunked so a single
- // request doesn't try to carry every recipient across every page.
- const insertChunkSize = 500;
- for (let i = 0; i < rows.length; i += insertChunkSize) {
- const { error: insertError } = await supabase
- .from('notifications')
- .insert(rows.slice(i, i + insertChunkSize));
- if (insertError) {
- console.warn('[Notifications] Broadcast insert chunk error:', insertError.message);
- }
- }
+ deepLinkPath: payload.deepLinkPath,
+ campusCode: payload.campusCode,
+ });
+ } catch (broadcastError) {
+ console.warn('[Notifications] Broadcast failed:', broadcastError);
  }
  }
  } catch (err) {

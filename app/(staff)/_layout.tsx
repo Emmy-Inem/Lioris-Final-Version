@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleGate } from '@/auth/RoleGate';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -11,10 +11,21 @@ import { BlurredTabsHost } from '@/components/BlurredTabsHost';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { AppText } from '@/components/AppText';
 
+/** The module (admin feature flag) behind each staff route. A disabled module must not be reachable by link. */
+const ROUTE_FLAG: Record<string, string> = {
+  announcements: 'campus_announcements',
+  forum: 'discussion_workspaces',
+  post: 'discussion_workspaces',
+  'events-list': 'campus_events',
+  events: 'campus_events',
+  messages: 'e2ee_messaging',
+};
+
 export default function StaffLayout() {
  const { colors } = useTheme();
  const { isDesktop } = useResponsive();
  const { isFeatureEnabled } = useFeatureFlags();
+ const segments = useSegments();
 
  if (!isFeatureEnabled('staff_role')) {
    return (
@@ -30,6 +41,12 @@ export default function StaffLayout() {
        </View>
      </RoleGate>
    );
+ }
+
+ // Hiding a tab only hid the button: notification links, search results and typed URLs still opened the module.
+ const routeFlag = ROUTE_FLAG[String((segments as string[])[1] ?? '')];
+ if (routeFlag && !isFeatureEnabled(routeFlag as any)) {
+   return <Redirect href="/(staff)/dashboard" />;
  }
 
  const tabsContent = (

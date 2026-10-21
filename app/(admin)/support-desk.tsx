@@ -188,10 +188,13 @@ export default function SupportDeskScreen() {
     haptics.medium();
     setActionLoading(true);
     try {
+      const targetCampusCode = newCampusInput.trim().toUpperCase();
       const res = await adminUpdateUserProfile(selectedTicket.userId, {
-        campus_code: newCampusInput.trim().toUpperCase(),
+        campus_code: targetCampusCode,
       });
-      if (res.success) {
+      // Only report a transfer the database actually stored: a Campus Admin's campus change is silently
+      // reverted by the security trigger, which adminUpdateUserProfile detects by reading the row back.
+      if (res.success && res.row?.campus_code === targetCampusCode) {
         toast.success(`Campus affiliation transferred to "${newCampusInput.trim().toUpperCase()}".`);
         await updateSupportTicket(selectedTicket.id, {
           status: 'resolved',
@@ -200,7 +203,7 @@ export default function SupportDeskScreen() {
         queryClient.invalidateQueries({ queryKey: ['support_tickets'] });
         setSelectedTicket(null);
       } else {
-        toast.error(res.error || 'Failed to transfer campus.');
+        toast.error(res.error || 'The campus was not changed. Only a Super Admin can move a member to another campus.');
       }
     } finally {
       setActionLoading(false);

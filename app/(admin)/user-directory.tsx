@@ -24,7 +24,8 @@ import { ShimmerCardList } from'@/components/ShimmerSkeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { recordAuditLogEntry, listAuditLogEntries } from '@/api/auditLog';
-import { grantVerification, setCampusAmbassadorStatus } from '@/api/profile';
+import { setCampusAmbassadorStatus } from '@/api/profile';
+import { adminVerifyUser } from '@/api/verification';
 import {
  adminTriggerPasswordReset,
  adminUpdateUserProfile,
@@ -38,7 +39,7 @@ import { usePullRefreshHandler } from '@/components/PullToRefresh';
 import { getUserDiagnostics, UserDiagnostics } from '@/api/adminDiagnostics';
 import { useToast } from '@/context/ToastContext';
 import { AuditLogEntry } from '@/api/types';
-import { getReportCountForUser } from '@/api/moderation';
+import { getReportCountForUser, suspendUserAccount, unsuspendUserAccount } from '@/api/moderation';
 import { haptics } from '@/utils/haptics';
 import { useAuth } from '@/auth/AuthContext';
 
@@ -315,19 +316,26 @@ export default function UserDirectoryScreen() {
     haptics.medium();
     setEditSaving(true);
     try {
-      const targetCampus = currentUser?.isCampusAdmin ? editModalUser.campus : editCampus;
-      const updates: Record<string, any> = {
-        full_name: editFullName.trim(),
-        student_id_number: editMatric.trim() || null,
-        campus_code: targetCampus,
-        department: editDepartment.trim() || 'General Studies',
-        role: editRole.toLowerCase(),
-        is_suspended: editSuspended,
-        verification_status: editVerified ? 'verified' : 'unverified',
-      };
+      const orig = editModalUser;
+      const targetCampus = currentUser?.isCampusAdmin ? orig.campus : editCampus;
+      // Send ONLY what this admin actually changed. Re-sending the whole form from a (possibly stale)
+      // directory list could silently undo a suspension or verification another admin made meanwhile.
+      const updates: Record<string, any> = {};
+      if (editFullName.trim() !== orig.fullName) updates.full_name = editFullName.trim();
+      const nextMatric = editMatric.trim() || null;
+      if ((nextMatric ?? 'Not Assigned') !== orig.matricNo) updates.student_id_number = nextMatric;
+      if (targetCampus !== orig.campus) updates.campus_code = targetCampus;
+      const nextDepartment = editDepartment.trim() || 'General Studies';
+      if (nextDepartment !== orig.department) updates.department = nextDepartment;
+      if (editRole !== orig.role) updates.role = editRole.toLowerCase();
       if (currentUser?.isSuperAdmin) {
-        updates.admin_role = editRole === 'Admin' ? editAdminRole : null;
+        const nextAdminRole = editRole === 'Admin' ? editAdminRole : null;
+        if (nextAdminRole !== (orig.adminRole ?? null)) updates.admin_role = nextAdminRole;
       }
+      const suspensionChanged = editSuspended !== orig.suspended;
+      const verificationChanged = editVerified !== orig.isVerified;
+      // Revoking verification has no dedicated RPC; granting it goes through admin_verify_user() below.
+      if (verificationChanged && !editVerified) updates.verification_status = 'unverified';
       if (editIsAmbassador !== !!editModalUser.isCampusAmbassador) {
         if (editIsAmbassador && editRole !== 'Student') {
           Alert.alert('Invalid Role', 'Only students can be appointed as Campus Ambassadors.');
@@ -341,9 +349,28 @@ export default function UserDirectoryScreen() {
         }
         await setCampusAmbassadorStatus(editModalUser.id, editIsAmbassador);
       }
-      const res = await adminUpdateUserProfile(editModalUser.id, updates);
+      let res: { success: boolean; error?: string; notApplied?: string[] } = { success: true };
+      if (Object.keys(updates).length > 0) res = await adminUpdateUserProfile(orig.id, updates);
 
-      if (res.success) {
+      // Suspension and verification go through their RPCs (campus scope, hierarchy and audit in the database).
+      let statusError: string | null = null;
+      if (res.success && suspensionChanged) {
+        try {
+          if (editSuspended) await suspendUserAccount(orig.id, 'Suspended from the profile editor');
+          else await unsuspendUserAccount(orig.id, 'Restored from the profile editor');
+        } catch (err: any) {
+          statusError = err?.message || 'The suspension change was not saved.';
+        }
+      }
+      if (res.success && !statusError && verificationChanged && editVerified) {
+        try {
+          await adminVerifyUser(orig.id, 'Verified from the profile editor');
+        } catch (err: any) {
+          statusError = err?.message || 'The verification change was not saved.';
+        }
+      }
+
+      if (res.success && !statusError) {
         setUsers((prev) =>
           prev.map((u) =>
             u.id === editModalUser.id
@@ -362,10 +389,14 @@ export default function UserDirectoryScreen() {
               : u,
           ),
         );
-        toast.success(`Profile updated for ${editFullName.trim()}.`);
+        toast.success(Object.keys(updates).length === 0 && !suspensionChanged && !verificationChanged
+          ? 'No changes to save.'
+          : `Profile updated for ${editFullName.trim()}.`);
         setEditModalUser(null);
       } else {
-        toast.error(res.error || 'Failed to update user profile.');
+        toast.error(statusError || res.error || 'Failed to update user profile.');
+        // Part of the change may have been stored: reload so the list shows what the database really holds.
+        void loadProfiles();
       }
     } finally {
       setEditSaving(false);
@@ -497,42 +528,33 @@ export default function UserDirectoryScreen() {
  }
 
  // Core suspend/restore mutation - shared between the single-item toggle
- // below and the bulk suspend flow, so both go through Supabase the same
- // way (RPC first, direct column update as a fallback).
-  async function setSuspendedCore(target: DirectoryUser, nextSuspended: boolean) {
+ // below and the bulk suspend flow. Both go through the database RPCs only
+ // (suspend_user_account / unsuspend_user_account): they enforce campus scope and the
+ // admin hierarchy and write the audit entry, so there is deliberately NO raw
+ // profiles update fallback - a refused suspension must surface as an error.
+  async function setSuspendedCore(target: DirectoryUser, nextSuspended: boolean, reason?: string) {
     if (currentUser?.isCampusAdmin && (target.role === 'Admin' || (currentUser.campusCode && target.campus !== currentUser.campusCode))) {
       throw new Error('Campus Admins cannot suspend administrators or users outside their registered campus.');
     }
     if ((target as any).adminRole === 'super_admin' || target.email?.toLowerCase().trim() === 'inememmanuel@gmail.com') {
       throw new Error('Super Administrators cannot be suspended.');
     }
- const { supabase } = await import('@/api/supabase');
  if (nextSuspended) {
- const { error } = await supabase.rpc('suspend_user_account', {
- p_target_user_id: target.id,
- p_reason: 'Administrative security suspension from User Directory',
- });
- if (error) {
- const { error: fallbackError } = await supabase.from('profiles').update({ is_suspended: true }).eq('id', target.id);
- if (fallbackError) throw fallbackError;
- }
+ await suspendUserAccount(target.id, reason?.trim() || 'Administrative security suspension from User Directory');
  } else {
- const { error } = await supabase.from('profiles').update({ is_suspended: false }).eq('id', target.id);
- if (error) throw error;
+ await unsuspendUserAccount(target.id, reason?.trim() || 'Suspension appeal granted');
  }
  }
 
  // Core verify mutation - there was no existing single-item "verify" action
  // in this screen (only suspend/role-change/wipe), so this is the shared
  // primitive both the new single-item and bulk verify actions call.
-  async function verifyUserCore(target: DirectoryUser) {
+  async function verifyUserCore(target: DirectoryUser, note?: string) {
     if (currentUser?.isCampusAdmin && currentUser.campusCode && target.campus !== currentUser.campusCode) {
       throw new Error('Campus Admins cannot verify users outside their registered campus.');
     }
- const { supabase } = await import('@/api/supabase');
- const { error } = await supabase.from('profiles').update({ verification_status: 'verified' }).eq('id', target.id);
- if (error) throw error;
- grantVerification(target.id);
+ // admin_verify_user(): campus scope + the verify permission + closing a pending request + audit, in one transaction.
+ await adminVerifyUser(target.id, note || 'Administrative verification grant from User Directory');
  }
 
  async function handleToggleSuspend(target: DirectoryUser) {
@@ -551,15 +573,7 @@ export default function UserDirectoryScreen() {
  return;
  }
 
- recordAuditLogEntry({
- action: nextSuspended ? 'user_suspended' : 'user_unsuspended',
- summary: `${nextSuspended ? 'Suspended' : 'Restored'} user account @${target.username} (${target.fullName})`,
- targetType: 'user',
- targetId: target.id,
- institutionCode: target.campus,
- reason: nextSuspended ? 'Policy enforcement suspension' : 'Suspension appeal granted',
- });
-
+ // The database function already wrote the audit entry.
  setSelectedUser(null);
  Alert.alert(
  nextSuspended ? 'Account Suspended' : 'Account Restored',
@@ -581,15 +595,7 @@ export default function UserDirectoryScreen() {
  return;
  }
 
- recordAuditLogEntry({
- action: 'verification_approved',
- summary: `Granted verified badge to @${target.username} (${target.fullName}) from User Directory`,
- targetType: 'user',
- targetId: target.id,
- institutionCode: target.campus,
- reason: 'Administrative verification grant',
- });
-
+ // The database function already wrote the audit entry.
  setSelectedUser(null);
  Alert.alert('User Verified', `${target.fullName}'s verified badge has been activated.`);
  }
@@ -653,92 +659,90 @@ export default function UserDirectoryScreen() {
  setSelectedUserIds(new Set());
  }
 
+ // The selection is always intersected with the rows currently VISIBLE (`filtered`): a user who was
+ // ticked and then filtered out of view must never be suspended or verified by a bulk action the
+ // admin cannot see the target list of.
  function getSelectedUsers(): DirectoryUser[] {
- return users.filter((u) => selectedUserIds.has(u.id));
+ return filtered.filter((u) => selectedUserIds.has(u.id));
  }
 
- async function handleBulkSuspend() {
- // Only acts on currently-unsuspended selected users - re-suspending an
+ // Bulk confirmation: shows the count and requires a recorded reason before anything is changed.
+ const BULK_ACTION_CAP = 50;
+ const BULK_REASON_MIN = 5;
+ const [bulkConfirm, setBulkConfirm] = useState<{ kind: 'suspend' | 'verify'; targets: DirectoryUser[] } | null>(null);
+ const [bulkReason, setBulkReason] = useState('');
+
+ function startBulkAction(kind: 'suspend' | 'verify') {
+ if (bulkProcessing) return;
+ const visibleSelected = getSelectedUsers();
+ // Only acts on rows where the action is not already in effect - re-suspending an
  // already-suspended account is a no-op that would just muddy the count.
- const targets = getSelectedUsers().filter((u) => !u.suspended);
- if (targets.length === 0 || bulkProcessing) {
- if (targets.length === 0) Alert.alert('Nothing to Suspend', 'All selected users are already suspended.');
+ const targets = visibleSelected.filter((u) => (kind === 'suspend' ? !u.suspended : !u.isVerified));
+ if (targets.length === 0) {
+ Alert.alert(
+ kind === 'suspend' ? 'Nothing to Suspend' : 'Nothing to Verify',
+ visibleSelected.length === 0
+ ? 'None of the selected users are visible in the current list. Adjust the filters or select users again.'
+ : kind === 'suspend' ? 'All selected users are already suspended.' : 'All selected users are already verified.',
+ );
  return;
  }
+ if (targets.length > BULK_ACTION_CAP) {
+ Alert.alert('Too Many Users', `A bulk action is limited to ${BULK_ACTION_CAP} users at a time. You have ${targets.length} selected - deselect some and try again.`);
+ return;
+ }
+ haptics.medium();
+ setBulkReason('');
+ setBulkConfirm({ kind, targets });
+ }
+
+ async function runBulkAction() {
+ if (!bulkConfirm || bulkProcessing) return;
+ const { kind, targets } = bulkConfirm;
+ const reason = bulkReason.trim();
+ if (reason.length < BULK_REASON_MIN) return;
+ setBulkConfirm(null);
  haptics.medium();
  setBulkProcessing(true);
 
  let succeeded = 0;
- let failed = 0;
+ const failures: string[] = [];
  for (const target of targets) {
  try {
- await setSuspendedCore(target, true);
+ if (kind === 'suspend') {
+ await setSuspendedCore(target, true, `${reason} (bulk action)`);
  setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, suspended: true } : u)));
- recordAuditLogEntry({
- action: 'user_suspended',
- summary: `Suspended user account @${target.username} (${target.fullName}) via bulk action`,
- targetType: 'user',
- targetId: target.id,
- institutionCode: target.campus,
- reason: 'Policy enforcement suspension (bulk)',
- });
- succeeded += 1;
- } catch (err) {
- console.warn('[UserDirectory] Bulk suspend error for', target.id, err);
- failed += 1;
- }
- }
-
- setBulkProcessing(false);
- clearUserSelection();
- if (failed > 0) haptics.error();
- else haptics.success();
-
- Alert.alert(
- 'Bulk Suspend Complete',
- failed > 0 ? `${succeeded} suspended, ${failed} failed. Retry the failed ones individually.` : `${succeeded} user${succeeded === 1 ? '' : 's'} suspended.`,
- );
- }
-
- async function handleBulkVerify() {
- const targets = getSelectedUsers().filter((u) => !u.isVerified);
- if (targets.length === 0 || bulkProcessing) {
- if (targets.length === 0) Alert.alert('Nothing to Verify', 'All selected users are already verified.');
- return;
- }
- haptics.medium();
- setBulkProcessing(true);
-
- let succeeded = 0;
- let failed = 0;
- for (const target of targets) {
- try {
- await verifyUserCore(target);
+ } else {
+ await verifyUserCore(target, `${reason} (bulk action)`);
  setUsers((prev) => prev.map((u) => (u.id === target.id ? { ...u, isVerified: true } : u)));
- recordAuditLogEntry({
- action: 'verification_approved',
- summary: `Granted verified badge to @${target.username} (${target.fullName}) via bulk action`,
- targetType: 'user',
- targetId: target.id,
- institutionCode: target.campus,
- reason: 'Administrative verification grant (bulk)',
- });
+ }
  succeeded += 1;
- } catch (err) {
- console.warn('[UserDirectory] Bulk verify error for', target.id, err);
- failed += 1;
+ } catch (err: any) {
+ console.warn(`[UserDirectory] Bulk ${kind} error for`, target.id, err);
+ failures.push(`${target.fullName}: ${err?.message || 'failed'}`);
  }
  }
 
  setBulkProcessing(false);
  clearUserSelection();
- if (failed > 0) haptics.error();
+ if (failures.length > 0) haptics.error();
  else haptics.success();
 
+ const done = kind === 'suspend' ? 'suspended' : 'verified';
  Alert.alert(
- 'Bulk Verify Complete',
- failed > 0 ? `${succeeded} verified, ${failed} failed. Retry the failed ones individually.` : `${succeeded} user${succeeded === 1 ? '' : 's'} verified.`,
+ kind === 'suspend' ? 'Bulk Suspend Complete' : 'Bulk Verify Complete',
+ failures.length > 0
+ ? `${succeeded} ${done}, ${failures.length} failed.\n\n${failures.slice(0, 5).join('\n')}${failures.length > 5 ? `\n...and ${failures.length - 5} more` : ''}`
+ : `${succeeded} user${succeeded === 1 ? '' : 's'} ${done}.`,
  );
+ }
+
+ function handleBulkSuspend() {
+ startBulkAction('suspend');
+ }
+
+ function handleBulkVerify() {
+ startBulkAction('verify');
  }
 
   function handleMutateRole(target: DirectoryUser, targetRole: DirectoryUser['role']) {
@@ -1051,7 +1055,10 @@ export default function UserDirectoryScreen() {
         <SolidCard radius={16} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.brandPrimary, backgroundColor: colors.pastelPrimaryBg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
             <View style={{ flex: 1, minWidth: 120 }}>
-              <AppText weight="bold" variant="bodySmall">{selectedUserIds.size} selected</AppText>
+              <AppText weight="bold" variant="bodySmall">
+                {getSelectedUsers().length} selected
+                {getSelectedUsers().length !== selectedUserIds.size ? ` (${selectedUserIds.size - getSelectedUsers().length} hidden by filters)` : ''}
+              </AppText>
             </View>
             <View style={{ flexShrink: 0 }}>
               <AppButton label="Clear" variant="ghost" size="sm" onPress={clearUserSelection} disabled={bulkProcessing} />
@@ -1614,6 +1621,47 @@ export default function UserDirectoryScreen() {
                 </View>
  </SolidCard>
  )}
+ </View>
+ </Modal>
+
+ {/* Bulk action confirmation: count + mandatory reason (Alert.prompt is iOS-only) */}
+ <Modal visible={!!bulkConfirm} transparent animationType="fade" onRequestClose={() => setBulkConfirm(null)}>
+ <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: spacing.lg }}>
+ <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: spacing.lg, maxWidth: 480, width: '100%', alignSelf: 'center' }}>
+ <AppText variant="h3" weight="bold" style={{ marginBottom: spacing.xs }}>
+ {bulkConfirm?.kind === 'suspend' ? 'Suspend' : 'Verify'} {bulkConfirm?.targets.length ?? 0} user{bulkConfirm?.targets.length === 1 ? '' : 's'}?
+ </AppText>
+ <AppText tone="secondary" variant="bodySmall" style={{ marginBottom: spacing.sm }}>
+ {bulkConfirm?.kind === 'suspend'
+ ? 'Each account is signed out of the app and loses access immediately. The reason is recorded in the audit log.'
+ : 'Each account gets the verified badge and any pending verification request is closed. The reason is recorded in the audit log.'}
+ </AppText>
+ <AppText variant="caption" tone="secondary" style={{ marginBottom: spacing.sm }}>
+ {(bulkConfirm?.targets ?? []).slice(0, 5).map((u) => u.fullName).join(', ')}
+ {(bulkConfirm?.targets.length ?? 0) > 5 ? ` and ${(bulkConfirm?.targets.length ?? 0) - 5} more` : ''}
+ </AppText>
+ <AppTextField
+ label={`Reason (min. ${BULK_REASON_MIN} characters)`}
+ value={bulkReason}
+ onChangeText={setBulkReason}
+ placeholder={bulkConfirm?.kind === 'suspend' ? 'e.g. Spam accounts reported in ticket #123' : 'e.g. IDs checked in person at registry'}
+ multiline
+ numberOfLines={3}
+ />
+ <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+ <View style={{ flex: 1 }}>
+ <AppButton label="Cancel" variant="secondary" onPress={() => setBulkConfirm(null)} fullWidth />
+ </View>
+ <View style={{ flex: 1 }}>
+ <AppButton
+ label={bulkConfirm?.kind === 'suspend' ? 'Suspend' : 'Verify'}
+ onPress={runBulkAction}
+ disabled={bulkReason.trim().length < BULK_REASON_MIN}
+ fullWidth
+ />
+ </View>
+ </View>
+ </View>
  </View>
  </Modal>
 

@@ -13,7 +13,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { JobApplication, JobApplicationStatus, JobListing } from '@/api/types';
-import { listJobApplicants, updateApplicationStatus } from '@/api/jobApplications';
+import { listJobApplicants, listJobQuestions, updateApplicationStatus } from '@/api/jobApplications';
 import { useSignedUrl } from '@/api/signedUrls';
 import { isSafeHttpUrl } from '@/utils/safeUrl';
 import { openExternalUrl } from '@/utils/openExternalUrl';
@@ -55,7 +55,16 @@ function ResumeButton({ resumeUrl }: { resumeUrl: string | null }) {
   );
 }
 
-function ApplicantRow({ application, onUpdated }: { application: JobApplication; onUpdated: () => void }) {
+function ApplicantRow({
+  application,
+  onUpdated,
+  questionText,
+}: {
+  application: JobApplication;
+  onUpdated: () => void;
+  /** Screening question text by question id, so each answer is shown under the question it answers. */
+  questionText: Record<string, string>;
+}) {
   const { colors, spacing, radius } = useTheme();
   const toast = useToast();
   const [updating, setUpdating] = useState<JobApplicationStatus | null>(null);
@@ -132,9 +141,14 @@ function ApplicantRow({ application, onUpdated }: { application: JobApplication;
       {Object.keys(application.answers || {}).length > 0 && (
         <View style={{ gap: 4 }}>
           {Object.entries(application.answers).map(([qId, answer]) => (
-            <AppText key={qId} variant="caption" tone="secondary" style={{ fontStyle: 'italic' }}>
-              • {answer}
-            </AppText>
+            <View key={qId}>
+              <AppText variant="caption" weight="bold">
+                {questionText[qId] || 'Question no longer available'}
+              </AppText>
+              <AppText variant="caption" tone="secondary" style={{ fontStyle: 'italic' }}>
+                {answer || 'No answer'}
+              </AppText>
+            </View>
           ))}
         </View>
       )}
@@ -211,6 +225,16 @@ export function JobApplicantsModal({
     enabled: visible && !!job,
   });
 
+  const { data: questions = [] } = useQuery({
+    queryKey: ['job-questions', job?.id],
+    queryFn: () => listJobQuestions(job!.id),
+    enabled: visible && !!job,
+  });
+  const questionText = React.useMemo(
+    () => Object.fromEntries(questions.map((q) => [q.id, q.questionText])) as Record<string, string>,
+    [questions],
+  );
+
   function refresh() {
     if (job) void queryClient.invalidateQueries({ queryKey: ['job-applicants', job.id] });
   }
@@ -274,7 +298,7 @@ export function JobApplicantsModal({
                 description="Candidates who apply in Lioris will show up here, ranked automatically against this posting."
               />
             ) : (
-              applicants.map((app) => <ApplicantRow key={app.id} application={app} onUpdated={refresh} />)
+              applicants.map((app) => <ApplicantRow key={app.id} application={app} onUpdated={refresh} questionText={questionText} />)
             )}
           </ScrollView>
 

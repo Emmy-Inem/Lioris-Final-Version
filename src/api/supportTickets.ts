@@ -282,9 +282,14 @@ export async function updateSupportTicket(
 }
 
 export async function deleteSupportTicket(ticketId: string): Promise<boolean> {
-  const { error } = await supabase.from('support_tickets').delete().eq('id', ticketId);
+  const { data, error } = await supabase.from('support_tickets').delete().eq('id', ticketId).select('id');
   if (error) {
     console.error('[SupportTickets] delete failed:', error);
+    return false;
+  }
+  // RLS hides a row the caller may not delete instead of raising an error: zero rows means nothing was deleted.
+  if (!data || data.length === 0) {
+    console.warn('[SupportTickets] delete matched no rows (not found, or not permitted):', ticketId);
     return false;
   }
 
