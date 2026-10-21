@@ -58,6 +58,14 @@ const ADMIN_FEATURES: NavFeature[] = [
     keywords: ['users', 'members', 'directory', 'accounts', 'students', 'staff', 'alumni', 'ban', 'roles'],
   },
   {
+    title: 'Members Under 18 & Guardian Consent',
+    description: 'See minors awaiting parent or guardian consent, record decisions, correct a date of birth',
+    route: '/(admin)/minors-consent',
+    icon: 'shield-half-outline',
+    category: 'People',
+    keywords: ['minor', 'minors', 'under 18', 'child', 'guardian', 'parent', 'consent', 'age', 'date of birth', 'dob'],
+  },
+  {
     title: 'Support & Help Desk',
     description: 'Resolve user inquiries, technical tickets and bug reports',
     route: '/(admin)/support-desk',

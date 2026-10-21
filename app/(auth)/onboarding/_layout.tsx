@@ -14,6 +14,7 @@ export default function OnboardingLayout() {
  <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
  <Stack.Screen name="join-waitlist" />
  <Stack.Screen name="build-profile" />
+ <Stack.Screen name="guardian-details" />
  <Stack.Screen name="select-interests" />
  <Stack.Screen name="verify" />
  <Stack.Screen name="get-started" />

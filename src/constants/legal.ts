@@ -81,8 +81,12 @@ export const COPYRIGHT_TAKEDOWN = {
  */
 export const SUSPENSION_APPEAL_EMAIL = 'support@lioris.app';
 
-/** Minimum eligible age. Users aged 16–17 must have a parent/guardian's authorisation. */
-export const MIN_AGE = 16;
+/**
+ * Minimum eligible age. Members aged 13–17 are minors: they give a parent/guardian's details and some features
+ * stay limited until an administrator records the guardian's consent. Enforced by the database (sign-up trigger,
+ * migration 20261111000000); src/utils/age.ts mirrors these two numbers for instant feedback.
+ */
+export const MIN_AGE = 13;
 export const INDEPENDENT_AGE = 18;
 
 export const DATA_CONTROLLER = {
@@ -113,6 +117,8 @@ export const NDPC = {
 /** Retention schedule. Keep in sync with docs/compliance/retention-and-deletion.md. */
 export const RETENTION = {
   verificationDocumentsDaysAfterDecision: 30,
+  /** Guardian details are deleted this many days after the member turns 18 (purge_guardian_records_for_adults). */
+  guardianDaysAfterAdulthood: 30,
   chatMessages: 'while your account or the conversation remains active, subject to safety, legal and backup exceptions',
   auditLogsMonths: 24,
   accountData: 'until you delete your account',

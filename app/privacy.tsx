@@ -161,6 +161,7 @@ export default function PrivacyPolicyScreen() {
                 items={[
                   <><LegalStrong>Account data:</LegalStrong> email address, username, full name, authentication credentials handled by our authentication provider, role (student, alumni, staff, admin), and security settings such as two-factor authentication status.</>,
                   <><LegalStrong>Profile data:</LegalStrong> institution, faculty/department, level, bio, interests, avatar and banner images, and preferences you choose to add.</>,
+                  <><LegalStrong>Date of birth and, for members under {INDEPENDENT_AGE}, guardian details:</LegalStrong> your date of birth, collected at sign-up (or the first time you are asked afterwards), and - if you are aged {MIN_AGE}–17 - your parent or guardian's full name, relationship to you, e-mail address and/or phone number, and whether a campus administrator has recorded their consent (pending, confirmed, declined or withdrawn), with who recorded it, when, and a short note on how it was checked. Only you, administrators of your own campus and Super Admins can see the guardian details; other members never see your date of birth or your guardian's details.</>,
                   <><LegalStrong>University email and verification data:</LegalStrong> your institutional email domain and, if you apply for the verified tick, verification documents such as a student ID card or admission letter that you upload, together with the review decision.</>,
                   <><LegalStrong>User content:</LegalStrong> forum posts, comments, study resources, marketplace listings, event registrations, mentorship requests, support tickets and reports you file.</>,
                   <><LegalStrong>Messages:</LegalStrong> direct and group chat messages and attachments, and call metadata for Jitsi Meet calls.</>,
@@ -187,6 +188,7 @@ export default function PrivacyPolicyScreen() {
                   <><LegalStrong>Security and integrity of the platform</LegalStrong> (rate limiting, fraud prevention, incident investigation). Lawful basis: legitimate interest and legal obligation to keep personal data secure.</>,
                   <><LegalStrong>Complying with the law</LegalStrong> (responding to lawful requests, breach notification). Lawful basis: legal obligation.</>,
                   <><LegalStrong>Recording your acceptance of these documents</LegalStrong> (Terms version and age-eligibility confirmation). Lawful basis: legitimate interest in evidencing consent and legal obligation.</>,
+                  <><LegalStrong>Applying our age rules</LegalStrong> (checking that members are at least {MIN_AGE}, limiting some features for members under {INDEPENDENT_AGE}, and recording a parent or guardian's consent). Lawful basis: legal obligation and our legitimate interest in protecting children; for a guardian's contact details, the guardian's consent to the account, which we ask an administrator to verify.</>,
                 ]}
               />
               <LegalParagraph>
@@ -246,6 +248,7 @@ export default function PrivacyPolicyScreen() {
                   <><LegalStrong>Verification documents:</LegalStrong> targeted for deletion within {RETENTION.verificationDocumentsDaysAfterDecision} days after the verification decision, unless required for a dispute, fraud prevention or law.</>,
                   <><LegalStrong>Audit and security logs:</LegalStrong> normally up to {RETENTION.auditLogsMonths} months, with longer retention where a security incident or legal duty requires it.</>,
                   <><LegalStrong>AI Copilot prompts and images:</LegalStrong> {RETENTION.aiPrompts}.</>,
+                  <><LegalStrong>Date of birth and guardian details:</LegalStrong> your date of birth is kept with your account. Guardian details are kept while you are under {INDEPENDENT_AGE} and are deleted about {RETENTION.guardianDaysAfterAdulthood} days after you turn {INDEPENDENT_AGE}; they are also erased, and your date of birth cleared, when you delete your account, and both are included in "Export my data".</>,
                   <><LegalStrong>Deleted accounts:</LegalStrong> data is removed {RETENTION.deletedAccountPurge}; residual provider backups normally roll off within {RETENTION.backupRollOffDays} days and are not used for ordinary service activity.</>,
                 ]}
               />
@@ -282,12 +285,20 @@ export default function PrivacyPolicyScreen() {
 
             <LegalSection title="8. Children and Age Limit">
               <LegalParagraph>
-                Lioris is for university communities. People aged {INDEPENDENT_AGE} or older may register themselves.
-                An admitted university student aged {MIN_AGE}–17 may register only with authorisation from a parent or
-                legal guardian and must confirm that authorisation during sign-up. People under {MIN_AGE} may not use
-                Lioris. If we learn that an ineligible account was created, we may suspend it and delete the child's
-                personal data, subject to safety and legal retention duties. Report a suspected ineligible account
-                through {DATA_CONTROLLER.supportChannel}.
+                Lioris is for university communities. We ask for your date of birth when you create an account (members
+                who joined before this rule are asked the next time they sign in; it is not a requirement to keep
+                using the app, and until it is given we treat the account as an adult's).
+              </LegalParagraph>
+              <LegalBullets
+                items={[
+                  <><LegalStrong>Under {MIN_AGE}:</LegalStrong> we cannot create the account. An account whose date of birth shows the member is under {MIN_AGE} is blocked, and we may delete the child's personal data, subject to safety and legal retention duties.</>,
+                  <><LegalStrong>Aged {MIN_AGE}–17 (minors):</LegalStrong> you must give your parent or guardian's name, relationship and an e-mail address or phone number. A campus administrator records whether the guardian has consented. We do not currently send the guardian an e-mail ourselves: an administrator contacts them using the details you gave and records the outcome. Until consent is confirmed your account is limited: you cannot post jobs, you can only message people you are connected with, and adult members cannot find you in people search or suggestions. Whether or not consent is confirmed, members under {INDEPENDENT_AGE} cannot create marketplace listings or start or give to giving campaigns.</>,
+                  <><LegalStrong>{INDEPENDENT_AGE} or older:</LegalStrong> no guardian details are needed and none of these limits apply.</>,
+                  <><LegalStrong>Your date of birth cannot be edited by you once it is recorded</LegalStrong> (so it cannot be changed to get round these rules). If it was entered wrongly, ask {DATA_CONTROLLER.supportChannel}; an administrator can correct it and the correction, with the reason, is recorded in the audit log. You can re-submit your guardian's details at any time; changed details restart the consent check.</>,
+                ]}
+              />
+              <LegalParagraph>
+                Report a suspected ineligible account through {DATA_CONTROLLER.supportChannel}.
               </LegalParagraph>
             </LegalSection>
 

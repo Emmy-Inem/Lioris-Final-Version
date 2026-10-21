@@ -185,7 +185,7 @@ export function ReConsentGate() {
               ageConfirmed,
               () => setAgeConfirmed((v) => !v),
               `I confirm that I meet Lioris's age requirement`,
-              `I am ${INDEPENDENT_AGE}+ or an admitted university student aged ${MIN_AGE}–17 with parent or guardian authorisation.`,
+              `I am ${INDEPENDENT_AGE}+, or I am ${MIN_AGE}–17 and will give (or have given) a parent or guardian's details.`,
             )}
 
             {error ? (

@@ -17,6 +17,8 @@ import { AppLoadingScreen } from '@/components/AppLoadingScreen';
 import { OfflineBanner, setupNetworkAwareQueries } from '@/components/OfflineBanner';
 import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { ReConsentGate } from '@/components/ReConsentGate';
+import { DateOfBirthPromptGate } from '@/components/DateOfBirthPromptGate';
+import { MinorConsentBanner } from '@/components/MinorConsentBanner';
 import { MaintenanceGate } from '@/components/MaintenanceGate';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
@@ -483,10 +485,12 @@ function AppShell() {
       <StatusBarForTheme />
       <ImpersonationBanner />
       <OfflineBanner />
+      <MinorConsentBanner />
       <MaintenanceGate>
         <Slot />
       </MaintenanceGate>
       <ReConsentGate />
+      <DateOfBirthPromptGate />
       <AlertHost />
       <AppLockOverlay />
       <PullToRefresh />

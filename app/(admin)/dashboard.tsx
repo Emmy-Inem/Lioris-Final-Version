@@ -93,6 +93,7 @@ export default function AdminOverviewScreen() {
     { key: 'reports', label: 'Open reports', count: badges.reports, icon: 'flag-outline' as const, tint: colors.critical, route: '/(admin)/moderation-queue' },
     { key: 'takedowns', label: 'Copyright takedown requests', count: badges.takedowns, icon: 'document-lock-outline' as const, tint: '#F59E0B', route: '/(admin)/takedown-requests' },
     { key: 'support', label: 'Open support tickets', count: badges.support, icon: 'help-buoy-outline' as const, tint: '#06B6D4', route: '/(admin)/support-desk' },
+    { key: 'minors', label: 'Members under 18 awaiting guardian consent', count: badges.minors, icon: 'shield-half-outline' as const, tint: '#8B5CF6', route: '/(admin)/minors-consent' },
   ].filter((row) => row.count > 0);
 
   const hubs = getVisibleAdminGroups(user?.isSuperAdmin).filter((group) => group.key !== 'overview');

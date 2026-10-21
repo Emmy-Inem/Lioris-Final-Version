@@ -90,6 +90,7 @@ export default function AdminLayout() {
       {/* Pages inside a group: not tabs themselves, but they keep their group's tab lit. */}
       <Tabs.Screen name="verification-requests" options={{ href: null, tabGroup: 'user-directory' } as any} />
       <Tabs.Screen name="support-desk" options={{ href: null, tabGroup: 'user-directory' } as any} />
+      <Tabs.Screen name="minors-consent" options={{ href: null, tabGroup: 'user-directory' } as any} />
       <Tabs.Screen name="takedown-requests" options={{ href: null, tabGroup: 'moderation-queue' } as any} />
       <Tabs.Screen name="audit-logs" options={{ href: null, tabGroup: 'moderation-queue' } as any} />
       <Tabs.Screen name="feature-controls" options={{ href: null, tabGroup: 'platform-config' } as any} />

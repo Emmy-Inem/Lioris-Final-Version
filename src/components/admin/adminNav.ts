@@ -5,7 +5,7 @@ import type { Ionicons } from '@expo/vector-icons';
  *
  * Five groups, each with one job, and every capability lives in exactly one of them:
  *   Overview - what needs attention right now (read-only summary that links into the groups)
- *   People   - accounts: the directory, ID verification, support tickets
+ *   People   - accounts: the directory, ID verification, support tickets, members under 18 (guardian consent)
  *   Content  - what members publish: threads/communities, events, resources, comments
  *   Safety   - reports, copyright takedowns, the audit trail
  *   Platform - feature switches, campuses & security, broadcasts, portal links, system health
@@ -48,6 +48,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
       { key: 'members', label: 'Members', route: '/(admin)/user-directory', path: '/user-directory' },
       { key: 'verification', label: 'ID Verification', route: '/(admin)/verification-requests', path: '/verification-requests' },
       { key: 'support', label: 'Support', route: '/(admin)/support-desk', path: '/support-desk' },
+      { key: 'minors', label: 'Under 18', route: '/(admin)/minors-consent', path: '/minors-consent' },
     ],
   },
   {

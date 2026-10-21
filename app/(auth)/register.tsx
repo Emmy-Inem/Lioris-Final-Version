@@ -22,6 +22,7 @@ import { institutionThemeOverrides } from '@/theme/colors';
 import { Image } from 'expo-image';
 import { LiorisLogo } from '@/components/LiorisLogo';
 import { CONSENT_VERSION, INDEPENDENT_AGE, MIN_AGE } from '@/constants/legal';
+import { DateOfBirthField, useDobFields } from '@/components/DateOfBirthField';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
 import { captchaRequired } from '@/utils/captcha';
 import { persistCampus } from '@/hooks/useViewScope';
@@ -54,6 +55,7 @@ export default function RegisterScreen() {
  const [botField, setBotField] = useState('');
  const [acceptedTerms, setAcceptedTerms] = useState(false);
  const [confirmedAge, setConfirmedAge] = useState(false);
+ const { fields: dobFields, setFields: setDobFields, parsed: dobParsed } = useDobFields();
  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
  const turnstileRef = React.useRef<TurnstileWidgetRef>(null);
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -121,8 +123,22 @@ export default function RegisterScreen() {
     setErrorMessage(`Username @${username.trim().replace(/^@/, '')} is already taken. Please choose another.`);
     return;
   }
+  // Age rules: the date of birth is required, under 13 cannot register, 13-17 continue and give a guardian's details
+  // right after sign-up. The database refuses an under-13 date as well (sign-up trigger).
+  if (dobParsed.status === 'incomplete') {
+    setErrorMessage('Enter your date of birth (day, month and year).');
+    return;
+  }
+  if (dobParsed.status === 'invalid') {
+    setErrorMessage('That is not a valid date of birth. Check the day, month and year.');
+    return;
+  }
+  if (dobParsed.status === 'under_13') {
+    setErrorMessage(`You must be at least ${MIN_AGE} years old to create a Lioris account.`);
+    return;
+  }
   if (!confirmedAge) {
-    setErrorMessage(`Confirm that you are ${INDEPENDENT_AGE}+ or an admitted university student aged ${MIN_AGE}–17 with parent or guardian authorisation.`);
+    setErrorMessage(`Confirm that the date of birth you entered is yours. If you are under ${INDEPENDENT_AGE}, you will be asked for a parent or guardian's details next.`);
     return;
   }
  if (!acceptedTerms) {
@@ -156,6 +172,7 @@ export default function RegisterScreen() {
       botField,
       acceptedTermsVersion: CONSENT_VERSION,
       confirmedAgeEligible: true,
+      dateOfBirth: dobParsed.iso,
       captchaToken: captchaToken || undefined,
     });
     seedProfileUsername(
@@ -410,6 +427,8 @@ export default function RegisterScreen() {
 
  <AppTextField label="Display Full Name" value={fullName} onChangeText={setFullName} placeholder="Inem Light" />
 
+ <DateOfBirthField fields={dobFields} onChange={setDobFields} parsed={dobParsed} />
+
  {/* Anti-Bot Honeypot Field */}
  <View style={{ position: 'absolute', left: -9999, top: -9999, width: 0, height: 0, opacity: 0, overflow: 'hidden' }} aria-hidden={true}>
  <AppTextField
@@ -427,7 +446,7 @@ export default function RegisterScreen() {
   accessibilityRole="checkbox"
   accessibilityState={{ checked: confirmedAge }}
   aria-checked={confirmedAge}
-  accessibilityLabel="I am 18 or older, or an admitted university student aged 16 to 17 with parent or guardian authorisation"
+  accessibilityLabel="The date of birth I entered is mine. If I am under 18, I will give a parent or guardian's details"
   style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, minHeight: 44, marginBottom: spacing.md, marginTop: spacing.sm }}
   >
     <View style={{ width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'flex-start' }}>
@@ -438,7 +457,7 @@ export default function RegisterScreen() {
       />
     </View>
     <AppText variant="bodySmall" style={{ flex: 1 }}>
-      I am {INDEPENDENT_AGE}+ or an admitted university student aged {MIN_AGE}–17 with parent or guardian authorisation.
+      The date of birth I entered is mine. I am {INDEPENDENT_AGE}+, or I am {MIN_AGE}–17 and will give a parent or guardian's details after sign-up.
     </AppText>
   </Pressable>
 
