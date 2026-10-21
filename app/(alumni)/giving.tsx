@@ -10,6 +10,8 @@ import { SolidCard } from '@/components/SolidCard';
 import { AppButton } from '@/components/AppButton';
 import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { CampaignCardSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -204,17 +206,19 @@ export default function AlumniGivingScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [tab, setTab] = useState<'browse' | 'mine'>('browse');
 
-  const { data: campaigns = [], isLoading } = useQuery({
+  const campaignsQuery = useQuery({
     queryKey: ['giving-campaigns', 'approved', campusCode],
     queryFn: () => listGivingCampaigns(campusCode && campusCode !== 'ALL' ? campusCode : undefined),
     enabled: isEnabled && tab === 'browse',
   });
+  const { data: campaigns = [], isLoading } = campaignsQuery;
 
-  const { data: myCampaigns = [], isLoading: myLoading } = useQuery({
+  const myCampaignsQuery = useQuery({
     queryKey: ['giving-campaigns', 'mine'],
     queryFn: listMyGivingCampaigns,
     enabled: isEnabled && tab === 'mine',
   });
+  const { data: myCampaigns = [], isLoading: myLoading } = myCampaignsQuery;
 
   async function handleGive(campaign: GivingCampaign) {
     haptics.light();
@@ -282,6 +286,9 @@ export default function AlumniGivingScreen() {
 
   const list = tab === 'browse' ? campaigns : myCampaigns;
   const loading = tab === 'browse' ? isLoading : myLoading;
+  // A failed load must not read as "No active campaigns": show the error, or a notice above the cached list.
+  const activeQuery = tab === 'browse' ? campaignsQuery : myCampaignsQuery;
+  const errorMode = queryErrorMode(activeQuery);
 
   return (
     <ScreenContainer glow={false}>
@@ -337,8 +344,21 @@ export default function AlumniGivingScreen() {
         </Pressable>
       </View>
 
+      {errorMode === 'inline' && (
+        <ErrorStateView
+          compact
+          subject="campaigns"
+          title="Couldn't refresh campaigns"
+          error={activeQuery.error}
+          onRetry={() => activeQuery.refetch()}
+          style={{ marginBottom: spacing.md }}
+        />
+      )}
+
       {loading ? (
         <CampaignCardSkeletonList count={3} />
+      ) : errorMode === 'blocking' ? (
+        <ErrorStateView subject="campaigns" error={activeQuery.error} onRetry={() => activeQuery.refetch()} />
       ) : list.length === 0 ? (
         <EmptyState
           icon="heart-outline"

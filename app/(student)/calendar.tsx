@@ -8,6 +8,7 @@ import { SolidCard } from '@/components/SolidCard';
 import { MonthCalendarGrid } from '@/components/MonthCalendarGrid';
 import { AgendaList } from '@/components/AgendaList';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -16,6 +17,7 @@ import { listEvents } from '@/api/events';
 import { useAuth } from '@/auth/AuthContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { isSuperAdminIdentity } from '@/utils/campusAccess';
+import { queryErrorMode } from '@/utils/queryError';
 
 const TABS = ['Monthly Grid', 'Agenda'] as const;
 
@@ -32,10 +34,12 @@ export default function CalendarScreen() {
  const [tab, setTab] = useState<(typeof TABS)[number]>('Monthly Grid');
   const [mapModalOpen, setMapModalOpen] = useState(false);
 
- const { data: events } = useQuery({
+ const { data: events, isError, error, refetch } = useQuery({
    queryKey: ['events', isSuperAdmin ? 'all' : 'student', 'calendar', currentCampus],
    queryFn: () => listEvents({ scope: isSuperAdmin ? 'all' : 'student', campusCode: currentCampus }),
  });
+
+ const errorMode = queryErrorMode({ isError, data: events });
 
  if (!isFeatureEnabled('utility_cards')) {
   return (
@@ -93,8 +97,14 @@ export default function CalendarScreen() {
  </View>
  )}
 
+ {errorMode === 'inline' && (
+  <ErrorStateView compact subject="the calendar" title="Couldn't refresh the calendar" error={error} onRetry={refetch} style={{ marginBottom: spacing.md }} />
+ )}
+
  <ScrollView style={{ flex: 1, width: '100%' }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
- {isDesktop ? (
+ {errorMode === 'blocking' ? (
+ <ErrorStateView subject="the calendar" error={error} onRetry={refetch} />
+ ) : isDesktop ? (
  <View style={{ flexDirection: 'row', gap: 28, alignItems: 'flex-start' }}>
  {/* Left Column: Month Grid */}
  <View style={{ flex: 1.1 }}>

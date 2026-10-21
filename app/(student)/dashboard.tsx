@@ -20,6 +20,7 @@ import { Badge } from '@/components/Badge';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { AmbassadorBadge } from '@/components/AmbassadorBadge';
 import { UnverifiedAccountNotice } from '@/components/UnverifiedAccountNotice';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { EventCard } from '@/components/EventCard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { heroTextShadowStyle } from '@/theme/heroTextShadow';
@@ -40,6 +41,7 @@ import { useReadHomeAlerts } from '@/utils/readDiscussionsTracker';
 import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { isSuperAdminIdentity } from '@/utils/campusAccess';
+import { refetchFailedQueries, summarizeQueryErrors } from '@/utils/queryError';
 import { getInstitutionByCode } from '@/api/institutions';
 import {
   getVisitedPortalLinks,
@@ -86,14 +88,15 @@ export default function StudentDashboard() {
         : 'GLOBAL');
 
   // 1. Announcements & Important Alerts
-  const { data: announcements = [] } = useQuery({
+  const announcementsQuery = useQuery({
     queryKey: ['announcements', 'dashboard', effectiveCampus],
     queryFn: () => listAnnouncements({ campusCode: effectiveCampus }),
     enabled: isFeatureEnabled('campus_announcements'),
   });
+  const announcements = announcementsQuery.data ?? [];
 
   // 2. Pinned or urgent discussion threads
-  const { data: recentPosts = [] } = useQuery({
+  const recentPostsQuery = useQuery({
     queryKey: ['posts', 'dashboard-feed', effectiveCampus, showBots],
     queryFn: () =>
       listFeedPosts({
@@ -104,33 +107,42 @@ export default function StudentDashboard() {
         pageSize: 30,
       }),
   });
+  const recentPosts = recentPostsQuery.data ?? [];
 
   // 3. Events (Attending vs Featured)
-  const { data: events = [] } = useQuery({
+  const eventsQuery = useQuery({
     queryKey: ['events', isSuperAdmin ? 'all' : 'student', effectiveCampus],
     queryFn: () => listEvents({ scope: isSuperAdmin ? 'all' : 'student', campusCode: effectiveCampus || undefined }),
     enabled: isFeatureEnabled('campus_events'),
   });
+  const events = eventsQuery.data ?? [];
 
   // 4. Saved Resources ONLY (per user request: replace cross-department clutter with bookmarked materials)
-  const { data: savedResources = [] } = useQuery({
+  const savedResourcesQuery = useQuery({
     queryKey: SAVED_ITEMS_KEY('resource'),
     queryFn: () => listSavedItems('resource'),
     enabled: isFeatureEnabled('academic_resources'),
   });
+  const savedResources = savedResourcesQuery.data ?? [];
 
   // 5. Active Study Pods (enrolled only)
-  const { data: studyGroups = [] } = useQuery({
+  const studyGroupsQuery = useQuery({
     queryKey: ['study-groups', 'dashboard', effectiveCampus],
     queryFn: () => listStudyGroups(effectiveCampus === 'ALL' ? undefined : (effectiveCampus || undefined), { mineOnly: true }),
     enabled: isFeatureEnabled('study_groups'),
   });
+  const studyGroups = studyGroupsQuery.data ?? [];
 
   // 6. University Services
   const { data: portalLinks = [] } = useQuery({
     queryKey: ['portal-links', 'dashboard', effectiveCampus],
     queryFn: () => listPortalLinks(effectiveCampus || undefined),
   });
+
+  // A failed load must not read as "nothing here": show an error (or a small notice if other sections loaded).
+  const mainQueries = [announcementsQuery, recentPostsQuery, eventsQuery, savedResourcesQuery, studyGroupsQuery];
+  const loadErrors = summarizeQueryErrors(mainQueries);
+  const loadBlocked = loadErrors.mode === 'blocking';
 
   const [portalVisits, setPortalVisits] = useState<Record<string, number>>({});
 
@@ -411,6 +423,16 @@ export default function StudentDashboard() {
         {/* Verification Notice for unverified personal email accounts */}
         <UnverifiedAccountNotice />
 
+        {loadErrors.mode === 'inline' && (
+          <ErrorStateView
+            compact
+            subject="your dashboard"
+            title="Some sections couldn't refresh"
+            error={loadErrors.error}
+            onRetry={() => refetchFailedQueries(mainQueries)}
+          />
+        )}
+
         {/* Nudge toward a fuller profile - the fields it names are exactly what mentor matching uses */}
         {isFeatureEnabled('alumni_mentorship') && missingMentorshipFields && !profileNudgeDismissed ? (
           <View
@@ -653,8 +675,12 @@ export default function StudentDashboard() {
           </View>
         </View>
 
+        {loadBlocked && (
+          <ErrorStateView subject="your dashboard" error={loadErrors.error} onRetry={() => refetchFailedQueries(mainQueries)} />
+        )}
+
         {/* 4. Events You're Attending (or Featured Campus Events) */}
-        {isFeatureEnabled('campus_events') && (
+        {!loadBlocked && isFeatureEnabled('campus_events') && (
           <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
@@ -719,7 +745,7 @@ export default function StudentDashboard() {
         )}
 
         {/* 5. My Saved Course Materials (Only bookmarked resources display here) */}
-        {isFeatureEnabled('academic_resources') && (
+        {!loadBlocked && isFeatureEnabled('academic_resources') && (
           <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
@@ -807,7 +833,7 @@ export default function StudentDashboard() {
         )}
 
         {/* 6. Active Study Pods (Enrolled Only) */}
-        {isFeatureEnabled('study_groups') && (
+        {!loadBlocked && isFeatureEnabled('study_groups') && (
           <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>

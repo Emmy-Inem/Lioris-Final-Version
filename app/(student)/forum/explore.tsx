@@ -9,6 +9,7 @@ import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -23,6 +24,7 @@ import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModal';
 import { submitVerificationRequest } from '@/api/verification';
 import { usePermissions } from '@/context/RolePermissionsContext';
+import { queryErrorMode } from '@/utils/queryError';
 
 const CATEGORIES = ['All', 'Academic & Tech', 'Campus Life', 'Union & Polls'] as const;
 type CategoryFilter = typeof CATEGORIES[number];
@@ -71,15 +73,19 @@ export default function ExploreForumsScreen() {
   const [newDesc, setNewDesc] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const { data: communities = [] } = useQuery({
+  const communitiesQuery = useQuery({
     queryKey: ['communities', showAllCampuses ? 'all-campuses' : isGlobalActive ? 'global' : effectiveCampus],
     queryFn: () => listCommunities(showAllCampuses ? 'ALL' : isGlobalActive ? undefined : effectiveCampus),
   });
+  const communities = communitiesQuery.data ?? [];
 
   const { data: joinedIds = DEFAULT_JOINED_COMMUNITY_IDS, refetch: refetchJoined } = useQuery({
     queryKey: ['my-joined-community-ids', user?.id],
     queryFn: () => listMyJoinedCommunityIds(user?.id),
   });
+
+  // A failed load must not read as "No matching discussion spaces": show the error, or a notice above the cached list.
+  const communitiesErrorMode = queryErrorMode(communitiesQuery);
 
   const { data: communityStatsMap } = useQuery({
     queryKey: ['forum-communities-stats'],
@@ -363,6 +369,19 @@ export default function ExploreForumsScreen() {
           })}
         </ScrollView>
 
+        {communitiesErrorMode === 'inline' && (
+          <ErrorStateView
+            compact
+            subject="discussion spaces"
+            title="Couldn't refresh discussion spaces"
+            error={communitiesQuery.error}
+            onRetry={() => communitiesQuery.refetch()}
+          />
+        )}
+        {communitiesErrorMode === 'blocking' && (
+          <ErrorStateView subject="discussion spaces" error={communitiesQuery.error} onRetry={() => communitiesQuery.refetch()} />
+        )}
+
         {/* Community Directory List - Mobile & Desktop Optimized */}
         <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.md }}>
           {filtered.map((ch) => {
@@ -503,7 +522,7 @@ export default function ExploreForumsScreen() {
             );
           })}
 
-          {filtered.length === 0 && (
+          {filtered.length === 0 && communitiesErrorMode !== 'blocking' && (
             <EmptyState
               title="No matching discussion spaces"
               description={search ? 'Try a different search term or clear your filters.' : 'No discussion spaces available in this category.'}

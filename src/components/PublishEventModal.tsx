@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeImageForUpload, resizePickedAsset } from '@/utils/pickImage';
 import { useQuery } from '@tanstack/react-query';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
@@ -243,10 +244,10 @@ export function PublishEventModal({
         document.body.removeChild(input);
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
           const dataUrl = ev.target?.result as string;
           if (dataUrl) {
-            setBannerUri(dataUrl);
+            setBannerUri(await resizeImageForUpload(dataUrl));
             haptics.light();
           }
         };
@@ -268,7 +269,8 @@ export function PublishEventModal({
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      setBannerUri(result.assets[0].uri);
+      const banner = await resizePickedAsset(result.assets[0]);
+      setBannerUri(banner.uri);
       haptics.light();
     }
   }

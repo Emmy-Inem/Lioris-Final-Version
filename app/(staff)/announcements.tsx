@@ -11,6 +11,8 @@ import { AnnouncementCard } from'@/components/AnnouncementCard';
 import { SolidCard } from'@/components/SolidCard';
 import { ShimmerCardList } from'@/components/ShimmerSkeleton';
 import { EmptyState } from'@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
@@ -51,10 +53,11 @@ export default function StaffAnnouncementsScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const { data: announcements, isLoading } = useQuery({
+  const { data: announcements, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['announcements', campusCode],
     queryFn: () => listAnnouncements(campusCode && campusCode !== 'ALL' ? { campusCode } : undefined),
   });
+  const errorMode = queryErrorMode({ isError, data: announcements });
 
   function resetForm() {
     setEditingId(null);
@@ -241,8 +244,21 @@ export default function StaffAnnouncementsScreen() {
           </SolidCard>
         ) : null}
 
+        {errorMode === 'inline' && (
+          <ErrorStateView
+            compact
+            subject="announcements"
+            title="Couldn't refresh announcements"
+            error={error}
+            onRetry={refetch}
+            style={{ marginBottom: spacing.md }}
+          />
+        )}
+
         {isLoading ? (
           <ShimmerCardList count={3} />
+        ) : errorMode === 'blocking' ? (
+          <ErrorStateView subject="announcements" error={error} onRetry={refetch} />
         ) : announcements && announcements.length > 0 ? (
           <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
             {announcements.map((a) => (

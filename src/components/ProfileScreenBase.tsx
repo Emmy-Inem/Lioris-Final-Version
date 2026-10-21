@@ -31,6 +31,7 @@ import { SUPABASE_URL, supabase } from '@/api/supabase';
 import { pickImageFromLibrary } from '@/utils/pickImage';
 import { CropKind, ImageCropperModal } from './ImageCropperModal';
 import { ImageViewerModal } from './ImageViewerModal';
+import { ErrorStateView } from './ErrorStateView';
 import type { CroppedImage } from '@/utils/cropImage';
 
 /* Short labels so the segmented control fits a 375px phone on one line with no
@@ -151,7 +152,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   /* NOTE for other agents: the profile activity list uses the key
      ['my-posts', userId]. Anything that deletes / publishes / reposts a post
      must invalidate ['my-posts'] so this list refreshes. */
-  const { data: myPosts, isLoading: postsLoading } = useQuery({
+  const { data: myPosts, isLoading: postsLoading, isError: postsFailed, error: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ['my-posts', user?.id],
     queryFn: () => listMyPosts(user?.id),
     enabled: !!user,
@@ -836,6 +837,8 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  <PostCard post={p} />
  </View>
  ))
+ ) : postsFailed ? (
+ <ErrorStateView subject="your posts" error={postsError} onRetry={refetchPosts} />
  ) : (
  <SolidCard radius={20} style={{ alignItems: 'center', padding: spacing.lg }}>
  <Ionicons name="chatbubbles-outline" size={32} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />

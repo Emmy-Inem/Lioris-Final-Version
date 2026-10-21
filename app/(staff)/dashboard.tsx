@@ -10,6 +10,7 @@ import { GlassCard } from '@/components/GlassCard';
 import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
 import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
 import { UnverifiedAccountNotice } from '@/components/UnverifiedAccountNotice';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
@@ -36,6 +37,7 @@ import { useBotVisibility } from '@/hooks/useBotVisibility';
 import { haptics } from '@/utils/haptics';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { isSuperAdminIdentity } from '@/utils/campusAccess';
+import { refetchFailedQueries, summarizeQueryErrors } from '@/utils/queryError';
 
 export default function StaffDashboard() {
   const { colors, spacing, isDark } = useTheme();
@@ -65,32 +67,41 @@ export default function StaffDashboard() {
         ? profile.institutionCode
         : '');
 
-  const { data: openReports } = useQuery({
+  const openReportsQuery = useQuery({
     queryKey: ['reports', 'open', effectiveCampus],
     queryFn: () => listReports({ status: 'open', institutionCode: effectiveCampus === 'ALL' ? undefined : (effectiveCampus || undefined) }),
   });
+  const openReports = openReportsQuery.data;
 
-  const { data: pendingResources } = useQuery({
+  const pendingResourcesQuery = useQuery({
     queryKey: ['resources', 'pending-review', effectiveCampus],
     queryFn: () => listResources({ approvalStatus: 'pending', campusCode: effectiveCampus }),
   });
+  const pendingResources = pendingResourcesQuery.data;
 
-  const { data: events } = useQuery({
+  const eventsQuery = useQuery({
     queryKey: ['events', 'staff-dash', effectiveCampus],
     queryFn: () => listEvents({ scope: 'all', campusCode: effectiveCampus }),
   });
+  const events = eventsQuery.data;
 
   const { showBots, isBotPost } = useBotVisibility();
 
-  const { data: studentPosts } = useQuery({
+  const studentPostsQuery = useQuery({
     queryKey: ['posts', 'staff-student-pulse', effectiveCampus, showBots],
     queryFn: () => listFeedPosts({ scope: 'student', viewerInstitutionCode: effectiveCampus, viewScope: 'campus', showBots }),
   });
+  const studentPosts = studentPostsQuery.data;
 
   const { data: portalLinks } = useQuery({
     queryKey: ['portal-links', 'staff-dash', effectiveCampus],
     queryFn: () => listPortalLinks(effectiveCampus),
   });
+
+  // A failed load must not read as "nothing here": show an error (or a small notice if other sections loaded).
+  const mainQueries = [openReportsQuery, pendingResourcesQuery, eventsQuery, studentPostsQuery];
+  const loadErrors = summarizeQueryErrors(mainQueries);
+  const loadBlocked = loadErrors.mode === 'blocking';
 
   const fullName = profile?.fullName ?? user?.fullName ?? 'Faculty Member';
   const institutionName = profile?.institutionName || LAUNCH_INSTITUTIONS.find((i) => i.code === effectiveCampus)?.name || 'Campus Network';
@@ -198,6 +209,19 @@ export default function StaffDashboard() {
         </GlassCard>
 
         {isUnverifiedPersonalUser(profile) && <UnverifiedAccountNotice />}
+
+        {loadErrors.mode === 'inline' && (
+          <ErrorStateView
+            compact
+            subject="your dashboard"
+            title="Some sections couldn't refresh"
+            error={loadErrors.error}
+            onRetry={() => refetchFailedQueries(mainQueries)}
+          />
+        )}
+        {loadBlocked && (
+          <ErrorStateView subject="your dashboard" error={loadErrors.error} onRetry={() => refetchFailedQueries(mainQueries)} />
+        )}
 
         {/* 2. Action Required: Moderation & Resource Review */}
         {(openReportsCount > 0 || pendingResourcesCount > 0) && (
@@ -408,6 +432,7 @@ export default function StaffDashboard() {
         />
 
         {/* 5. Academic Symposiums & Faculty Events */}
+        {!loadBlocked && (
         <View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
@@ -471,6 +496,7 @@ export default function StaffDashboard() {
             </SolidCard>
           )}
         </View>
+        )}
 
         {/* 6. Trending Campus Inquiries & Academic Discussions (Dismissible) */}
         {activeDiscussions.length > 0 && (

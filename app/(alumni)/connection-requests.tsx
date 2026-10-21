@@ -6,19 +6,22 @@ import { AppHeader } from '@/components/AppHeader';
 import { AppText } from '@/components/AppText';
 import { ConnectionRequestCard } from '@/components/ConnectionRequestCard';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listIncomingConnectionRequests } from '@/api/connections';
+import { queryErrorMode } from '@/utils/queryError';
 
 export default function ConnectionRequestsScreen() {
   const { spacing } = useTheme();
   const { isDesktop } = useResponsive();
   const queryClient = useQueryClient();
 
-  const { data: requests, isLoading } = useQuery({
+  const { data: requests, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['connections', 'incoming'],
     queryFn: listIncomingConnectionRequests,
   });
+  const errorMode = queryErrorMode({ isError, data: requests });
 
   return (
     <ScreenContainer glow={false}>
@@ -26,6 +29,16 @@ export default function ConnectionRequestsScreen() {
       <AppText variant={isDesktop ? 'h1' : 'h2'} weight="bold" style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.md }}>
         Connection Requests
       </AppText>
+      {errorMode === 'inline' && (
+        <ErrorStateView
+          compact
+          subject="connection requests"
+          title="Couldn't refresh requests"
+          error={error}
+          onRetry={refetch}
+          style={{ marginBottom: spacing.sm }}
+        />
+      )}
       <FlatList
         data={requests ?? []}
         keyExtractor={(item) => item.id}
@@ -46,7 +59,9 @@ export default function ConnectionRequestsScreen() {
           </View>
         )}
         ListEmptyComponent={
-          !isLoading ? (
+          errorMode === 'blocking' ? (
+            <ErrorStateView subject="connection requests" error={error} onRetry={refetch} />
+          ) : !isLoading ? (
             <EmptyState title="No pending requests" description="New connection requests will show up here." />
           ) : null
         }

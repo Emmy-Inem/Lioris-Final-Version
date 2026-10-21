@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeImageForUpload, resizePickedAsset } from '@/utils/pickImage';
+import { MAX_DOCUMENT_IMAGE_WIDTH } from '@/utils/imageResize';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { AppText } from './AppText';
@@ -70,10 +72,10 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit, defaultI
         document.body.removeChild(input);
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
           const dataUrl = ev.target?.result as string;
           if (dataUrl) {
-            setDocumentPhotoUri(dataUrl);
+            setDocumentPhotoUri(await resizeImageForUpload(dataUrl, undefined, MAX_DOCUMENT_IMAGE_WIDTH));
             haptics.light();
             if (errorMessage) setErrorMessage(null);
           }
@@ -91,7 +93,8 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit, defaultI
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      setDocumentPhotoUri(result.assets[0].uri);
+      const photo = await resizePickedAsset(result.assets[0], { maxWidth: MAX_DOCUMENT_IMAGE_WIDTH });
+      setDocumentPhotoUri(photo.uri);
       if (errorMessage) setErrorMessage(null);
       haptics.light();
     }

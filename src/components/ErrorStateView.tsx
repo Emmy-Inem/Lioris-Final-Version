@@ -5,11 +5,14 @@ import { AppText } from './AppText';
 import { AppButton } from './AppButton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { haptics } from '@/utils/haptics';
+import { queryErrorCopy } from '@/utils/queryError';
 
 export interface ErrorStateViewProps {
   title?: string;
   message?: string;
   error?: Error | unknown;
+  /** What failed to load, for the default copy ("Couldn't load <subject>"). */
+  subject?: string;
   onRetry?: () => void | Promise<unknown>;
   retryLabel?: string;
   secondaryActionLabel?: string;
@@ -23,6 +26,7 @@ export function ErrorStateView({
   title,
   message,
   error,
+  subject,
   onRetry,
   retryLabel = 'Try Again',
   secondaryActionLabel,
@@ -31,28 +35,25 @@ export function ErrorStateView({
   compact = false,
   style,
 }: ErrorStateViewProps) {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { colors, spacing, radius } = useTheme();
   const [retrying, setRetrying] = useState(false);
 
-  // Detect network/connection drop
-  const errorMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  // Friendly copy by failure kind (offline / permission / other); the raw error text is never shown.
+  const copy = queryErrorCopy(error, subject);
   const isNetworkFailure =
-    /network|connection|fetch|offline|timeout|econnrefused|failed to fetch/i.test(errorMessage) ||
-    /network|connection/i.test(title || '') ||
-    /network|connection/i.test(message || '');
+    copy.kind === 'offline' || /network|connection/i.test(title || '') || /network|connection/i.test(message || '');
 
-  const resolvedTitle =
-    title ||
-    (isNetworkFailure ? 'Connection Interrupted' : 'Unable to Load Content');
+  const resolvedTitle = title || (isNetworkFailure ? 'Connection Interrupted' : copy.title);
 
   const resolvedMessage =
     message ||
     (isNetworkFailure
       ? 'Please check your internet connection or mobile data and tap below to retry.'
-      : errorMessage || 'Something went wrong while loading this page. Tap below to reload.');
+      : error
+        ? copy.message
+        : 'Something went wrong while loading this page. Tap below to reload.');
 
-  const resolvedIcon: keyof typeof Ionicons.glyphMap =
-    icon || (isNetworkFailure ? 'cloud-offline-outline' : 'alert-circle-outline');
+  const resolvedIcon: keyof typeof Ionicons.glyphMap = icon || (isNetworkFailure ? 'cloud-offline-outline' : copy.icon);
 
   const handleRetry = async () => {
     if (!onRetry || retrying) return;
@@ -71,13 +72,15 @@ export function ErrorStateView({
         style={[
           styles.compactContainer,
           {
-            backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
-            borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : '#FCA5A5',
+            backgroundColor: colors.roseBg,
+            borderColor: colors.critical,
             borderRadius: radius.md,
             padding: spacing.sm,
           },
           style,
         ]}
+        accessibilityRole="alert"
+        accessibilityLabel={`${resolvedTitle}. ${resolvedMessage}`}
       >
         <Ionicons name={resolvedIcon} size={18} color={colors.critical} style={{ marginTop: 2 }} />
         <View style={{ flex: 1, gap: 2 }}>
@@ -92,6 +95,8 @@ export function ErrorStateView({
           <Pressable
             onPress={handleRetry}
             disabled={retrying}
+            accessibilityRole="button"
+            accessibilityLabel={retryLabel}
             style={{
               paddingHorizontal: 10,
               paddingVertical: 5,
@@ -100,7 +105,7 @@ export function ErrorStateView({
             }}
           >
             {retrying ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={colors.textInverse} />
             ) : (
               <AppText variant="caption" weight="bold" tone="inverse">
                 {retryLabel}
@@ -122,12 +127,14 @@ export function ErrorStateView({
         },
         style,
       ]}
+      accessibilityRole="alert"
+      accessibilityLabel={`${resolvedTitle}. ${resolvedMessage}`}
     >
       <View
         style={[
           styles.iconCircle,
           {
-            backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+            backgroundColor: colors.roseBg,
           },
         ]}
       >

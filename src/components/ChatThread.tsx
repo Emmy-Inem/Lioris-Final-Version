@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { resizePickedAsset } from '@/utils/pickImage';
 import * as DocumentPicker from 'expo-document-picker';
 import { AppText } from './AppText';
 import { Avatar } from './Avatar';
@@ -350,9 +351,9 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
       });
       if (result.canceled || !result.assets?.[0]) return;
 
-      const asset = result.assets[0];
       setUploadingAttachment(true);
       haptics.light();
+      const asset = await resizePickedAsset(result.assets[0]);
       const publicUrl = await uploadMediaFile('resources', asset.uri, 'chat_attachments');
       const fileName = asset.fileName || 'Study Photo';
       await handleSend(`📷 Shared a photo: ${fileName}`, publicUrl);

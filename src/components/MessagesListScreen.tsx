@@ -23,6 +23,8 @@ import { submitVerificationRequest } from '@/api/verification';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { VerificationRequiredGate } from './VerificationRequiredGate';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
+import { ErrorStateView } from './ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 
 export function MessagesListScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
@@ -76,11 +78,13 @@ export function MessagesListScreen() {
 
   const messagingEnabled = isFeatureEnabled('e2ee_messaging');
 
-  const { data: conversations, isLoading } = useQuery({
+  const { data: conversations, isLoading, isError: conversationsFailed, error: conversationsError, refetch: refetchConversations } = useQuery({
     queryKey: ['conversations'],
     queryFn: listConversations,
     enabled: !isRestrictedGuest,
   });
+  // A failed load must not read as "No Conversations Found": show the error, or a notice above the cached list.
+  const conversationsErrorMode = queryErrorMode({ isError: conversationsFailed, data: conversations });
 
   async function handleArchive(id: string) {
     await archiveConversation(id);
@@ -224,6 +228,16 @@ export function MessagesListScreen() {
               </View>
             </View>
 
+            {conversationsErrorMode === 'inline' && (
+              <ErrorStateView
+                compact
+                subject="conversations"
+                title="Couldn't refresh conversations"
+                error={conversationsError}
+                onRetry={refetchConversations}
+                style={{ marginBottom: spacing.sm }}
+              />
+            )}
             {/* List */}
             <FlatList
               data={filtered}
@@ -240,7 +254,9 @@ export function MessagesListScreen() {
                 />
               )}
               ListEmptyComponent={
-                !isLoading ? (
+                conversationsErrorMode === 'blocking' ? (
+                  <ErrorStateView subject="conversations" error={conversationsError} onRetry={refetchConversations} />
+                ) : !isLoading ? (
                   <View style={{ alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.md }}>
                     <Ionicons name="chatbubbles-outline" size={36} color={colors.textSecondary} />
                     <AppText variant="bodySmall" weight="bold" style={{ marginTop: spacing.sm }}>
@@ -420,6 +436,16 @@ export function MessagesListScreen() {
           </View>
 
           {/* Conversation List */}
+          {conversationsErrorMode === 'inline' && (
+            <ErrorStateView
+              compact
+              subject="conversations"
+              title="Couldn't refresh conversations"
+              error={conversationsError}
+              onRetry={refetchConversations}
+              style={{ marginBottom: spacing.sm }}
+            />
+          )}
           <SolidCard radius={20} style={{ padding: spacing.xs, flex: 1 }}>
             <FlatList
               data={filtered}
@@ -434,7 +460,9 @@ export function MessagesListScreen() {
                 </Animated.View>
               )}
               ListEmptyComponent={
-                !isLoading ? (
+                conversationsErrorMode === 'blocking' ? (
+                  <ErrorStateView subject="conversations" error={conversationsError} onRetry={refetchConversations} />
+                ) : !isLoading ? (
                   <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl, paddingHorizontal: spacing.md, flex: 1 }}>
                     <View
                       style={{
