@@ -290,14 +290,14 @@ export default function RolePermissionsScreen() {
                     borderColor: selected ? colors.brandPrimary : colors.border,
                   }}
                 >
-                  <Ionicons name={tab.icon} size={16} color={selected ? '#FFFFFF' : colors.textPrimary} />
-                  <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'primary'}>
+                  <Ionicons name={tab.icon} size={16} color={selected ? colors.onBrand : colors.textPrimary} />
+                  <AppText variant="bodySmall" weight="bold" tone={selected ? 'onBrand' : 'primary'}>
                     {tab.label}
                   </AppText>
                   <View style={{ marginLeft: 4 }}>
                     <Badge
                       label={tab.badge}
-                      tone={selected ? 'inverse' : 'brand'}
+                      tone={selected ? 'onBrand' : 'brand'}
                     />
                   </View>
                 </Pressable>
@@ -374,7 +374,7 @@ export default function RolePermissionsScreen() {
                       backgroundColor: selected ? colors.textPrimary : colors.divider,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                    <AppText variant="caption" weight="bold" tone={selected ? undefined : 'secondary'} style={selected ? { color: colors.surface } : undefined}>
                       {cat}
                     </AppText>
                   </Pressable>

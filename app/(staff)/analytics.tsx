@@ -149,7 +149,7 @@ export default function StaffAnalyticsScreen() {
                   <AppText
                     variant="caption"
                     weight="bold"
-                    tone={timeRangeDays === opt.days ? 'inverse' : 'secondary'}
+                    tone={timeRangeDays === opt.days ? 'onBrand' : 'secondary'}
                   >
                     {opt.label}
                   </AppText>

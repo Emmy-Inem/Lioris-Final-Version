@@ -210,8 +210,8 @@ export function HelpSupportModal({ visible, onClose }: { visible: boolean; onClo
                   borderColor: mode === 'chat' ? colors.brandPrimary : colors.border,
                 }}
               >
-                <Ionicons name="sparkles" size={12} color={mode === 'chat' ? '#FFFFFF' : colors.textSecondary} />
-                <AppText variant="caption" weight="bold" style={{ color: mode === 'chat' ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}>
+                <Ionicons name="sparkles" size={12} color={mode === 'chat' ? colors.onBrand : colors.textSecondary} />
+                <AppText variant="caption" weight="bold" style={{ color: mode === 'chat' ? colors.onBrand : colors.textPrimary, fontSize: 11 }}>
                   AI Assistant
                 </AppText>
               </Pressable>
@@ -220,7 +220,7 @@ export function HelpSupportModal({ visible, onClose }: { visible: boolean; onClo
               onPress={() => handleQuickTicket('bug_report')}
               style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: mode === 'ticket' && category === 'bug_report' ? colors.brandPrimary : colors.background, borderWidth: 1, borderColor: mode === 'ticket' && category === 'bug_report' ? colors.brandPrimary : colors.border }}
             >
-              <AppText variant="caption" weight="bold" style={{ color: mode === 'ticket' && category === 'bug_report' ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}>
+              <AppText variant="caption" weight="bold" style={{ color: mode === 'ticket' && category === 'bug_report' ? colors.onBrand : colors.textPrimary, fontSize: 11 }}>
                 Report a Bug
               </AppText>
             </Pressable>
@@ -228,7 +228,7 @@ export function HelpSupportModal({ visible, onClose }: { visible: boolean; onClo
               onPress={() => handleQuickTicket('feedback')}
               style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: mode === 'ticket' && category === 'feedback' ? colors.brandPrimary : colors.background, borderWidth: 1, borderColor: mode === 'ticket' && category === 'feedback' ? colors.brandPrimary : colors.border }}
             >
-              <AppText variant="caption" weight="bold" style={{ color: mode === 'ticket' && category === 'feedback' ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}>
+              <AppText variant="caption" weight="bold" style={{ color: mode === 'ticket' && category === 'feedback' ? colors.onBrand : colors.textPrimary, fontSize: 11 }}>
                 Give Feedback
               </AppText>
             </Pressable>
@@ -237,7 +237,7 @@ export function HelpSupportModal({ visible, onClose }: { visible: boolean; onClo
                 onPress={() => handleQuickTicket('general')}
                 style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: category === 'general' ? colors.brandPrimary : colors.background, borderWidth: 1, borderColor: category === 'general' ? colors.brandPrimary : colors.border }}
               >
-                <AppText variant="caption" weight="bold" style={{ color: category === 'general' ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}>
+                <AppText variant="caption" weight="bold" style={{ color: category === 'general' ? colors.onBrand : colors.textPrimary, fontSize: 11 }}>
                   Other
                 </AppText>
               </Pressable>
@@ -269,7 +269,7 @@ export function HelpSupportModal({ visible, onClose }: { visible: boolean; onClo
                   >
                     <AppText
                       variant="bodySmall"
-                      style={{ color: m.role === 'user' ? '#FFFFFF' : colors.textPrimary, lineHeight: 19 }}
+                      style={{ color: m.role === 'user' ? colors.onBrand : colors.textPrimary, lineHeight: 19 }}
                     >
                       {m.content}
                     </AppText>
@@ -326,7 +326,7 @@ export function HelpSupportModal({ visible, onClose }: { visible: boolean; onClo
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="send" size={17} color={!chatInput.trim() || chatBusy ? colors.textSecondary : '#FFFFFF'} />
+                  <Ionicons name="send" size={17} color={!chatInput.trim() || chatBusy ? colors.textSecondary : colors.onBrand} />
                 </Pressable>
               </View>
             </>
@@ -364,7 +364,7 @@ export function HelpSupportModal({ visible, onClose }: { visible: boolean; onClo
                         <AppText
                           variant="caption"
                           weight={isSelected ? 'bold' : undefined}
-                          style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}
+                          style={{ color: isSelected ? colors.onBrand : colors.textPrimary, fontSize: 11 }}
                         >
                           {cat.label}
                         </AppText>

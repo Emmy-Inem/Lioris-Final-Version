@@ -509,7 +509,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                     marginTop: 2,
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11.5 }}>
+                  <AppText variant="caption" weight="bold" tone="onBrand" style={{ fontSize: 11.5 }}>
                     Verify Student Profile
                   </AppText>
                 </Pressable>
@@ -536,7 +536,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                       Official Admin Communication
                     </AppText>
                   </View>
-                  <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.pill }}>
+                  <View style={{ backgroundColor: '#DC2626', paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.pill }}>
                     <AppText weight="bold" style={{ color: '#FFFFFF', fontSize: 11 }}>ROOT ADMIN</AppText>
                   </View>
                 </View>
@@ -783,8 +783,8 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                       backgroundColor: selected ? colors.brandPrimary : colors.surface,
                     }}
                   >
-                    <Ionicons name={com.icon} size={13} color={selected ? '#FFFFFF' : colors.brandPrimary} />
-                    <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'primary'}>
+                    <Ionicons name={com.icon} size={13} color={selected ? colors.onBrand : colors.brandPrimary} />
+                    <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'primary'}>
                       {com.slug}
                     </AppText>
                   </Pressable>

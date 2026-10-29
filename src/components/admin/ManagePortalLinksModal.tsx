@@ -283,7 +283,7 @@ export function ManagePortalLinksModal({
         aria-pressed={selected}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: selected ? colors.brandPrimary : colors.surface, borderWidth: 1, borderColor: selected ? colors.brandPrimary : colors.border }}
       >
-        <AppText variant="caption" weight={selected ? 'bold' : 'medium'} style={{ color: selected ? '#FFFFFF' : colors.textPrimary }}>
+        <AppText variant="caption" weight={selected ? 'bold' : 'medium'} style={{ color: selected ? colors.onBrand : colors.textPrimary }}>
           {label}
         </AppText>
         {count !== undefined ? (
@@ -393,7 +393,7 @@ export function ManagePortalLinksModal({
                     aria-pressed={selected}
                     style={{ width: 38, height: 38, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: selected ? colors.brandPrimary : colors.surface, borderWidth: 1, borderColor: selected ? colors.brandPrimary : colors.border }}
                   >
-                    <Ionicons name={ic} size={18} color={selected ? '#FFFFFF' : colors.textPrimary} />
+                    <Ionicons name={ic} size={18} color={selected ? colors.onBrand : colors.textPrimary} />
                   </Pressable>
                 );
               })}

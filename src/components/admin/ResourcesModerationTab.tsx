@@ -394,7 +394,7 @@ export function ResourcesModerationTab() {
  backgroundColor: section === 'approved' ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={section === 'approved' ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={section === 'approved' ? 'onBrand' : 'secondary'}>
  Live Library Archive{countLabel(approvedResources.length)}
  </AppText>
  </Pressable>
@@ -412,7 +412,7 @@ export function ResourcesModerationTab() {
  backgroundColor: section === 'pending' ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={section === 'pending' ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={section === 'pending' ? 'onBrand' : 'secondary'}>
  Pending Review Queue{countLabel(pendingSubmissions.length)}
  </AppText>
  </Pressable>
@@ -448,7 +448,7 @@ export function ResourcesModerationTab() {
  backgroundColor: selectedCategory === 'all' ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={selectedCategory === 'all' ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={selectedCategory === 'all' ? 'onBrand' : 'secondary'}>
  All{countLabel(section === 'approved' ? approvedResources.length : pendingSubmissions.length)}
  </AppText>
  </Pressable>
@@ -469,7 +469,7 @@ export function ResourcesModerationTab() {
  backgroundColor: selected ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={selected ? 'onBrand' : 'secondary'}>
  {cat}{countLabel(count)}
  </AppText>
  </Pressable>

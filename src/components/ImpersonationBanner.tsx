@@ -61,8 +61,8 @@ export function ImpersonationBanner() {
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, minWidth: 0 }}>
-        <Ionicons name="eye-outline" size={16} color="#FFFFFF" />
-        <AppText variant="caption" weight="bold" tone="inverse" style={{ flexShrink: 1 }}>
+        <Ionicons name="eye-outline" size={16} color={colors.onCritical} />
+        <AppText variant="caption" weight="bold" tone="onCritical" style={{ flexShrink: 1 }}>
           Viewing as {impersonation.targetName || 'user'} - Admin Support Mode ({formatCountdown(msRemaining)})
         </AppText>
       </View>
@@ -80,8 +80,8 @@ export function ImpersonationBanner() {
           opacity: isEnding ? 0.6 : 1,
         }}
       >
-        <Ionicons name="log-out-outline" size={14} color="#FFFFFF" />
-        <AppText variant="caption" weight="bold" tone="inverse">
+        <Ionicons name="log-out-outline" size={14} color={colors.onCritical} />
+        <AppText variant="caption" weight="bold" tone="onCritical">
           {isEnding ? 'Returning...' : 'Return to Admin'}
         </AppText>
       </Pressable>

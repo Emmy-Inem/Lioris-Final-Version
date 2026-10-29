@@ -416,7 +416,7 @@ export default function SystemHealthScreen() {
               }}
             >
               <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-              <AppText style={{ color: '#047857', fontSize: 13.5, fontWeight: '500' }}>
+              <AppText style={{ color: isDark ? '#6EE7B7' : '#047857', fontSize: 13.5, fontWeight: '500' }}>
                 All database foreign keys, cascaded relations, and indexes are in verified sync. No orphaned records found.
               </AppText>
             </View>
@@ -461,7 +461,7 @@ export default function SystemHealthScreen() {
               }}
             >
               <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-              <AppText style={{ color: '#047857', fontSize: 13.5, fontWeight: '500' }}>
+              <AppText style={{ color: isDark ? '#6EE7B7' : '#047857', fontSize: 13.5, fontWeight: '500' }}>
                 No client errors reported.
               </AppText>
             </View>

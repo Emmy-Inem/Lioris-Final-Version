@@ -501,7 +501,7 @@ export function PublishEventModal({
                       borderColor: selected ? colors.brandPrimary : colors.border,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                    <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
                       {s === 'campus' ? 'Campus Specific' : 'Global Network (All Nodes)'}
                     </AppText>
                   </Pressable>
@@ -553,7 +553,7 @@ export function PublishEventModal({
                       borderColor: selected ? colors.brandPrimary : colors.border,
                     }}
                   >
-                    <AppText variant="caption" weight="semiBold" tone={selected ? 'inverse' : 'secondary'}>
+                    <AppText variant="caption" weight="semiBold" tone={selected ? 'onBrand' : 'secondary'}>
                       {cat}
                     </AppText>
                   </Pressable>

@@ -73,6 +73,11 @@ export function accentTextOnTint(accent: string, bases: string[], alpha = 0.126,
   return fg;
 }
 
+/** Text/icon colour for a `brandPrimary` fill: navy ink or white, whichever reads better (white on every light-theme brand, navy on the lighter dark-theme brands). */
+export function onBrandColor(brand: string): string {
+  return readableOn(brand, '#0B1120', '#FFFFFF');
+}
+
 /** Picks near-black or white text, whichever reads better on `bg`. */
 export function readableOn(bg: string, dark = '#0A1326', light = '#FFFFFF'): string {
   return contrastRatio(dark, bg) >= contrastRatio(light, bg) ? dark : light;

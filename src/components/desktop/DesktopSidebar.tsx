@@ -301,7 +301,7 @@ export function DesktopSidebar() {
                 <Ionicons
                   name={item.icon}
                   size={18}
-                  color={isActive ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
+                  color={isActive ? colors.onBrand : isDark ? '#94A3B8' : '#64748B'}
                 />
                 {collapsed && item.badgeCount && item.badgeCount > 0 ? (
                   <View style={styles.miniBadgeDot} />
@@ -315,7 +315,7 @@ export function DesktopSidebar() {
                     flex: 1,
                     minWidth: 0,
                     fontSize: 13,
-                    color: isActive ? '#FFFFFF' : isDark ? '#E2E8F0' : '#1E293B',
+                    color: isActive ? colors.onBrand : isDark ? '#E2E8F0' : '#1E293B',
                   }}
                 >
                   {item.label}
@@ -327,7 +327,7 @@ export function DesktopSidebar() {
                   style={[
                     styles.badge,
                     {
-                      backgroundColor: isActive ? '#FFFFFF' : colors.brandPrimary,
+                      backgroundColor: isActive ? colors.onBrand : colors.brandPrimary,
                       flexShrink: 0,
                     },
                   ]}
@@ -336,7 +336,7 @@ export function DesktopSidebar() {
                     variant="caption"
                     weight="bold"
                     style={{
-                      color: isActive ? colors.brandPrimary : '#FFFFFF',
+                      color: isActive ? colors.brandPrimary : colors.onBrand,
                       fontSize: 10,
                     }}
                   >

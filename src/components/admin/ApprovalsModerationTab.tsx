@@ -169,7 +169,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  backgroundColor: section === 'resources' ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={section === 'resources' ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={section === 'resources' ? 'onBrand' : 'secondary'}>
  Resource Submissions{countLabel(allResourcesData, pendingResources.length)}
  </AppText>
  </Pressable>
@@ -187,7 +187,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  backgroundColor: section === 'credentials' ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={section === 'credentials' ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={section === 'credentials' ? 'onBrand' : 'secondary'}>
  ID Verifications{countLabel(verificationsData, verifications.length)}
  </AppText>
  </Pressable>
@@ -206,7 +206,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  backgroundColor: section === 'nodes' ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={section === 'nodes' ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={section === 'nodes' ? 'onBrand' : 'secondary'}>
  Campus Nodes{countLabel(waitlistData, waitlist.length)}
  </AppText>
  </Pressable>

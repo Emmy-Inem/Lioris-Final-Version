@@ -164,7 +164,7 @@ export function NotificationsScreen() {
               <AppText
                 variant="caption"
                 weight={isActive ? 'bold' : 'medium'}
-                style={{ color: isActive ? '#FFFFFF' : colors.textSecondary }}
+                style={{ color: isActive ? colors.onBrand : colors.textSecondary }}
               >
                 {f.label}
               </AppText>
@@ -537,7 +537,7 @@ export function NotificationsScreen() {
                   backgroundColor: selected ? colors.brandPrimary : 'transparent',
                 }}
               >
-                <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                <AppText variant="bodySmall" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
                   {t} {t === 'Alerts' && unreadCount > 0 ? `(${unreadCount})` : ''}
                 </AppText>
               </Pressable>

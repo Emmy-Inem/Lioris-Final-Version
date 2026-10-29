@@ -100,7 +100,7 @@ export function SegmentedTabs({
               borderColor: selected ? colors.brandPrimary : colors.border,
             }}
           >
-            <AppText variant="bodySmall" weight={selected ? 'bold' : 'medium'} style={{ color: selected ? '#FFFFFF' : colors.textPrimary }}>
+            <AppText variant="bodySmall" weight={selected ? 'bold' : 'medium'} style={{ color: selected ? colors.onBrand : colors.textPrimary }}>
               {tab.label}
             </AppText>
             {tab.badge ? (
@@ -115,7 +115,7 @@ export function SegmentedTabs({
                   backgroundColor: selected ? 'rgba(255,255,255,0.28)' : colors.pastelPrimaryBg,
                 }}
               >
-                <AppText weight="bold" style={{ fontSize: 10.5, color: selected ? '#FFFFFF' : colors.brandPrimary }}>
+                <AppText weight="bold" style={{ fontSize: 10.5, color: selected ? colors.onBrand : colors.brandPrimary }}>
                   {tab.badge > 99 ? '99+' : tab.badge}
                 </AppText>
               </View>

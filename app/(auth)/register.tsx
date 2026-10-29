@@ -242,11 +242,11 @@ export default function RegisterScreen() {
  backgroundColor: selected ? colors.brandPrimary : 'transparent',
  }}
  >
- <Ionicons name={p.icon} size={14} color={selected ? '#FFFFFF' : isDark ? '#CBD5E1' : '#475467'} />
+ <Ionicons name={p.icon} size={14} color={selected ? colors.onBrand : isDark ? '#CBD5E1' : '#475467'} />
  <AppText
  variant="bodySmall"
  weight="bold"
- tone={selected ? 'inverse' : 'secondary'}
+ tone={selected ? 'onBrand' : 'secondary'}
  style={!selected ? { color: isDark ? '#CBD5E1' : '#475467' } : undefined}
  >
  {p.label}
@@ -290,7 +290,7 @@ export default function RegisterScreen() {
            <AppText
              variant="caption"
              weight="bold"
-             tone={isSelected ? 'inverse' : 'primary'}
+             tone={isSelected ? 'onBrand' : 'primary'}
            >
              {inst.shortName || inst.code}
            </AppText>

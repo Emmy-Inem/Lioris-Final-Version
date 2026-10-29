@@ -552,7 +552,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  borderColor: '#FFFFFF',
  }}
  >
- <Ionicons name="pencil" size={12} color="#FFFFFF" />
+ <Ionicons name="pencil" size={12} color={colors.onBrand} />
  </View>
  </Pressable>
 
@@ -809,11 +809,11 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  backgroundColor: selected ? colors.brandPrimary : 'transparent',
  }}
  >
- <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+ <AppText variant="bodySmall" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
  {tab}
  </AppText>
  {count > 0 ? (
- <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+ <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
  {count}
  </AppText>
  ) : null}
@@ -910,7 +910,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                         <AppText
                           variant="caption"
                           weight="bold"
-                          tone={isSubActive ? 'inverse' : 'secondary'}
+                          tone={isSubActive ? 'onBrand' : 'secondary'}
                         >
                           {sub.label}
                         </AppText>
@@ -1087,7 +1087,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="image" size={18} color="#FFFFFF" />
+                  <Ionicons name="image" size={18} color={colors.onBrand} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <AppText weight="bold" variant="bodySmall">

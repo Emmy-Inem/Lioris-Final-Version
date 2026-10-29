@@ -181,7 +181,7 @@ export function DepartmentPicker({
                   <AppText
                     variant="caption"
                     weight="bold"
-                    tone={activeGroupCode === null ? 'inverse' : 'secondary'}
+                    tone={activeGroupCode === null ? 'onBrand' : 'secondary'}
                   >
                     All {groupLabel}s
                   </AppText>
@@ -208,7 +208,7 @@ export function DepartmentPicker({
                       <AppText
                         variant="caption"
                         weight="bold"
-                        tone={isSelected ? 'inverse' : 'secondary'}
+                        tone={isSelected ? 'onBrand' : 'secondary'}
                       >
                         {displayChip}
                       </AppText>

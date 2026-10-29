@@ -105,9 +105,9 @@ export function ErrorStateView({
             }}
           >
             {retrying ? (
-              <ActivityIndicator size="small" color={colors.textInverse} />
+              <ActivityIndicator size="small" color={colors.onCritical} />
             ) : (
-              <AppText variant="caption" weight="bold" tone="inverse">
+              <AppText variant="caption" weight="bold" tone="onCritical">
                 {retryLabel}
               </AppText>
             )}

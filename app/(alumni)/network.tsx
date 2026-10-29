@@ -336,7 +336,7 @@ export default function AlumniNetworkScreen() {
                 borderColor: active ? colors.brandPrimary : colors.border,
               }}
             >
-              <AppText variant="caption" weight={active ? 'bold' : 'regular'} tone={active ? 'inverse' : 'secondary'}>
+              <AppText variant="caption" weight={active ? 'bold' : 'regular'} tone={active ? 'onBrand' : 'secondary'}>
                 Class of {year}
               </AppText>
             </Pressable>

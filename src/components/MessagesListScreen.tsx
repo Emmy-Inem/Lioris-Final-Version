@@ -191,8 +191,8 @@ export function MessagesListScreen() {
                     borderRadius: radius.pill,
                   }}
                 >
-                  <Ionicons name="create-outline" size={15} color="#FFFFFF" />
-                  <AppText variant="caption" weight="bold" tone="inverse">
+                  <Ionicons name="create-outline" size={15} color={colors.onBrand} />
+                  <AppText variant="caption" weight="bold" tone="onBrand">
                     New Chat
                   </AppText>
                 </Pressable>
@@ -326,8 +326,8 @@ export function MessagesListScreen() {
                     borderRadius: radius.pill,
                   }}
                 >
-                  <Ionicons name="create-outline" size={16} color="#FFFFFF" />
-                  <AppText variant="bodySmall" weight="bold" tone="inverse">
+                  <Ionicons name="create-outline" size={16} color={colors.onBrand} />
+                  <AppText variant="bodySmall" weight="bold" tone="onBrand">
                     Start a New Conversation
                   </AppText>
                 </Pressable>
@@ -360,8 +360,8 @@ export function MessagesListScreen() {
                   flexShrink: 0,
                 }}
               >
-                <Ionicons name="create-outline" size={15} color="#FFFFFF" />
-                <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11.5 }}>
+                <Ionicons name="create-outline" size={15} color={colors.onBrand} />
+                <AppText variant="caption" weight="bold" tone="onBrand" style={{ fontSize: 11.5 }}>
                   New Chat
                 </AppText>
               </Pressable>
@@ -427,7 +427,7 @@ export function MessagesListScreen() {
                     backgroundColor: selected ? colors.brandPrimary : 'transparent',
                   }}
                 >
-                  <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                  <AppText variant="bodySmall" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
                     {tab === 'all' ? 'All Messages' : 'Unread'}
                   </AppText>
                 </Pressable>
@@ -489,8 +489,8 @@ export function MessagesListScreen() {
                         borderRadius: radius.pill,
                       }}
                     >
-                      <Ionicons name="create-outline" size={17} color="#FFFFFF" />
-                      <AppText weight="bold" tone="inverse" variant="bodySmall">
+                      <Ionicons name="create-outline" size={17} color={colors.onBrand} />
+                      <AppText weight="bold" tone="onBrand" variant="bodySmall">
                         Start a Conversation
                       </AppText>
                     </Pressable>

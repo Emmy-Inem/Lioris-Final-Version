@@ -276,7 +276,7 @@ export function ForumsModerationTab() {
                 backgroundColor: selected ? colors.brandPrimary : colors.divider,
               }}
             >
-              <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
                 {f}
               </AppText>
             </Pressable>

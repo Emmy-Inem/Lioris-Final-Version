@@ -89,7 +89,7 @@ export default function CalendarScreen() {
  backgroundColor: selected ? colors.brandPrimary : 'transparent',
  }}
  >
- <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+ <AppText variant="bodySmall" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
  {t}
  </AppText>
  </Pressable>

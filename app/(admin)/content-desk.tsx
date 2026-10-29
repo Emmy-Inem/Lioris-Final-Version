@@ -117,8 +117,8 @@ export default function ContentDeskScreen() {
                   borderColor: selected ? colors.brandPrimary : colors.border,
                 }}
               >
-                <Ionicons name={t.icon as any} size={15} color={selected ? '#FFFFFF' : colors.textSecondary} />
-                <AppText variant="bodySmall" weight={selected ? 'bold' : 'semiBold'} tone={selected ? 'inverse' : 'secondary'}>
+                <Ionicons name={t.icon as any} size={15} color={selected ? colors.onBrand : colors.textSecondary} />
+                <AppText variant="bodySmall" weight={selected ? 'bold' : 'semiBold'} tone={selected ? 'onBrand' : 'secondary'}>
                   {t.label}
                 </AppText>
               </Pressable>

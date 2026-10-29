@@ -103,8 +103,8 @@ function ChatAttachment({ mediaUrl, isMe }: { mediaUrl: string; isMe: boolean })
         marginBottom: 6,
       }}
     >
-      <Ionicons name="document-text" size={16} color={isMe ? '#FFFFFF' : colors.brandPrimary} />
-      <AppText variant="caption" tone={isMe ? 'inverse' : 'brand'} style={{ textDecorationLine: 'underline' }}>
+      <Ionicons name="document-text" size={16} color={isMe ? colors.onBrand : colors.brandPrimary} />
+      <AppText variant="caption" tone={isMe ? 'onBrand' : 'brand'} style={{ textDecorationLine: 'underline' }}>
         {loading ? 'Preparing file…' : url ? 'Download attachment' : 'Attachment unavailable'}
       </AppText>
     </Pressable>
@@ -610,7 +610,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                         justifyContent: 'center',
                       }}
                     >
-                      <Ionicons name={isVoice ? 'call' : 'videocam'} size={20} color="#FFFFFF" />
+                      <Ionicons name={isVoice ? 'call' : 'videocam'} size={20} color={colors.onBrand} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <AppText weight="bold" variant="bodySmall">
@@ -629,7 +629,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: 6,
-                      backgroundColor: '#22C55E',
+                      backgroundColor: '#15803D',
                       paddingVertical: 9,
                       borderRadius: radius.pill,
                     }}
@@ -688,7 +688,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
                 {item.mediaUrl ? <ChatAttachment mediaUrl={item.mediaUrl} isMe={isMe} /> : null}
                 <AppText
                   variant="bodySmall"
-                  tone={isMe ? 'inverse' : 'primary'}
+                  tone={isMe ? 'onBrand' : 'primary'}
                   style={{ lineHeight: 19 }}
                 >
                   {item.content}
@@ -817,7 +817,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
             justifyContent: 'center',
           }}
         >
-          <Ionicons name="send" size={17} color={draft.trim() ? '#FFFFFF' : colors.textSecondary} />
+          <Ionicons name="send" size={17} color={draft.trim() ? colors.onBrand : colors.textSecondary} />
         </Pressable>
       </View>
       ) : (

@@ -99,13 +99,13 @@ export function OfflineBanner() {
         paddingHorizontal: spacing.sm,
       }}
     >
-      <Ionicons name="cloud-offline-outline" size={14} color="#FFFFFF" />
-      <AppText variant="caption" weight="bold" tone="inverse" style={{ fontSize: 11.5 }}>
+      <Ionicons name="cloud-offline-outline" size={14} color={colors.onCritical} />
+      <AppText variant="caption" weight="bold" tone="onCritical" style={{ fontSize: 11.5 }}>
         {checking
           ? 'Checking network connection...'
           : "You're offline. Tap to reconnect"}
       </AppText>
-      <Ionicons name="refresh-outline" size={12} color="#FFFFFF" style={{ opacity: 0.9 }} />
+      <Ionicons name="refresh-outline" size={12} color={colors.onCritical} style={{ opacity: 0.9 }} />
     </Pressable>
   );
 }

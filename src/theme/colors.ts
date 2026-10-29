@@ -106,6 +106,10 @@ export interface ThemeColors {
  textPrimary: string;
  textSecondary: string;
  textInverse: string;
+ /** Text/icons drawn on a `brandPrimary` fill: white where the fill is dark (light theme), navy ink where it is light (dark theme). Re-derived per campus brand in ThemeProvider. */
+ onBrand: string;
+ /** Text/icons drawn on a `critical` fill (error banners, destructive chips). */
+ onCritical: string;
  brandPrimary: string;
  brandPrimaryPressed: string;
  brandAccent: string;
@@ -152,6 +156,8 @@ export const lightColors: ThemeColors = {
  // #5B6679 (was #667085): 4.7:1 on the `border` fill and 5.8:1 on white; the old value was 4.06:1 on `border`.
  textSecondary: '#5B6679',
  textInverse: '#FFFFFF',
+ onBrand: '#FFFFFF',
+ onCritical: '#FFFFFF', // 5.64:1 on #C42A30
 
  brandPrimary: palette.liorisBlue,
  brandPrimaryPressed: '#102DB8',
@@ -202,6 +208,8 @@ export const darkColors: ThemeColors = {
  textPrimary: '#FFFFFF',
  textSecondary: '#94A3B8',
  textInverse: '#FFFFFF',
+ onBrand: '#0B1120', // 5.95:1 on #6A89FF (white is 3.16:1)
+ onCritical: '#0B1120', // 5.56:1 on #F25555 (white is 3.38:1)
 
  brandPrimary: '#6A89FF',
  brandPrimaryPressed: palette.liorisBlue,

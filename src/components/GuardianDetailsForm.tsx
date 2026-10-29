@@ -81,7 +81,7 @@ export function GuardianDetailsForm({ initial, submitLabel = 'Save guardian deta
                 borderColor: selected ? colors.brandPrimary : colors.border,
               }}
             >
-              <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'primary'}>
+              <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'primary'}>
                 {r.label}
               </AppText>
             </Pressable>

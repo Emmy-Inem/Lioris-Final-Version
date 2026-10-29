@@ -393,8 +393,8 @@ export default function ResourcesScreen() {
                 paddingVertical: 6,
               }}
             >
-              <Ionicons name="library" size={13} color="#ffffff" />
-              <AppText weight="bold" variant="caption" style={{ color: '#ffffff', fontSize: 11 }}>
+              <Ionicons name="library" size={13} color={colors.onBrand} />
+              <AppText weight="bold" variant="caption" style={{ color: colors.onBrand, fontSize: 11 }}>
                 Global Library
               </AppText>
             </Pressable>
@@ -414,8 +414,8 @@ export default function ResourcesScreen() {
               paddingVertical: 6,
             }}
           >
-            <Ionicons name="school" size={13} color="#ffffff" />
-            <AppText weight="bold" variant="caption" style={{ color: '#ffffff', fontSize: 11 }}>
+            <Ionicons name="school" size={13} color={colors.onBrand} />
+            <AppText weight="bold" variant="caption" style={{ color: colors.onBrand, fontSize: 11 }}>
               Research Hub
             </AppText>
           </Pressable>
@@ -439,8 +439,8 @@ export default function ResourcesScreen() {
               shadowRadius: 3,
             }}
           >
-            <Ionicons name="cloud-upload-outline" size={14} color="#FFFFFF" />
-            <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
+            <Ionicons name="cloud-upload-outline" size={14} color={colors.onBrand} />
+            <AppText weight="bold" tone="onBrand" variant="caption" style={{ fontSize: 11 }}>
               Upload
             </AppText>
           </Pressable>
@@ -546,7 +546,7 @@ export default function ResourcesScreen() {
                     variant="caption"
                     style={{
                       fontSize: 10.5,
-                      color: isSelected ? colors.textInverse : colors.textSecondary,
+                      color: isSelected ? colors.onBrand : colors.textSecondary,
                     }}
                   >
                     {item.code === 'CURRENT' ? `My Campus (${effectiveCampus})` : item.label}
@@ -585,7 +585,7 @@ export default function ResourcesScreen() {
                     variant="caption"
                     style={{
                       fontSize: 10.5,
-                      color: isSelected ? colors.textInverse : colors.textSecondary,
+                      color: isSelected ? colors.onBrand : colors.textSecondary,
                     }}
                   >
                     {item.label}
@@ -785,14 +785,14 @@ export default function ResourcesScreen() {
                 <Ionicons
                   name={cat.icon}
                   size={13}
-                  color={isActive ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
+                  color={isActive ? colors.onBrand : isDark ? '#94A3B8' : '#64748B'}
                 />
                 <AppText
                   variant="caption"
                   weight={isActive ? 'bold' : 'medium'}
                   style={{
                     fontSize: 11,
-                    color: isActive ? '#FFFFFF' : isDark ? '#E2E8F0' : '#334155',
+                    color: isActive ? colors.onBrand : isDark ? '#E2E8F0' : '#334155',
                   }}
                 >
                   {cat.label}
@@ -860,8 +860,8 @@ export default function ResourcesScreen() {
                     gap: 7,
                   }}
                 >
-                  <Ionicons name="library" size={16} color="#FFFFFF" />
-                  <AppText variant="bodySmall" weight="bold" tone="inverse">
+                  <Ionicons name="library" size={16} color={colors.onBrand} />
+                  <AppText variant="bodySmall" weight="bold" tone="onBrand">
                     Global Library
                   </AppText>
                 </Pressable>
@@ -881,8 +881,8 @@ export default function ResourcesScreen() {
                   gap: 7,
                 }}
               >
-                <Ionicons name="school" size={16} color="#FFFFFF" />
-                <AppText variant="bodySmall" weight="bold" tone="inverse">
+                <Ionicons name="school" size={16} color={colors.onBrand} />
+                <AppText variant="bodySmall" weight="bold" tone="onBrand">
                   Research Hub
                 </AppText>
               </Pressable>
@@ -902,8 +902,8 @@ export default function ResourcesScreen() {
                     gap: 7,
                   }}
                 >
-                  <Ionicons name="sparkles" size={16} color="#FFFFFF" />
-                  <AppText variant="bodySmall" weight="bold" tone="inverse">
+                  <Ionicons name="sparkles" size={16} color={colors.onBrand} />
+                  <AppText variant="bodySmall" weight="bold" tone="onBrand">
                     AI Study Copilot
                   </AppText>
                 </Pressable>
@@ -924,8 +924,8 @@ export default function ResourcesScreen() {
                   gap: 8,
                 }}
               >
-                <Ionicons name="cloud-upload" size={18} color="#FFFFFF" />
-                <AppText variant="bodySmall" weight="bold" tone="inverse">
+                <Ionicons name="cloud-upload" size={18} color={colors.onBrand} />
+                <AppText variant="bodySmall" weight="bold" tone="onBrand">
                   Upload Resource
                 </AppText>
               </Pressable>
@@ -1029,7 +1029,7 @@ export default function ResourcesScreen() {
                         variant="caption"
                         style={{
                           fontSize: 11,
-                          color: isSelected ? colors.textInverse : colors.textSecondary,
+                          color: isSelected ? colors.onBrand : colors.textSecondary,
                         }}
                       >
                         {item.code === 'CURRENT' ? `My Campus (${effectiveCampus})` : item.label}
@@ -1068,7 +1068,7 @@ export default function ResourcesScreen() {
                         variant="caption"
                         style={{
                           fontSize: 11,
-                          color: isSelected ? colors.textInverse : colors.textSecondary,
+                          color: isSelected ? colors.onBrand : colors.textSecondary,
                         }}
                       >
                         {item.label}
@@ -1183,12 +1183,12 @@ export default function ResourcesScreen() {
                       <Ionicons
                         name={c.icon}
                         size={14}
-                        color={selected ? '#FFFFFF' : colors.textSecondary}
+                        color={selected ? colors.onBrand : colors.textSecondary}
                       />
                       <AppText
                         variant="bodySmall"
                         weight={selected ? 'bold' : 'medium'}
-                        style={{ color: selected ? '#FFFFFF' : colors.textPrimary, fontSize: 12 }}
+                        style={{ color: selected ? colors.onBrand : colors.textPrimary, fontSize: 12 }}
                       >
                         {c.label}
                       </AppText>

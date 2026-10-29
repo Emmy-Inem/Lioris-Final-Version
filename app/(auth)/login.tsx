@@ -145,12 +145,12 @@ export default function LoginScreen() {
  <Ionicons
  name={p === 'student' ? 'school' : 'star'}
  size={14}
- color={selected ? '#FFFFFF' : isDark ? '#CBD5E1' : '#475467'}
+ color={selected ? colors.onBrand : isDark ? '#CBD5E1' : '#475467'}
  />
  <AppText
  variant="bodySmall"
  weight="bold"
- tone={selected ? 'inverse' : 'secondary'}
+ tone={selected ? 'onBrand' : 'secondary'}
  style={!selected ? { color: isDark ? '#CBD5E1' : '#475467' } : undefined}
  >
  {p === 'student' ? 'Student Portal' : 'Alumni Circle'}

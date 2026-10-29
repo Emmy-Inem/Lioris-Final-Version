@@ -1032,7 +1032,7 @@ export function EventDetailScreen() {
               <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <View style={{ backgroundColor: colors.brandPrimary, paddingHorizontal: 12, paddingVertical: 5, borderRadius: radius.pill }}>
-                    <AppText variant="caption" weight="bold" tone="inverse" style={{ textTransform: 'uppercase' }}>
+                    <AppText variant="caption" weight="bold" tone="onBrand" style={{ textTransform: 'uppercase' }}>
                       {event.category}
                     </AppText>
                   </View>
@@ -1043,7 +1043,7 @@ export function EventDetailScreen() {
                 </View>
 
                 <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: radius.pill }}>
-                  <AppText variant="caption" weight="bold" tone="inverse">
+                  <AppText variant="caption" weight="bold" tone="onBrand">
                     {hasCapacity ? `${currentRsvpCount} / ${capacity} Registered` : `${currentRsvpCount} Registered`}
                   </AppText>
                 </View>
@@ -1485,7 +1485,7 @@ export function EventDetailScreen() {
             <View style={{ position: 'absolute', bottom: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
               <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                 <View style={{ backgroundColor: colors.brandPrimary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}>
-                  <AppText variant="caption" weight="bold" tone="inverse" style={{ textTransform: 'uppercase' }}>
+                  <AppText variant="caption" weight="bold" tone="onBrand" style={{ textTransform: 'uppercase' }}>
                     {event.category}
                   </AppText>
                 </View>
@@ -1495,7 +1495,7 @@ export function EventDetailScreen() {
               </View>
 
               <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}>
-                <AppText variant="caption" weight="bold" tone="inverse">
+                <AppText variant="caption" weight="bold" tone="onBrand">
                   {hasCapacity ? `${currentRsvpCount} / ${capacity} Registered` : `${currentRsvpCount} Registered`}
                 </AppText>
               </View>
@@ -2280,7 +2280,7 @@ export function EventDetailScreen() {
                               paddingVertical: 7,
                               alignItems: 'center',
                               borderRadius: radius.pill,
-                              backgroundColor: active ? (st === 'approved' ? '#10B981' : st === 'pending' ? '#F59E0B' : '#EF4444') : colors.surface,
+                              backgroundColor: active ? (st === 'approved' ? '#047857' : st === 'pending' ? '#B45309' : '#DC2626') : colors.surface,
                             }}
                           >
                             <AppText variant="caption" weight="bold" style={{ color: active ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}>
@@ -2315,7 +2315,7 @@ export function EventDetailScreen() {
                         borderColor: editIsSpotlight ? colors.brandPrimary : colors.border,
                       }}
                     >
-                      <AppText weight="bold" style={{ fontSize: 11, color: editIsSpotlight ? '#FFFFFF' : colors.textSecondary }}>
+                      <AppText weight="bold" style={{ fontSize: 11, color: editIsSpotlight ? colors.onBrand : colors.textSecondary }}>
                         {editIsSpotlight ? 'FEATURED ★' : 'STANDARD'}
                       </AppText>
                     </Pressable>
@@ -2337,9 +2337,9 @@ export function EventDetailScreen() {
                         paddingHorizontal: 12,
                         paddingVertical: 6,
                         borderRadius: radius.pill,
-                        backgroundColor: editSponsored ? '#F59E0B' : colors.surface,
+                        backgroundColor: editSponsored ? '#B45309' : colors.surface,
                         borderWidth: 1,
-                        borderColor: editSponsored ? '#F59E0B' : colors.border,
+                        borderColor: editSponsored ? '#B45309' : colors.border,
                       }}
                     >
                       <AppText weight="bold" style={{ fontSize: 11, color: editSponsored ? '#FFFFFF' : colors.textSecondary }}>

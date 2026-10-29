@@ -168,7 +168,8 @@ function TabItem({
     transform: [{ scale: labelScale.value }],
   }));
 
-  const iconColor = isFocused ? '#FFFFFF' : isDark ? '#CBD5E1' : '#475569';
+  const { colors } = useTheme();
+  const iconColor = isFocused ? colors.onBrand : isDark ? '#CBD5E1' : '#475569';
 
   return (
     <Animated.View style={[styles.tabItemContainer, animatedContainerStyle]}>
@@ -190,7 +191,7 @@ function TabItem({
             numberOfLines={1}
             ellipsizeMode="clip"
             style={{
-              color: '#FFFFFF',
+              color: colors.onBrand,
               fontSize: 12,
               lineHeight: 15,
               letterSpacing: 0.2,

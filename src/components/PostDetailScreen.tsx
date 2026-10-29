@@ -548,7 +548,7 @@ export function PostDetailScreen() {
             onPress={handleGoBack}
             style={{ marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.brandPrimary }}
           >
-            <AppText tone="inverse" weight="bold">Go Back</AppText>
+            <AppText tone="onBrand" weight="bold">Go Back</AppText>
           </Pressable>
         </View>
       </ScreenContainer>
@@ -1078,7 +1078,7 @@ export function PostDetailScreen() {
                   flexShrink: 0,
                 }}
               >
-                <AppText variant="caption" weight="bold" tone={(!newReply.trim() && !attachedReplyMedia) ? 'secondary' : 'inverse'}>
+                <AppText variant="caption" weight="bold" tone={(!newReply.trim() && !attachedReplyMedia) ? 'secondary' : 'onBrand'}>
                   {submittingReply ? '...' : 'Reply'}
                 </AppText>
               </Pressable>

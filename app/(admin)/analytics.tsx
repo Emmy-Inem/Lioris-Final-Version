@@ -330,7 +330,7 @@ export default function AdminAnalyticsScreen() {
                   <AppText
                     variant="caption"
                     weight="bold"
-                    tone={timeRangeDays === opt.days ? 'inverse' : 'secondary'}
+                    tone={timeRangeDays === opt.days ? 'onBrand' : 'secondary'}
                   >
                     {opt.label}
                   </AppText>
@@ -409,7 +409,7 @@ export default function AdminAnalyticsScreen() {
                 borderColor: colors.brandPrimary,
               }}
             >
-              <AppText variant="caption" weight="bold" tone="inverse">
+              <AppText variant="caption" weight="bold" tone="onBrand">
                 {activeCampusName}
               </AppText>
             </Pressable>
@@ -434,7 +434,7 @@ export default function AdminAnalyticsScreen() {
                   borderColor: campusFilter === 'ALL' ? colors.brandPrimary : colors.border,
                 }}
               >
-                <AppText variant="caption" weight="bold" tone={campusFilter === 'ALL' ? 'inverse' : 'primary'}>
+                <AppText variant="caption" weight="bold" tone={campusFilter === 'ALL' ? 'onBrand' : 'primary'}>
                   All Institutions
                 </AppText>
               </Pressable>
@@ -456,7 +456,7 @@ export default function AdminAnalyticsScreen() {
                       borderColor: active ? colors.brandPrimary : colors.border,
                     }}
                   >
-                    <AppText variant="caption" weight="bold" tone={active ? 'inverse' : 'primary'}>
+                    <AppText variant="caption" weight="bold" tone={active ? 'onBrand' : 'primary'}>
                       {inst.shortName || inst.name}
                     </AppText>
                   </Pressable>
@@ -1083,7 +1083,7 @@ export default function AdminAnalyticsScreen() {
                   <AppText
                     variant="caption"
                     weight="bold"
-                    tone={statusFilter === type ? 'inverse' : 'secondary'}
+                    tone={statusFilter === type ? 'onBrand' : 'secondary'}
                   >
                     {type === 'all' ? 'All Users' : type === 'active' ? 'Active (7d)' : 'Inactive'}
                   </AppText>

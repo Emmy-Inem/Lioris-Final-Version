@@ -151,7 +151,7 @@ export function IncomingCallListener() {
                 accessibilityRole="button"
                 accessibilityLabel="Accept call"
                 onPress={handleAccept}
-                style={[styles.actionBtn, { backgroundColor: '#22C55E' }]}
+                style={[styles.actionBtn, { backgroundColor: '#15803D' }]}
               >
                 <Ionicons name={isVoice ? 'call' : 'videocam'} size={26} color="#FFFFFF" />
               </Pressable>

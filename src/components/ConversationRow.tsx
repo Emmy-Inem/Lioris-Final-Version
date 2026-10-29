@@ -106,7 +106,7 @@ export function ConversationRow({ conversation, onArchive, onSelect, isSelected 
  flexShrink: 0,
  }}
  >
- <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 10 }}>
+ <AppText variant="caption"weight="bold"tone="onBrand"style={{ fontSize: 10 }}>
  {conversation.unreadCount}
  </AppText>
  </View>
@@ -131,7 +131,7 @@ export function ConversationRow({ conversation, onArchive, onSelect, isSelected 
  justifyContent: 'center',
  }}
  >
- <Ionicons name="archive-outline"size={20} color="#FFFFFF" />
+ <Ionicons name="archive-outline"size={20} color={colors.onCritical} />
  </Pressable>
  )}
  >

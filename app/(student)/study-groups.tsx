@@ -160,7 +160,7 @@ export default function StudyGroupsScreen() {
                   onPress={() => setCourse(c)}
                   style={{ paddingHorizontal: 13, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: selected ? colors.brandPrimary : colors.surface, borderWidth: 1, borderColor: selected ? colors.brandPrimary : colors.border }}
                 >
-                  <AppText variant="caption" weight={selected ? 'bold' : 'medium'} style={{ color: selected ? '#FFFFFF' : colors.textSecondary }}>
+                  <AppText variant="caption" weight={selected ? 'bold' : 'medium'} style={{ color: selected ? colors.onBrand : colors.textSecondary }}>
                     {c}
                   </AppText>
                 </Pressable>

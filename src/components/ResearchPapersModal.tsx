@@ -233,9 +233,9 @@ export function ResearchPapersModal({
                 style={[styles.searchBtn, { backgroundColor: colors.brandPrimary }]}
               >
                 {loading ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
+                  <ActivityIndicator size="small" color={colors.onBrand} />
                 ) : (
-                  <AppText variant="caption" weight="bold" style={{ color: '#ffffff' }}>
+                  <AppText variant="caption" weight="bold" style={{ color: colors.onBrand }}>
                     Search
                   </AppText>
                 )}
@@ -263,7 +263,7 @@ export function ResearchPapersModal({
                     <AppText
                       variant="caption"
                       weight={isSelected ? 'bold' : 'regular'}
-                      style={{ color: isSelected ? '#ffffff' : colors.textSecondary }}
+                      style={{ color: isSelected ? colors.onBrand : colors.textSecondary }}
                     >
                       {topic}
                     </AppText>
@@ -423,8 +423,8 @@ export function ResearchPapersModal({
                         onPress={() => handleOpenPaper(paper)}
                         style={[styles.smallActionBtn, { backgroundColor: colors.brandPrimary }]}
                       >
-                        <Ionicons name="open-outline" size={13} color="#ffffff" />
-                        <AppText variant="caption" weight="bold" style={{ color: '#ffffff', fontSize: 11 }}>
+                        <Ionicons name="open-outline" size={13} color={colors.onBrand} />
+                        <AppText variant="caption" weight="bold" style={{ color: colors.onBrand, fontSize: 11 }}>
                           {paper.openAccessPdfUrl ? 'Open PDF ↗' : 'View Paper ↗'}
                         </AppText>
                       </Pressable>

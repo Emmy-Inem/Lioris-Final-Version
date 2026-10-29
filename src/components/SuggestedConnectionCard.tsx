@@ -131,13 +131,13 @@ export function SuggestedConnectionCard({ person, index }: { person: SuggestedPe
           <Ionicons
             name={status === 'pending' ? 'checkmark-circle' : 'person-add'}
             size={14}
-            color={status === 'pending' ? colors.brandPrimary : '#FFFFFF'}
+            color={status === 'pending' ? colors.brandPrimary : colors.onBrand}
           />
           <AppText
             variant="caption"
             weight="bold"
             style={{
-              color: status === 'pending' ? colors.brandPrimary : '#FFFFFF',
+              color: status === 'pending' ? colors.brandPrimary : colors.onBrand,
               fontSize: 12,
             }}
           >

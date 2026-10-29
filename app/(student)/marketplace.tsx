@@ -176,8 +176,8 @@ export default function MarketplaceScreen() {
                   gap: 8,
                 }}
               >
-                <Ionicons name="add" size={18} color="#FFFFFF" />
-                <AppText variant="bodySmall" weight="bold" tone="inverse">
+                <Ionicons name="add" size={18} color={colors.onBrand} />
+                <AppText variant="bodySmall" weight="bold" tone="onBrand">
                   List an Item
                 </AppText>
               </Pressable>
@@ -243,12 +243,12 @@ export default function MarketplaceScreen() {
                       <Ionicons
                         name={cat.icon}
                         size={14}
-                        color={isSelected ? '#FFFFFF' : colors.textSecondary}
+                        color={isSelected ? colors.onBrand : colors.textSecondary}
                       />
                       <AppText
                         variant="bodySmall"
                         weight={isSelected ? 'bold' : 'medium'}
-                        style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 12 }}
+                        style={{ color: isSelected ? colors.onBrand : colors.textPrimary, fontSize: 12 }}
                       >
                         {cat.label}
                       </AppText>
@@ -370,8 +370,8 @@ export default function MarketplaceScreen() {
                 paddingVertical: 7,
               }}
             >
-              <Ionicons name="add" size={16} color="#FFFFFF" />
-              <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
+              <Ionicons name="add" size={16} color={colors.onBrand} />
+              <AppText weight="bold" tone="onBrand" variant="caption" style={{ fontSize: 11 }}>
                 List Item
               </AppText>
             </Pressable>

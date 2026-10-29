@@ -128,11 +128,11 @@ export function MyListingsScreen() {
                 backgroundColor: selected ? colors.brandPrimary : colors.surface,
               }}
             >
-              <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="bodySmall" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
                 {f.label}
               </AppText>
               {errorMode === 'blocking' ? null : (
-                <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
                   {count}
                 </AppText>
               )}

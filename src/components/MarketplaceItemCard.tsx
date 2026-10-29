@@ -425,8 +425,8 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  paddingVertical: 5,
  }}
  >
- <Ionicons name="people"size={10} color="#FFFFFF" />
- <AppText variant="caption"weight="bold"tone="inverse"style={{ fontSize: 11 }}>
+ <Ionicons name="people"size={10} color={colors.onBrand} />
+ <AppText variant="caption"weight="bold"tone="onBrand"style={{ fontSize: 11 }}>
  Meetup
  </AppText>
  </Pressable>
@@ -500,8 +500,8 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
           opacity: togglingSold ? 0.6 : 1,
         }}
       >
-        <Ionicons name={isSold ? 'refresh' : 'checkmark-circle-outline'} size={10} color={isSold ? colors.textPrimary : '#FFFFFF'} />
-        <AppText variant="caption" weight="bold" tone={isSold ? undefined : 'inverse'} style={{ fontSize: 11 }}>
+        <Ionicons name={isSold ? 'refresh' : 'checkmark-circle-outline'} size={10} color={isSold ? colors.textPrimary : colors.onBrand} />
+        <AppText variant="caption" weight="bold" tone={isSold ? undefined : 'onBrand'} style={{ fontSize: 11 }}>
           {isSold ? 'Available' : 'Mark Sold'}
         </AppText>
       </Pressable>

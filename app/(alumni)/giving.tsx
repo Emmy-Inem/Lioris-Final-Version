@@ -330,7 +330,7 @@ export default function AlumniGivingScreen() {
           onPress={() => setTab('browse')}
           style={{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 999, backgroundColor: tab === 'browse' ? colors.brandPrimary : colors.divider }}
         >
-          <AppText variant="caption" weight="bold" tone={tab === 'browse' ? 'inverse' : 'secondary'}>
+          <AppText variant="caption" weight="bold" tone={tab === 'browse' ? 'onBrand' : 'secondary'}>
             Browse Campaigns
           </AppText>
         </Pressable>
@@ -338,7 +338,7 @@ export default function AlumniGivingScreen() {
           onPress={() => setTab('mine')}
           style={{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 999, backgroundColor: tab === 'mine' ? colors.brandPrimary : colors.divider }}
         >
-          <AppText variant="caption" weight="bold" tone={tab === 'mine' ? 'inverse' : 'secondary'}>
+          <AppText variant="caption" weight="bold" tone={tab === 'mine' ? 'onBrand' : 'secondary'}>
             My Campaigns
           </AppText>
         </Pressable>

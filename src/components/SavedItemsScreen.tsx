@@ -180,12 +180,12 @@ export function SavedItemsScreen() {
                 backgroundColor: selected ? colors.brandPrimary : colors.surface,
               }}
             >
-              <Ionicons name={f.icon} size={15} color={selected ? '#FFFFFF' : colors.textSecondary} />
-              <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+              <Ionicons name={f.icon} size={15} color={selected ? colors.onBrand : colors.textSecondary} />
+              <AppText variant="bodySmall" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
                 {f.label}
               </AppText>
               {count > 0 ? (
-                <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
                   {count}
                 </AppText>
               ) : null}

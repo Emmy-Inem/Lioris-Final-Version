@@ -301,7 +301,7 @@ export function ResourceReaderModal({
                   variant="caption"
                   weight="bold"
                   style={{
-                    color: activeTab === tab.key ? '#FFFFFF' : colors.textSecondary,
+                    color: activeTab === tab.key ? colors.onBrand : colors.textSecondary,
                     fontSize: 12,
                     textAlign: 'center',
                   }}
