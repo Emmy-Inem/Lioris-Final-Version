@@ -64,6 +64,24 @@ await check('chain guard: when a part is missing, the parts after it refuse to r
   assert(rows.length === 1, `later parts ran although an earlier one failed: ${rows.join(',')}`);
 });
 
+await check('supabase/manual/parts: pasting the parts one at a time, in order, gives the same result as the bundle; out of order is refused', async () => {
+  const dir = resolve(ROOT, 'supabase/manual/parts');
+  const parts = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
+  const expected = readdirSync(resolve(ROOT, 'supabase/migrations')).filter((f) => f.endsWith('.sql') && f.slice(0, 14) >= FIRST).length;
+  assert(parts.length === expected, `${parts.length} part files for ${expected} migrations`);
+  const db = await freshDb();
+  // A later part pasted first must refuse to run.
+  let refused = false;
+  try { await db.exec(readFileSync(resolve(dir, parts[2]), 'utf8')); } catch (e) { refused = /Stopped: migration/.test(String(e.message)); try { await db.exec('ROLLBACK'); } catch { /* none */ } }
+  assert(refused, 'a later part ran although the earlier ones were not applied');
+  for (const f of parts) await db.exec(readFileSync(resolve(dir, f), 'utf8'));
+  const n = (await db.query('SELECT count(*)::int n FROM public._manual_migration_log')).rows[0].n;
+  assert(n === expected, `logged ${n} of ${expected}`);
+  // each part is safe to paste again
+  for (const f of parts) await db.exec(readFileSync(resolve(dir, f), 'utf8'));
+  assert((await db.query('SELECT count(*)::int n FROM public._manual_migration_log')).rows[0].n === expected, 'second pass changed the log');
+});
+
 const ok = results.filter(Boolean).length;
 console.log(`${ok}/${results.length} checks passed`);
 process.exit(ok === results.length ? 0 : 1);

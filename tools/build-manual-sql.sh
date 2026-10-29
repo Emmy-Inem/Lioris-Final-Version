@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
-# Rebuilds supabase/manual/*.sql (paste-into-the-SQL-editor versions) from the migrations.
+# Rebuilds supabase/manual/*.sql (paste-into-the-SQL-editor versions) from the migrations, then the per-migration parts.
 set -euo pipefail
-exec python3 "$(dirname "$0")/build-manual-sql.py"
+here="$(dirname "$0")"
+python3 "$here/build-manual-sql.py"
+python3 "$here/split-manual-parts.py"
