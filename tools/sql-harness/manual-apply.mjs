@@ -82,6 +82,40 @@ await check('supabase/manual/parts: pasting the parts one at a time, in order, g
   assert((await db.query('SELECT count(*)::int n FROM public._manual_migration_log')).rows[0].n === expected, 'second pass changed the log');
 });
 
+await check('supabase/manual/04_post_setup.sql: runs after the bundle with pg_cron/Vault missing, reports what to do, promotes only the listed admin, and is safe twice', async () => {
+  const db = await freshDb();
+  await db.exec(script);
+  const post = readFileSync(resolve(ROOT, 'supabase/manual/04_post_setup.sql'), 'utf8');
+  const A = '00000000-0000-4000-8000-0000000000a1';
+  const B = '00000000-0000-4000-8000-0000000000a2';
+  for (const [id, mail] of [[A, 'owner@school.test'], [B, 'campus@school.test']]) {
+    await db.query(`INSERT INTO auth.users (id, email, raw_user_meta_data, email_confirmed_at) VALUES ($1,$2,'{"campus_code":"GLOBAL"}'::jsonb, now())`, [id, mail]);
+  }
+  await db.exec(`ALTER TABLE public.profiles DISABLE TRIGGER USER`);
+  await db.exec(`UPDATE public.profiles SET role='admin', admin_role='campus_admin', campus_code='GLOBAL' WHERE id IN ('${A}','${B}')`);
+  await db.exec(`ALTER TABLE public.profiles ENABLE TRIGGER USER`);
+  const runIt = async (emails) => {
+    const sql = post.replace('ARRAY[]::text[] AS super_admin_emails', `ARRAY[${emails.map((e) => `'${e}'`).join(',')}]::text[] AS super_admin_emails`);
+    const res = await db.exec(sql);
+    const last = res[res.length - 1];
+    return last.rows;
+  };
+  let rows = await runIt([]);
+  const by = (item) => rows.find((r) => r.item === item);
+  assert(by('extension pg_cron')?.status === 'ACTION NEEDED', 'pg_cron missing should be reported');
+  assert(by('vault secrets')?.status === 'ACTION NEEDED', 'vault missing should be reported');
+  assert(rows.some((r) => r.item === 'admin owner@school.test' && r.status === 'ACTION NEEDED'), 'a campus-less campus admin must be flagged');
+  assert(rows.some((r) => r.item === 'super admins' && r.status === 'ACTION NEEDED') || rows.some((r) => /Super Admin \(whole platform\)/.test(r.detail)), 'super admin presence reported');
+  rows = await runIt(['owner@school.test']);
+  const roles = (await db.query(`SELECT email, admin_role FROM public.profiles WHERE id IN ('${A}','${B}') ORDER BY email`)).rows;
+  assert(roles.find((r) => r.email === 'owner@school.test').admin_role === 'super_admin', 'listed admin must be promoted');
+  assert(roles.find((r) => r.email === 'campus@school.test').admin_role === 'campus_admin', 'an admin that is not listed must be left alone');
+  rows = await runIt(['owner@school.test']);  // second run: no error, no change
+  assert(rows.some((r) => r.item === 'admin owner@school.test' && r.status === 'OK'), 'owner reported OK after promotion');
+  rows = await runIt(['nobody@school.test']);
+  assert(rows.some((r) => r.item === 'promote nobody@school.test' && r.status === 'ACTION NEEDED'), 'unknown e-mail must be reported, not ignored');
+});
+
 const ok = results.filter(Boolean).length;
 console.log(`${ok}/${results.length} checks passed`);
 process.exit(ok === results.length ? 0 : 1);

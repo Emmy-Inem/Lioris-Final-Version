@@ -38,3 +38,22 @@ VALUES ('admin_mfa_required', '{"enabled": true}', 'Require AAL2 for enrolled ad
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 ```
 Undo: `UPDATE public.platform_settings SET value = '{"enabled": false}' WHERE key = 'admin_mfa_required';`
+
+## Step 4: post-setup (after 02_apply_all.sql)
+
+Run `04_post_setup.sql` once, then again whenever its report says ACTION NEEDED. It enables pg_cron / pg_net / Vault when
+they are off, creates the Vault secrets for the ID-document purge (the cron secret is random and is created only if it does
+not exist), schedules every background job that is missing (reminders and retention clean-ups), promotes the administrators
+whose e-mails you put in the list at the top of the file, and prints a report (item, status, detail).
+
+If the report says `lioris_cron_secret` was just created, copy its value (query at the bottom of the file) and set it as the
+edge-function secret `CRON_SECRET`; the purge function rejects the job until the two match.
+
+## Edge functions
+
+`scripts/deploy-supabase.sh` deploys every function (the verify-jwt policy is read from `supabase/config.toml`, so
+`login-with-username`, which is called before sign-in, is deployed with the JWT check off), lists missing secret names and
+smoke-tests the functions. The workflow `.github/workflows/deploy-edge-functions.yml` runs it for you when function code
+changes on `main`, or by hand from the Actions tab. It stays idle until the repository secret `SUPABASE_ACCESS_TOKEN` exists
+(Supabase dashboard > Account > Access Tokens). Function secrets (`CRON_SECRET`, `GEMINI_API_KEY`, ...) are set in Supabase
+under Edge Functions > Secrets.

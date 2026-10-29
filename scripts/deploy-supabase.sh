@@ -19,8 +19,14 @@ SUPABASE_URL="https://${PROJECT_REF}.supabase.co"
 # Public (publishable) key - safe to embed, it ships in every client bundle.
 ANON_KEY="${SUPABASE_ANON_KEY:-sb_publishable_TB0Pw8k2oJQTmoO951YaIQ_xzOyGpZF}"
 
-# Functions deployed with --no-verify-jwt (mirrors supabase/config.toml).
-JWT_OFF=(overpass-proxy purge-expired-verification-documents send-push report-client-error)
+# Functions deployed with --no-verify-jwt. Read from supabase/config.toml ([functions.<name>] verify_jwt = false) so the two
+# can never drift apart again: a hand-kept list here once left out login-with-username, which is called BEFORE sign-in
+# with only the publishable key, so a JWT check on it would reject every username sign-in.
+JWT_OFF=()
+while IFS= read -r fn; do JWT_OFF+=("$fn"); done < <(
+  awk '/^\[functions\./ { gsub(/^\[functions\.|\]$/, ""); name=$0 } /^verify_jwt *= *false/ { if (name != "") print name }' \
+    "$(dirname "${BASH_SOURCE[0]}")/../supabase/config.toml"
+)
 
 REQUIRED_SECRETS=(
   SUPABASE_SERVICE_ROLE_KEY
@@ -81,8 +87,11 @@ LINKED_REF=""
 [ -f supabase/.temp/project-ref ] && LINKED_REF="$(tr -d '[:space:]' < supabase/.temp/project-ref)"
 if [ "$LINKED_REF" = "$PROJECT_REF" ]; then
   ok "linked to $PROJECT_REF"
+elif [ -z "$LINKED_REF" ]; then
+  # Every command below passes --project-ref explicitly, so an unlinked checkout (a CI runner) works.
+  ok "not linked; using --project-ref $PROJECT_REF"
 else
-  bad "not linked to $PROJECT_REF (linked: ${LINKED_REF:-none}). Run: supabase link --project-ref $PROJECT_REF"
+  bad "linked to a DIFFERENT project ($LINKED_REF), expected $PROJECT_REF. Run: supabase link --project-ref $PROJECT_REF"
   exit 1
 fi
 
@@ -154,6 +163,11 @@ else
     for fn in "${FUNCTIONS[@]}"; do
       case "$fn" in
         gemini-proxy|admin-delete-user|admin-impersonate-user|delete-my-account|turn-credentials) smoke "$fn" "401" ;;
+        admin-create-user|admin-force-signout|admin-manage-institution|admin-review-giving-campaign|admin-review-paid-event|support-ai-chat) smoke "$fn" "401" ;;
+        login-with-username)
+          # Must reach the function WITHOUT a JWT: its own 401 body says invalid_credentials, the gateway's says Invalid JWT.
+          body="$(curl -s --max-time 20 -X POST -H "apikey: ${ANON_KEY}" -H 'Content-Type: application/json' -d '{}' "${SUPABASE_URL}/functions/v1/${fn}" || true)"
+          if printf '%s' "$body" | grep -q 'invalid_credentials\|bad_request'; then ok "$fn reachable without a JWT"; else bad "$fn did not answer like the function (JWT check still on? body: ${body:0:120})"; SMOKE_FAIL=$((SMOKE_FAIL+1)); fi ;;
         purge-expired-verification-documents|send-push) smoke "$fn" "401" ;;
         overpass-proxy) smoke "$fn" "400" ;;
         report-client-error) smoke "$fn" "400 202 204" ;;
