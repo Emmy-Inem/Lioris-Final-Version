@@ -93,17 +93,20 @@ export function SavedItemsScreen() {
       case 'resource':
         if (roleGroup === '(admin)') {
           router.push({ pathname: '/(admin)/content-desk', params: { tab: 'resources' } } as any);
+        } else if (roleGroup === '(student)') {
+          router.push({ pathname: '/(student)/resources', params: { resourceId: item.itemId } } as any);
         } else {
-          router.push({ pathname: `/${roleGroup}/resources` as any, params: { resourceId: item.itemId } });
+          // Only the student portal has a resource library; the other portals have no such screen to open.
+          Alert.alert('Not Available', 'The resource library is available to students.');
         }
         break;
       case 'job':
         if (roleGroup === '(admin)') {
           router.push({ pathname: '/(admin)/content-desk', params: { tab: 'jobs' } } as any);
-        } else if (roleGroup === '(alumni)' || roleGroup === '(student)') {
-          router.push(`/${roleGroup}/jobs` as any);
+        } else if (roleGroup === '(alumni)') {
+          router.push('/(alumni)/jobs' as any);
         } else {
-          Alert.alert('Not Available', 'Job listings are available for students and alumni.');
+          Alert.alert('Not Available', 'The career board is available to alumni.');
         }
         break;
       case 'marketplace':

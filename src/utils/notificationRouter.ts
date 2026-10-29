@@ -48,7 +48,6 @@ export function resolveNotificationRoute(
     //   /event/<id> or /events/<id>
     const eventMatch = /^\/events?\/([^/?#]+)$/i.exec(subPath);
     if (eventMatch) {
-      if (role === 'admin') return '/(admin)/content-moderation';
       return `/(${role})/events/${eventMatch[1]}`;
     }
 
@@ -61,7 +60,7 @@ export function resolveNotificationRoute(
     // 2. Section-level deep links:
     if (subPath === '/feed' || subPath === '/forum' || subPath === '/forum/explore') {
       if (subPath === '/forum/explore' && role === 'student') return '/(student)/forum/explore';
-      if (role === 'admin') return '/(admin)/communities';
+      if (role === 'admin') return '/(admin)/forum';
       return role === 'student' ? '/(student)/feed' : `/(${role})/forum`;
     }
     if (subPath === '/connection-requests' || subPath === '/connections') {
@@ -70,7 +69,7 @@ export function resolveNotificationRoute(
     if (subPath === '/resources') {
       if (role === 'student') return '/(student)/resources';
       if (role === 'staff') return '/(staff)/moderation';
-      if (role === 'admin') return '/(admin)/content-moderation';
+      if (role === 'admin') return '/(admin)/content-desk?tab=resources';
       return `/(${role})/dashboard`;
     }
     if (subPath === '/study-groups') {
@@ -78,7 +77,7 @@ export function resolveNotificationRoute(
     }
     if (subPath === '/announcements') {
       if (role === 'staff') return '/(staff)/announcements';
-      if (role === 'admin') return '/(admin)/broadcast';
+      if (role === 'admin') return '/(admin)/announcements';
       return `/(${role})/dashboard`;
     }
     if (subPath === '/moderation' || subPath === '/moderation-queue') {
@@ -88,7 +87,7 @@ export function resolveNotificationRoute(
     }
     if (subPath === '/jobs') {
       if (role === 'alumni') return '/(alumni)/jobs';
-      if (role === 'admin') return '/(admin)/content-moderation';
+      if (role === 'admin') return '/(admin)/content-desk?tab=jobs';
       return `/(${role})/dashboard`;
     }
     if (subPath === '/mentorship') {
@@ -96,16 +95,15 @@ export function resolveNotificationRoute(
     }
     if (subPath === '/marketplace' || subPath === '/marketplace-mine') {
       if (role === 'student') return subPath === '/marketplace-mine' ? '/(student)/marketplace?tab=mine' : '/(student)/marketplace';
-      if (role === 'admin') return '/(admin)/content-moderation';
+      if (role === 'admin') return '/(admin)/content-desk?tab=marketplace';
       return `/(${role})/dashboard`;
     }
     if (subPath === '/giving') {
       if (role === 'alumni') return '/(alumni)/giving';
-      if (role === 'admin') return '/(admin)/content-moderation';
+      if (role === 'admin') return '/(admin)/content-desk?tab=donations';
       return `/(${role})/dashboard`;
     }
     if (subPath === '/events' || subPath === '/events-list') {
-      if (role === 'admin') return '/(admin)/content-moderation';
       return `/(${role})/events-list`;
     }
 

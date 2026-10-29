@@ -659,6 +659,22 @@ export function EventDetailScreen() {
     );
   }
 
+  // The load finished and there is no such event (removed, or not visible to this member): say so instead of spinning.
+  if (!event && !isLoading) {
+    return (
+      <ScreenContainer>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 300, gap: spacing.sm, paddingHorizontal: spacing.lg }}>
+          <Ionicons name="calendar-outline" size={36} color={colors.textSecondary} />
+          <AppText weight="bold" variant="h3">Event not found</AppText>
+          <AppText tone="secondary" style={{ textAlign: 'center' }}>
+            This event may have been removed, or it is not available to your campus.
+          </AppText>
+          <AppButton label="Back to events" onPress={goBackSafely} />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   if (isLoading || !event) {
     return (
       <ScreenContainer>

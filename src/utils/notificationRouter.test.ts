@@ -84,3 +84,47 @@ test('routes database notifications to the exact mentorship or pod', () => {
   // the older list-level links still work
   assert.equal(resolveNotificationRoute('/(student)/study-groups', 'system', 'student'), '/(student)/study-groups');
 });
+
+// Every route the resolver can hand back must be a real screen in app/ (an unmatched route is a dead end).
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+
+function appRoutes(): string[] {
+  const root = join(process.cwd(), 'app');
+  const out: string[] = [];
+  const walk = (dir: string, prefix: string) => {
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) { walk(full, `${prefix}/${name}`); continue; }
+      if (!/\.tsx?$/.test(name) || name.startsWith('_') || name.startsWith('+')) continue;
+      out.push(`${prefix}/${name.replace(/\.tsx?$/, '')}`.replace(/\/index$/, ''));
+    }
+  };
+  walk(root, '');
+  return out;
+}
+
+test('resolveNotificationRoute only returns routes that exist for the recipient role', () => {
+  if (!existsSync(join(process.cwd(), 'app'))) return;
+  const routes = appRoutes().map(
+    (r) =>
+      new RegExp(
+        '^' + r.split('/').map((part) => (/^\[.+\]$/.test(part) ? '[^/]+' : part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))).join('/') + '$',
+      ),
+  );
+  const id = '3f2a9c1e-7b4d-4e8a-9c55-0a1b2c3d4e5f';
+  const links = [
+    '/feed', '/forum', '/forum/explore', '/connection-requests', '/connections', '/resources', '/study-groups', '/announcements',
+    '/moderation', '/moderation-queue', '/jobs', '/mentorship', '/marketplace', '/marketplace-mine', '/giving', '/events', '/events-list',
+    '/profile', '/dashboard', '/messages', '/settings', '/notifications', '/saved', '/search',
+    `/post/${id}`, `/events/${id}`, `/event/${id}`, `/messages/${id}`, `/mentorship/${id}`, `/mentorship-space/${id}`, `/pod/${id}`, `/study-groups/${id}`,
+  ];
+  const missing: string[] = [];
+  for (const role of ['student', 'staff', 'alumni', 'admin']) {
+    for (const link of links) {
+      const resolved = resolveNotificationRoute(link, 'system_announcement', role).split('?')[0];
+      if (!routes.some((rx) => rx.test(resolved))) missing.push(`${role} ${link} -> ${resolved}`);
+    }
+  }
+  assert.deepEqual(missing, []);
+});

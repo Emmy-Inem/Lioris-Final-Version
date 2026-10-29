@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
@@ -50,7 +51,12 @@ export default function ContentDeskScreen() {
     return ALL_CONTENT_TABS.filter((t) => isFeatureEnabled(t.featureKey));
   }, [isFeatureEnabled]);
 
-  const [tab, setTab] = useState<string>('threads');
+  // A link such as /(admin)/content-desk?tab=resources opens that tab (saved items and notifications use it).
+  const { tab: requestedTab } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<string>(typeof requestedTab === 'string' && requestedTab ? requestedTab : 'threads');
+  useEffect(() => {
+    if (typeof requestedTab === 'string' && requestedTab) setTab(requestedTab);
+  }, [requestedTab]);
 
   // Auto-switch to first available tab if active tab's feature flag is turned off
   useEffect(() => {

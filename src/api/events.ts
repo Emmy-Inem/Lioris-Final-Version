@@ -310,8 +310,10 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
       .select('*, profiles:creator_id(full_name), event_attendees(user_id)')
       .eq('id', id);
     if (currentUserId) detailQuery = detailQuery.eq('event_attendees.user_id', currentUserId);
-    const { data, error } = await detailQuery.single();
-    if (!error && data) {
+    // maybeSingle: an event that is gone (or that this member may not see) is "not found", not an error.
+    const { data, error } = await detailQuery.maybeSingle();
+    if (error) throw error;
+    if (data) {
       const isRsvpd = currentUserId ? (data.event_attendees ?? []).some((a: any) => a.user_id === currentUserId) : false;
       // See listEvents(): banner_url may be a private `campus-media` storage path, not a URL.
       const coverImageUrl = await resolveSignedMediaUrl('campus-media', data.banner_url);
@@ -347,13 +349,14 @@ export async function getEvent(id?: string | null): Promise<CampusEvent | null> 
       return freshEvent;
     }
   } catch (err) {
-    console.warn('[Events] Supabase getEvent error:', err);
+    // A load that failed is an error the screen can show with a retry, not "the event does not exist" - unless this
+    // session created the event and still has it.
+    const local = [...locallyCreatedEvents].find((e) => e.id === id);
+    if (local) return local;
+    throw err;
   }
 
-  const found = [...locallyCreatedEvents].find((e) => e.id === id);
-  if (found) return found;
-
-  return null;
+  return [...locallyCreatedEvents].find((e) => e.id === id) ?? null;
 }
 
 export interface CreateEventPayload {

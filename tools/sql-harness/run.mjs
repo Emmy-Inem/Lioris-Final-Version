@@ -1633,8 +1633,9 @@ console.log('\n== admin analytics & user activity monitoring ==');
       assert(Array.isArray(res.most_used_features), 'most used features array');
       assert(Array.isArray(res.campus_metrics), 'campus metrics array');
 
-      // Test campus filtering
-      const uiRes = (await c.q("SELECT public.get_admin_analytics_summary(30, 'UI') AS data")).rows[0].data;
+      // Test campus filtering. The seeded posts carry fixed 2026-09 dates, so the window must not be "the last 30
+      // days" (this check failed on its own once the calendar moved past them): use a window wider than any seed.
+      const uiRes = (await c.q("SELECT public.get_admin_analytics_summary(3650, 'UI') AS data")).rows[0].data;
       eq(uiRes.bot_users, 7, '7 UI bots counted when campus filtered');
       eq(uiRes.total_posts, 7, '7 UI forum posts counted when campus filtered');
     });
