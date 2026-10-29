@@ -123,7 +123,13 @@ export default function AdminOverviewScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="shield" size={13} color="#FCA5A5" style={heroTextShadowStyle} />
                   <AppText variant="caption" weight="bold" style={[{ fontSize: 11, letterSpacing: 0.5, color: '#FCA5A5' }, heroTextShadowStyle]}>
-                    {user?.isSuperAdmin ? 'SUPER ADMIN' : user?.isCampusAdmin ? `CAMPUS ADMIN • ${user?.campusCode ?? 'CAMPUS'}` : 'ADMIN'}
+                    {user?.isSuperAdmin
+                      ? 'SUPER ADMIN'
+                      : user?.isCampusAmbassador
+                        ? `CAMPUS AMBASSADOR ADMIN • ${user?.campusCode ?? 'CAMPUS'}`
+                        : user?.isCampusAdmin
+                          ? `CAMPUS ADMIN • ${user?.campusCode ?? 'CAMPUS'}`
+                          : 'ADMIN'}
                   </AppText>
                 </View>
                 <AppText variant="h1" weight="bold" tone="inverse" numberOfLines={1} style={{ fontSize: 22, marginTop: 4 }}>

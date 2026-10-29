@@ -12,6 +12,7 @@ import { DonationsModerationTab } from '@/components/admin/DonationsModerationTa
 import { MentorshipModerationTab } from '@/components/admin/MentorshipModerationTab';
 import { MarketplaceModerationTab } from '@/components/admin/MarketplaceModerationTab';
 import { StudyPodsModerationTab } from '@/components/admin/StudyPodsModerationTab';
+import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags, FeatureKey } from '@/context/FeatureFlagsContext';
@@ -68,6 +69,7 @@ export default function ContentDeskScreen() {
         nestedScrollEnabled
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150 }}
       >
+        <AdminSectionTabs group="content" />
         <View style={{ paddingTop: isDesktop ? spacing.xs : spacing.md, paddingBottom: spacing.sm }}>
           <AppText variant={isDesktop ? 'h1' : 'h3'} weight="bold">
             Content Moderation Desk

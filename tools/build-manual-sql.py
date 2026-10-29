@@ -42,7 +42,7 @@ ALTER TABLE public._manual_migration_log ENABLE ROW LEVEL SECURITY;
 prev = None
 for f in files:
     version = f.name[:14]
-    body = f.read_text()
+    body = f.read_text(encoding='utf-8')
     guard = ''
     if prev:
         guard = (f"DO $chain$ BEGIN IF NOT EXISTS (SELECT 1 FROM public._manual_migration_log WHERE version = '{prev}') THEN "
@@ -61,9 +61,9 @@ for f in files:
     prev = version
 
 parts.append("\nRESET lock_timeout;\nRESET statement_timeout;\n")
-(OUT / '02_apply_all.sql').write_text(''.join(parts))
+(OUT / '02_apply_all.sql').write_text(''.join(parts), encoding='utf-8')
 
-verify = (ROOT / 'supabase' / 'diagnostics' / 'audit_live_state.sql').read_text()
+verify = (ROOT / 'supabase' / 'diagnostics' / 'audit_live_state.sql').read_text(encoding='utf-8')
 verify += f"""
 
 -- ============================================================================
@@ -81,5 +81,5 @@ FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace AND n.nspname = 'public'
 WHERE p.prosecdef AND has_function_privilege('anon', p.oid, 'EXECUTE');
 """
-(OUT / '03_verify_after.sql').write_text(verify)
+(OUT / '03_verify_after.sql').write_text(verify, encoding='utf-8')
 print(f"wrote 01, 02 ({len(files)} migrations), 03 into {OUT}")

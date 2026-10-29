@@ -260,7 +260,9 @@ export async function getMyProfile(user?: {
         jobTitle: data.job_title || null,
         location: data.location || null,
         linkedinUrl: data.linkedin_url || null,
-        userType: isAdmin ? 'admin' : dbRole,
+        // Campus Ambassadors hold campus-admin authority in the database but
+        // remain student representatives in member-facing profiles.
+        userType: data.is_campus_ambassador ? 'student' : isAdmin ? 'admin' : dbRole,
        isVerified,
        isCampusAmbassador: !!data.is_campus_ambassador,
        verificationStatus,
@@ -708,7 +710,7 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
         fullName: data.full_name || 'Campus Member',
         username: data.username || data.full_name?.toLowerCase().replace(/[^a-z0-9]+/g, '.') || 'user',
         email: '',
-        userType: dbRole,
+        userType: data.is_campus_ambassador ? 'student' : dbRole,
         adminRole: (data.admin_role as any) || (isAdmin ? (data.campus_code === 'GLOBAL' ? 'super_admin' : 'campus_admin') : null),
         graduationYear: data.graduation_year ?? null,
         bio: data.bio || '',

@@ -428,7 +428,7 @@ export default function StudentDashboard() {
               haptics.light();
               try {
                 await enterAmbassadorWorkspace();
-                router.push('/(ambassador)/dashboard' as any);
+                router.push('/(admin)/dashboard' as any);
               } catch (error: any) {
                 haptics.error();
                 Alert.alert('Ambassador access unavailable', error?.message || 'Your appointment could not be verified.');

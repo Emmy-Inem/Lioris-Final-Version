@@ -319,7 +319,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
   const adminRole = isMasterAdminEmail ? 'super_admin' : (profile?.admin_role as AdminRoleType | null | undefined);
   const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && adminRole === 'super_admin');
   const isCampusAdmin = role === 'admin' && !isSuperAdmin;
-  const isCampusAmbassador = role === 'student' && profile?.is_campus_ambassador === true;
+  const isCampusAmbassador = profile?.is_campus_ambassador === true;
   const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || null);
   const fullName =
     profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
@@ -328,7 +328,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
     id: session.user.id,
     fullName,
     email: userEmail,
-    role,
+    role: isCampusAmbassador ? 'student' : role,
     actualRole: isMasterAdminEmail ? 'admin' : role,
     adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
     campusCode,
@@ -461,9 +461,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             coverUrl: stored.coverUrl || undefined,
             isSuperAdmin,
             isCampusAdmin,
-            isCampusAmbassador: actualRole === 'student' && stored.isCampusAmbassador === true,
+            isCampusAmbassador: stored.isCampusAmbassador === true,
             workspaceMode:
-              actualRole === 'student' && stored.isCampusAmbassador === true && stored.workspaceMode === 'ambassador'
+              stored.isCampusAmbassador === true && stored.workspaceMode === 'ambassador'
                 ? 'ambassador'
                 : 'default',
             onboardingComplete: isComplete,
@@ -530,14 +530,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || storedUser?.campusCode || null);
           const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && adminRole === 'super_admin');
           const isCampusAdmin = role === 'admin' && !isSuperAdmin;
-          const isCampusAmbassador = role === 'student' && (profile?.is_campus_ambassador === true || (!profile && storedUser?.isCampusAmbassador === true));
+          const isCampusAmbassador = profile?.is_campus_ambassador === true || (!profile && storedUser?.isCampusAmbassador === true);
           const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || storedUser?.fullName || userRef.current?.fullName || userEmail.split('@')[0] || 'Campus Member';
 
-          const activeRole =
-            (userRef.current?.actualRole === 'admin' && userRef.current?.role) ||
-            (storedUser?.actualRole === 'admin' && storedUser?.role)
-              ? ((userRef.current?.role || storedUser?.role) as UserRole)
-              : role;
+          const activeRole = isCampusAmbassador
+            ? ((userRef.current?.workspaceMode === 'ambassador' || storedUser?.workspaceMode === 'ambassador') ? 'admin' : 'student')
+            : (userRef.current?.actualRole === 'admin' && userRef.current?.role) ||
+              (storedUser?.actualRole === 'admin' && storedUser?.role)
+                ? ((userRef.current?.role || storedUser?.role) as UserRole)
+                : role;
 
           const cachedOnboarding = userRef.current?.onboardingComplete ?? storedUser?.onboardingComplete;
           const isOnboarded = profile
@@ -728,14 +729,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || storedUser?.campusCode || null);
         const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && adminRole === 'super_admin');
         const isCampusAdmin = role === 'admin' && !isSuperAdmin;
-        const isCampusAmbassador = role === 'student' && (profile?.is_campus_ambassador === true || (!profile && storedUser?.isCampusAmbassador === true));
+        const isCampusAmbassador = profile?.is_campus_ambassador === true || (!profile && storedUser?.isCampusAmbassador === true);
         const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userRef.current?.fullName || storedUser?.fullName || userEmail.split('@')[0] || 'Campus Member';
+        const current = userRef.current;
 
-        const activeRole =
-          (userRef.current?.actualRole === 'admin' && userRef.current?.role) ||
-          (storedUser?.actualRole === 'admin' && storedUser?.role)
-            ? ((userRef.current?.role || storedUser?.role) as UserRole)
-            : role;
+        const activeRole = isCampusAmbassador
+          ? ((current?.workspaceMode === 'ambassador' || storedUser?.workspaceMode === 'ambassador') ? 'admin' : 'student')
+          : (userRef.current?.actualRole === 'admin' && userRef.current?.role) ||
+            (storedUser?.actualRole === 'admin' && storedUser?.role)
+              ? ((userRef.current?.role || storedUser?.role) as UserRole)
+              : role;
 
         const cachedOnboarding = userRef.current?.onboardingComplete ?? storedUser?.onboardingComplete;
         const isOnboarded = profile
@@ -749,7 +752,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // open. Keep that account's in-memory MFA/onboarding progress and skip the
         // state update when nothing changed, so a resume doesn't re-render (or
         // re-lock) the whole tree.
-        const current = userRef.current;
         const sameAccount = current?.id === session.user.id;
         const nextUser: SessionUser = {
           id: session.user.id,
@@ -894,7 +896,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         newRole === 'admin' ? ((row.admin_role ?? current.adminRole ?? 'campus_admin') as AdminRoleType) : null;
       const isSuperAdmin = isRoot || (newRole === 'admin' && newTier === 'super_admin');
       const isCampusAdmin = newRole === 'admin' && !isSuperAdmin;
-      const isCampusAmbassador = newRole === 'student' && row.is_campus_ambassador === true;
+      const isCampusAmbassador = row.is_campus_ambassador === true;
       const newCampus = isSuperAdmin ? 'GLOBAL' : ((row.campus_code ?? current.campusCode) as string | null);
 
       const roleChanged = newRole !== current.actualRole;
@@ -911,7 +913,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ...current,
           actualRole: newRole,
           // A real, database-verified change always wins over a Super Admin's local "View As" preview.
-          role: roleChanged ? newRole : current.role,
+          role: isCampusAmbassador
+            ? (current.workspaceMode === 'ambassador' ? 'admin' : 'student')
+            : roleChanged ? newRole : current.role,
           adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
           isSuperAdmin,
           isCampusAdmin,
@@ -1054,11 +1058,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const campusCode = isMasterAdminEmail ? 'GLOBAL' : (prof?.campus_code || null);
         const isSuperAdmin = isMasterAdminEmail || (userRole === 'admin' && adminRole === 'super_admin');
         const isCampusAdmin = userRole === 'admin' && !isSuperAdmin;
-        const isCampusAmbassador = userRole === 'student' && prof?.is_campus_ambassador === true;
+        const isCampusAmbassador = prof?.is_campus_ambassador === true;
 
         const nextUser: SessionUser = {
           ...session.user,
-          role: userRole,
+          role: isCampusAmbassador ? 'student' : userRole,
           actualRole: userRole,
           adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
           campusCode,
@@ -1261,7 +1265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       async enterAmbassadorWorkspace() {
         const current = userRef.current;
-        if (!current?.id || current.actualRole !== 'student') {
+        if (!current?.id || !current.isCampusAmbassador) {
           throw new Error('The Ambassador Console is only available to appointed students.');
         }
         const profile = await getOwnProfileRow(current.id);
@@ -1272,7 +1276,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(corrected);
           throw new Error('Your Campus Ambassador appointment is not active. Ask your Campus Admin to review it.');
         }
-        const next: SessionUser = { ...current, isCampusAmbassador: true, workspaceMode: 'ambassador' };
+        const next: SessionUser = { ...current, role: 'admin', isCampusAdmin: true, isCampusAmbassador: true, workspaceMode: 'ambassador' };
         await persist(next);
         userRef.current = next;
         setUser(next);
@@ -1280,7 +1284,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async exitAmbassadorWorkspace() {
         const current = userRef.current;
         if (!current) return;
-        const next: SessionUser = { ...current, workspaceMode: 'default' };
+        const next: SessionUser = { ...current, role: 'student', workspaceMode: 'default' };
         await persist(next);
         userRef.current = next;
         setUser(next);
@@ -1323,12 +1327,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const resolvedRole = isMaster ? 'admin' : ((profile.role || current.actualRole) as UserRole);
             const isSuper = isMaster || (resolvedRole === 'admin' && profile.admin_role === 'super_admin');
             const isCampus = resolvedRole === 'admin' && !isSuper;
-            const isAmbassador = resolvedRole === 'student' && profile.is_campus_ambassador === true;
+            const isAmbassador = profile.is_campus_ambassador === true;
             const next: SessionUser = {
               ...current,
               fullName: profile.full_name || current.fullName,
               actualRole: resolvedRole,
-              role: current.actualRole === 'admin' && current.isSuperAdmin ? current.role : resolvedRole,
+              role: isAmbassador
+                ? (current.workspaceMode === 'ambassador' ? 'admin' : 'student')
+                : current.actualRole === 'admin' && current.isSuperAdmin ? current.role : resolvedRole,
               adminRole: isSuper ? 'super_admin' : isCampus ? 'campus_admin' : null,
               isSuperAdmin: isSuper,
               isCampusAdmin: isCampus,

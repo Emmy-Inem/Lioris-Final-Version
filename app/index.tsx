@@ -51,8 +51,8 @@ export default function Index() {
  return <Redirect href="/(auth)/verify-mfa" />;
  }
 
-  if (user.actualRole === 'student' && user.isCampusAmbassador && user.workspaceMode === 'ambassador') {
-    return <Redirect href={'/(ambassador)/dashboard' as any} />;
+  if (user.isCampusAmbassador && user.workspaceMode === 'ambassador') {
+    return <Redirect href={'/(admin)/dashboard' as any} />;
   }
 
   return <Redirect href={DASHBOARD_BY_ROLE[user.role] as any} />;

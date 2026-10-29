@@ -14,7 +14,7 @@ export function AmbassadorGate({ children }: { children: React.ReactNode }) {
   if (isLoading) return <AppLoadingScreen message="Verifying ambassador appointment..." showTimeoutAction={false} />;
   if (!user) return <Redirect href="/(auth)/login" />;
   if (!user.onboardingComplete) return <Redirect href="/" />;
-  if (user.actualRole !== 'student' || !user.isCampusAmbassador || user.workspaceMode !== 'ambassador') {
+  if (!user.isCampusAmbassador || user.workspaceMode !== 'ambassador') {
     return <Redirect href="/(student)/dashboard" />;
   }
   return <>{children}</>;

@@ -87,7 +87,10 @@ export function DesktopTopBar() {
     enabled: !!user?.id,
   });
  const role = user?.role || 'student';
- const navigationGroup = user?.workspaceMode === 'ambassador' && user?.isCampusAmbassador ? 'ambassador' : role;
+ // The Ambassador workspace now uses the complete campus-admin information
+ // architecture, so search must resolve to admin results rather than the old
+ // limited ambassador route group.
+ const navigationGroup = role;
  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
 
  // Listen for global Cmd+K / Ctrl+K keyboard shortcut on web

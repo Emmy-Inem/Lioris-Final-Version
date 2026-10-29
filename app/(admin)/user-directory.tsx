@@ -119,7 +119,9 @@ export default function UserDirectoryScreen() {
  fullName: p.full_name || 'Campus Member',
  username: p.username || (p.email ? p.email.split('@')[0] : 'member'),
  email: p.email || '',
- role: (p.role ? p.role.charAt(0).toUpperCase() + p.role.slice(1) : 'Student') as any,
+ // Ambassadors are campus administrators in the database, but remain
+ // student representatives in the directory and retain a Student Portal.
+ role: (p.is_campus_ambassador ? 'Student' : p.role ? p.role.charAt(0).toUpperCase() + p.role.slice(1) : 'Student') as any,
  campus: p.campus_code || 'GLOBAL',
  department: p.department || 'General Studies',
  matricNo: p.student_id_number || 'Not Assigned',

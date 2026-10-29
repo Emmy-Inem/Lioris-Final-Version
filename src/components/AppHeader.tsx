@@ -122,20 +122,20 @@ export function AppHeader() {
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-        {user?.isCampusAmbassador && user.actualRole === 'student' && (
+        {user?.isCampusAmbassador && (
           <Pressable
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={roleGroup === '(ambassador)' ? 'Return to Student Portal' : 'Open Campus Ambassador Console'}
+            accessibilityLabel={user.workspaceMode === 'ambassador' ? 'Return to Student Portal' : 'Open Campus Ambassador Console'}
             onPress={async () => {
               haptics.light();
               try {
-                if (roleGroup === '(ambassador)') {
+                if (user.workspaceMode === 'ambassador') {
                   await exitAmbassadorWorkspace();
                   router.replace('/(student)/dashboard' as any);
                 } else {
                   await enterAmbassadorWorkspace();
-                  router.push('/(ambassador)/dashboard' as any);
+                  router.push('/(admin)/dashboard' as any);
                 }
               } catch (error: any) {
                 haptics.error();
@@ -146,14 +146,14 @@ export function AppHeader() {
               width: 32,
               height: 32,
               borderRadius: 16,
-              backgroundColor: roleGroup === '(ambassador)' ? colors.brandPrimary : colors.pastelPrimaryBg,
+              backgroundColor: user.workspaceMode === 'ambassador' ? colors.brandPrimary : colors.pastelPrimaryBg,
               borderWidth: 1,
-              borderColor: roleGroup === '(ambassador)' ? colors.brandPrimary : colors.border,
+              borderColor: user.workspaceMode === 'ambassador' ? colors.brandPrimary : colors.border,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Ionicons name={roleGroup === '(ambassador)' ? 'swap-horizontal' : 'star'} size={16} color={roleGroup === '(ambassador)' ? '#FFFFFF' : colors.brandPrimary} />
+            <Ionicons name={user.workspaceMode === 'ambassador' ? 'swap-horizontal' : 'star'} size={16} color={user.workspaceMode === 'ambassador' ? '#FFFFFF' : colors.brandPrimary} />
           </Pressable>
         )}
         {canSwitchCampus && (roleGroup === '(student)' || roleGroup === '(alumni)') && (

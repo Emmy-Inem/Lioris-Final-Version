@@ -50,13 +50,15 @@ export function DesktopSidebar() {
  const isAmbassadorWorkspace = user?.workspaceMode === 'ambassador' && user?.isCampusAmbassador === true;
 
   const rawAmbassadorNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
-    { id: 'home', label: 'Ambassador Overview', href: '/(ambassador)/dashboard', icon: 'grid-outline' },
-    { id: 'forum', label: 'Discussion Spaces', href: '/(ambassador)/discussions', icon: 'chatbubbles-outline', flagKey: 'discussion_workspaces', match: ['/discussions', '/post', '/forum'] },
-    { id: 'events', label: 'Campus Events', href: '/(ambassador)/events-list', icon: 'calendar-outline', flagKey: 'campus_events', match: ['/events-list', '/events'] },
-    { id: 'messages', label: 'Messages', href: '/(ambassador)/messages', icon: 'chatbubble-ellipses-outline', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
-    { id: 'notifications', label: 'Notifications', href: '/(ambassador)/notifications', icon: 'notifications-outline', badgeCount: unreadNotificationsCount },
-    { id: 'profile', label: 'My Profile', href: '/(ambassador)/profile', icon: 'person-outline' },
-    { id: 'settings', label: 'Settings', href: '/(ambassador)/settings', icon: 'settings-outline' },
+    { id: 'home', label: 'Campus Overview', href: '/(admin)/dashboard', icon: 'grid-outline', match: ['/dashboard'] },
+    { id: 'people', label: 'Campus Members', href: '/(admin)/user-directory', icon: 'people-outline', match: ['/user-directory', '/verification-requests', '/support-desk', '/minors-consent'] },
+    { id: 'content', label: 'Campus Content', href: '/(admin)/content-desk', icon: 'layers-outline', match: ['/content-desk', '/announcements', '/forum', '/events-list', '/events'] },
+    { id: 'announcements', label: 'Campus Announcements', href: '/(admin)/announcements', icon: 'megaphone-outline', flagKey: 'campus_announcements' },
+    { id: 'safety', label: 'Safety & Moderation', href: '/(admin)/moderation-queue', icon: 'shield-checkmark-outline', match: ['/moderation-queue', '/takedown-requests', '/audit-logs'] },
+    { id: 'analytics', label: 'Campus Analytics', href: '/(admin)/analytics', icon: 'analytics-outline', match: ['/analytics'] },
+    { id: 'messages', label: 'Messages', href: '/(admin)/messages', icon: 'chatbubble-ellipses-outline', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
+    { id: 'notifications', label: 'Notifications', href: '/(admin)/notifications', icon: 'notifications-outline', badgeCount: unreadNotificationsCount },
+    { id: 'settings', label: 'Settings', href: '/(admin)/settings', icon: 'settings-outline', match: ['/settings', '/profile'] },
     { id: 'student', label: 'Return to Student Portal', href: '/(ambassador)/student-portal', icon: 'swap-horizontal' },
   ];
   const ambassadorNavItems = rawAmbassadorNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
@@ -114,7 +116,7 @@ export function DesktopSidebar() {
   const rawAdminNavItems: (NavItem & { flagKey?: FeatureKey; superAdminOnly?: boolean })[] = [
     { id: 'home', label: 'Overview', href: '/(admin)/dashboard', icon: 'grid', match: ['/dashboard'] },
     { id: 'people', label: 'People', href: '/(admin)/user-directory', icon: 'people', match: ['/user-directory', '/verification-requests', '/support-desk', '/minors-consent'] },
-    { id: 'content', label: 'Content', href: '/(admin)/content-desk', icon: 'layers', match: ['/content-desk', '/forum', '/events-list', '/events'] },
+    { id: 'content', label: 'Content', href: '/(admin)/content-desk', icon: 'layers', match: ['/content-desk', '/announcements', '/forum', '/events-list', '/events'] },
     { id: 'safety', label: 'Safety', href: '/(admin)/moderation-queue', icon: 'shield-checkmark', match: ['/moderation-queue', '/takedown-requests', '/audit-logs'] },
     { id: 'platform', label: 'Platform', href: '/(admin)/platform-config', icon: 'settings', match: ['/platform-config', '/feature-controls', '/role-permissions', '/super-admin-config', '/system-health', '/analytics'], superAdminOnly: true },
     { id: 'messages', label: 'Messages', href: '/(admin)/messages', icon: 'chatbubble-ellipses', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
@@ -166,7 +168,7 @@ export function DesktopSidebar() {
       <View style={[styles.brandHeader, { paddingHorizontal: collapsed ? 10 : 14 }]}>
  <View style={[styles.logoRow, { justifyContent: collapsed ? 'center' : 'space-between' }]}>
         <Pressable
-          onPress={() => router.push(isAmbassadorWorkspace ? ('/(ambassador)/dashboard' as any) : role === 'admin' ? ('/(admin)/dashboard' as any) : (`/(${role})/dashboard` as any))}
+          onPress={() => router.push(isAmbassadorWorkspace ? ('/(admin)/dashboard' as any) : role === 'admin' ? ('/(admin)/dashboard' as any) : (`/(${role})/dashboard` as any))}
           accessibilityRole="link"
           accessibilityLabel="Lioris home"
           style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
@@ -361,7 +363,7 @@ export function DesktopSidebar() {
         ]}
       >
         <Pressable
-          onPress={() => router.push(isAmbassadorWorkspace ? ('/(ambassador)/profile' as any) : (`/(${role})/profile` as any))}
+          onPress={() => router.push(isAmbassadorWorkspace ? ('/(admin)/profile' as any) : (`/(${role})/profile` as any))}
           accessibilityRole="link"
           accessibilityLabel={`Open profile for ${user?.fullName || 'your account'}`}
           style={[styles.userCard, { justifyContent: collapsed ? 'center' : 'flex-start' }]}

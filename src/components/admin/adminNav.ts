@@ -55,7 +55,10 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     key: 'content',
     label: 'Content',
     icon: 'layers-outline',
-    sections: [{ key: 'content', label: 'Content', route: '/(admin)/content-desk', path: '/content-desk' }],
+    sections: [
+      { key: 'content', label: 'Content', route: '/(admin)/content-desk', path: '/content-desk' },
+      { key: 'announcements', label: 'Announcements', route: '/(admin)/announcements', path: '/announcements' },
+    ],
   },
   {
     key: 'safety',
