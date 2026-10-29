@@ -20,6 +20,11 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   ) {
     return { type: 'sourceFile', filePath: ROUTE_FALLBACK };
   }
+  // `react-native-url-polyfill/auto` only installs its URL implementation when Platform.OS !== 'web' (browsers have a
+  // native URL), but its ~20 KB are bundled anyway. An empty module on web is therefore behaviour-neutral.
+  if (platform === 'web' && moduleName === 'react-native-url-polyfill/auto') {
+    return { type: 'empty' };
+  }
   return (upstreamResolveRequest ?? context.resolveRequest)(context, moduleName, platform);
 };
 

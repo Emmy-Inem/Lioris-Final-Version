@@ -24,7 +24,7 @@ import { useToast } from '@/context/ToastContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { deactivateMyAccount, deleteMyAccount, exportMyData, getMyProfile, updateMyProfile } from '@/api/profile';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
-import { PROFILE_ACADEMIC_LEVELS } from './ProfileScreenBase';
+import { PROFILE_ACADEMIC_LEVELS } from '@/constants/academicLevels';
 import { getMyNotificationPreferences, updateMyNotificationPreferences } from '@/api/notificationPreferences';
 import { listMyDevices, removeMyDevice, MyDevice } from '@/api/devices';
 import { registerForPushNotificationsAsync } from '@/notifications/push';

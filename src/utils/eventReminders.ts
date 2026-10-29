@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { cancelAllScheduledDeviceNotifications, cancelLegacyDeviceReminders } from './eventRemindersLegacy';
 
 /**
  * Which events the signed-in user has a reminder for. The server (public.event_reminders) is the source of truth
@@ -100,17 +101,6 @@ const inFlight = new Set<string>();
 const RECONCILE_MIN_INTERVAL_MS = 60_000;
 let lastReconcileAt = 0;
 let reconcilePromise: Promise<void> | null = null;
-
-/** Cancels notifications an older app version scheduled on this device, so the server's reminder is the only one. */
-async function cancelLegacyDeviceReminders(markers: string[]): Promise<void> {
-  if (typeof localStorage !== 'undefined' || markers.length === 0) return;
-  try {
-    const Notifications = require('expo-notifications');
-    await Promise.all(markers.map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => {})));
-  } catch {
-    // notifications unavailable: nothing was scheduled by the OS
-  }
-}
 
 /** Replaces the local copy with the server's list. A failed request keeps what is already shown. */
 async function reconcileWithServer(uid: string): Promise<void> {
@@ -254,11 +244,5 @@ export async function cancelAllEventReminders(): Promise<void> {
   isHydrated = false;
   hydratedForUserId = null;
   notify();
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const Notifications = require('expo-notifications');
-    if (typeof localStorage === 'undefined') await Notifications.cancelAllScheduledNotificationsAsync();
-  } catch {
-    // web / test runner / notifications unavailable: nothing is scheduled by the OS
-  }
+  await cancelAllScheduledDeviceNotifications();
 }
