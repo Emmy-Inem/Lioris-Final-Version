@@ -78,7 +78,7 @@ export function VerifiedBadge({
         onPress={handlePress}
         hitSlop={6}
         accessibilityRole="button"
-        accessibilityLabel="Verified account badge"
+        accessibilityLabel="What does verified mean?"
         style={{ flexShrink: 0, justifyContent: 'center', alignItems: 'center' }}
       >
         {badgeIcon}

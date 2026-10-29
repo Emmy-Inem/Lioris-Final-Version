@@ -77,6 +77,20 @@ export function queryErrorCopy(error: unknown, subject = 'this content'): QueryE
   };
 }
 
+/**
+ * True when the failure means the table / view / function itself does not exist (migration not applied):
+ * Postgres 42P01 / 42883, PostgREST PGRST205 / PGRST202, or wording like "relation ... does not exist". A failed
+ * request (network, 5xx, permission) is NOT a missing relation and must be shown as an error, not "not available".
+ */
+export function isMissingRelationError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const obj = error as { code?: unknown; message?: unknown };
+  const code = obj.code === undefined ? '' : String(obj.code).toUpperCase();
+  if (code === '42P01' || code === '42883' || code === 'PGRST205' || code === 'PGRST202') return true;
+  const text = errorText(error).toLowerCase();
+  return /relation .* does not exist|could not find the table|could not find the function/.test(text);
+}
+
 export type QueryErrorMode = 'none' | 'blocking' | 'inline';
 
 /**

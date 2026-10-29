@@ -7,6 +7,7 @@ import { AppTextField } from './AppTextField';
 import { AppButton } from './AppButton';
 import { Avatar } from './Avatar';
 import { SolidCard } from './SolidCard';
+import { ErrorStateView } from './ErrorStateView';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import {
@@ -55,11 +56,14 @@ export function CommunityManageModal({ visible, onClose, community, isAdmin }: C
 
   const [moderators, setModerators] = useState<CommunityModerator[]>([]);
   const [loadingModerators, setLoadingModerators] = useState(false);
+  const [moderatorsError, setModeratorsError] = useState<unknown>(null);
   const [addModeratorOpen, setAddModeratorOpen] = useState(false);
   const [moderatorQuery, setModeratorQuery] = useState('');
   const debouncedModeratorQuery = useDebouncedValue(moderatorQuery);
   const [candidates, setCandidates] = useState<UserToMessage[]>([]);
   const [searchingCandidates, setSearchingCandidates] = useState(false);
+  const [candidatesError, setCandidatesError] = useState<unknown>(null);
+  const [candidateSearchNonce, setCandidateSearchNonce] = useState(0);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
@@ -82,12 +86,16 @@ export function CommunityManageModal({ visible, onClose, community, isAdmin }: C
     if (!addModeratorOpen) return;
     let cancelled = false;
     setSearchingCandidates(true);
+    setCandidatesError(null);
     searchUsersToMessage(debouncedModeratorQuery)
       .then((results) => {
         if (!cancelled) setCandidates(results.filter((r) => !moderators.some((m) => m.userId === r.id)));
       })
-      .catch(() => {
-        if (!cancelled) setCandidates([]);
+      .catch((err) => {
+        if (!cancelled) {
+          setCandidates([]);
+          setCandidatesError(err ?? new Error('Search failed'));
+        }
       })
       .finally(() => {
         if (!cancelled) setSearchingCandidates(false);
@@ -95,12 +103,15 @@ export function CommunityManageModal({ visible, onClose, community, isAdmin }: C
     return () => {
       cancelled = true;
     };
-  }, [addModeratorOpen, debouncedModeratorQuery, moderators]);
+  }, [addModeratorOpen, debouncedModeratorQuery, moderators, candidateSearchNonce]);
 
   async function refreshModerators() {
     setLoadingModerators(true);
+    setModeratorsError(null);
     try {
       setModerators(await listCommunityModerators(community.id));
+    } catch (err) {
+      setModeratorsError(err ?? new Error('Could not load moderators'));
     } finally {
       setLoadingModerators(false);
     }
@@ -342,6 +353,13 @@ export function CommunityManageModal({ visible, onClose, community, isAdmin }: C
                     <AppText variant="caption" tone="secondary">
                       Searching…
                     </AppText>
+                  ) : candidatesError ? (
+                    <ErrorStateView
+                      compact
+                      error={candidatesError}
+                      subject="people"
+                      onRetry={() => setCandidateSearchNonce((n) => n + 1)}
+                    />
                   ) : (
                     candidates.slice(0, 8).map((candidate) => (
                       <Pressable
@@ -374,6 +392,8 @@ export function CommunityManageModal({ visible, onClose, community, isAdmin }: C
                 <AppText variant="caption" tone="secondary">
                   Loading…
                 </AppText>
+              ) : moderatorsError ? (
+                <ErrorStateView compact error={moderatorsError} subject="moderators" onRetry={refreshModerators} />
               ) : moderators.length === 0 ? (
                 <AppText variant="caption" tone="secondary">
                   Just you for now - add someone to help keep this space tidy.
