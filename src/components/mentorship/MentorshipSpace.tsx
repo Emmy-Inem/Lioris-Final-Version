@@ -944,6 +944,7 @@ function GoalsPanel({
               onPress={() => run(`g-${g.id}`, async () => void (await setMentorshipGoalDone(g.id, !g.isDone)))}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: g.isDone }}
+              aria-checked={g.isDone}
               hitSlop={8}
             >
               <Ionicons name={g.isDone ? 'checkmark-circle' : 'ellipse-outline'} size={26} color={g.isDone ? colors.success : colors.textSecondary} />

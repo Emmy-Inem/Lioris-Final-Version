@@ -87,6 +87,7 @@ export default function ContentDeskScreen() {
 
         <ScrollView
           horizontal
+          accessibilityRole="tablist"
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: spacing.xs, paddingRight: spacing.md }}
           style={{ marginBottom: spacing.md, flexGrow: 0 }}
@@ -99,6 +100,7 @@ export default function ContentDeskScreen() {
                 key={t.key}
                 accessibilityRole="tab"
                 accessibilityState={{ selected }}
+                aria-selected={selected}
                 onPress={() => {
                   haptics.light();
                   setTab(t.key);

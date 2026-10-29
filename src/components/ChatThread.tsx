@@ -79,6 +79,7 @@ function ChatAttachment({ mediaUrl, isMe }: { mediaUrl: string; isMe: boolean })
     return (
       <Image
         source={{ uri: url }}
+        accessibilityLabel="Image shared in chat"
         style={{ width: 200, height: 150, borderRadius: 12, marginBottom: 6, backgroundColor: colors.divider }}
         resizeMode="cover"
       />

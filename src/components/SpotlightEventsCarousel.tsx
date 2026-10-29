@@ -17,7 +17,7 @@ function EventCoverImage({ coverImageUrl, style }: { coverImageUrl?: string | nu
   const { url: signedCoverUrl } = useSignedUrl('campus-media', isDataUri ? null : coverImageUrl);
   const effectiveUrl = isDataUri ? coverImageUrl : signedCoverUrl;
   if (!effectiveUrl) return null;
-  return <Image source={{ uri: effectiveUrl }} style={style} contentFit="cover" />;
+  return <Image source={{ uri: effectiveUrl }} accessibilityLabel="" style={style} contentFit="cover" />;
 }
 
 interface SpotlightEventsCarouselProps {
@@ -122,6 +122,7 @@ export function SpotlightEventsCarousel({ events, roleGroup }: SpotlightEventsCa
  accessibilityRole="button"
  accessibilityLabel={userPaused ? 'Play automatic slide show' : 'Pause automatic slide show'}
  accessibilityState={{ selected: userPaused }}
+ aria-pressed={userPaused}
  onFocus={() => setFocused(true)}
  onBlur={() => setFocused(false)}
  onPress={() => {

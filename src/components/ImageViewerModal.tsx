@@ -83,6 +83,7 @@ export function ImageViewerModal({
           ) : resolvedSource ? (
             <Image
               source={resolvedSource}
+              accessibilityLabel={caption || 'Full screen image'}
               style={styles.fullImage}
               contentFit="contain"
               transition={300}

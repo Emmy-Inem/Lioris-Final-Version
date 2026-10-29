@@ -464,7 +464,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         {/* Cover Photo Header */}
         <View style={{ height: isDesktop ? 220 : 150, position: 'relative', width: isDesktop ? undefined : '100%', marginHorizontal: isDesktop ? 32 : 0, marginTop: isDesktop ? 20 : 0, borderRadius: isDesktop ? 22 : 0, overflow: 'hidden' }}>
           {activeCover ? (
-            <Image source={activeCover} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            <Image source={activeCover} accessibilityLabel="Profile cover photo" style={{ width: '100%', height: '100%' }} contentFit="cover" />
           ) : (
             <View
               style={{
@@ -791,6 +791,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  onPress={() => setActiveTab(tab)}
  accessibilityRole="button"
  accessibilityState={{ selected }}
+ aria-pressed={selected}
  accessibilityLabel={`${tab}, ${count}`}
  style={{
  flexGrow: 1,
@@ -875,6 +876,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
                         onPress={() => setUnpublishedSubFilter(sub.id as any)}
                         accessibilityRole="button"
                         accessibilityState={{ selected: isSubActive }}
+                        aria-pressed={isSubActive}
                         style={{
                           paddingHorizontal: 12,
                           paddingVertical: 6,

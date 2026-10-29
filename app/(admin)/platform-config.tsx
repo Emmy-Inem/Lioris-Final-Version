@@ -134,6 +134,7 @@ export default function PlatformConsoleScreen() {
                   key={option.key}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: selected }}
+                  aria-checked={selected}
                   onPress={() => setAudience(option.key)}
                   style={{
                     paddingHorizontal: spacing.md,

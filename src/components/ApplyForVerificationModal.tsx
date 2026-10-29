@@ -191,6 +191,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit, defaultI
                     onPress={() => setDocumentType(type)}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: selected }}
+                    aria-checked={selected}
                     accessibilityLabel={type}
                     style={{
                       paddingHorizontal: spacing.md,
@@ -232,7 +233,7 @@ export function ApplyForVerificationModal({ visible, onClose, onSubmit, defaultI
               }}
             >
               {documentPhotoUri ? (
-                <Image source={{ uri: documentPhotoUri }} style={{ width: '100%', height: 120 }} contentFit="cover" transition={200} />
+                <Image source={{ uri: documentPhotoUri }} accessibilityLabel="Photo of your verification document" style={{ width: '100%', height: 120 }} contentFit="cover" transition={200} />
               ) : (
                 <>
                   <Ionicons name="cloud-upload-outline" size={20} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />

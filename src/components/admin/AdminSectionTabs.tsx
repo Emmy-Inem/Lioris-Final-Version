@@ -75,6 +75,7 @@ export function AdminSectionTabs({
       <ScrollView
         ref={scrollRef}
         horizontal
+        accessibilityRole="tablist"
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={(e) => {
@@ -99,6 +100,7 @@ export function AdminSectionTabs({
               key={section.key}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
+              aria-selected={selected}
               accessibilityLabel={count ? `${section.label}, ${count} waiting` : section.label}
               onLayout={(e) => {
                 if (!savedTabLayoutsByGroup[group]) {

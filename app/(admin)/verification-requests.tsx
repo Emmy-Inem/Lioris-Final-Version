@@ -146,6 +146,7 @@ function VerificationDocumentPanel({
         >
           <Image
             source={{ uri: document.signedUrl }}
+            accessibilityLabel="Submitted verification document"
             style={{ width: '100%', height: 260 }}
             resizeMode="contain"
             onError={() => setImageFailed(true)}
@@ -439,6 +440,7 @@ export default function VerificationRequestsScreen() {
                       hitSlop={8}
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: selectedIds.has(req.id) }}
+                      aria-checked={selectedIds.has(req.id)}
                       accessibilityLabel={`Select ${req.applicantName}`}
                       style={{ flexShrink: 0 }}
                     >
@@ -668,6 +670,7 @@ export default function VerificationRequestsScreen() {
             {fullScreenDocument && (
               <Image
                 source={{ uri: fullScreenDocument.signedUrl }}
+                accessibilityLabel="Submitted verification document, full size"
                 style={{ width: '100%', height: 560 }}
                 resizeMode="contain"
               />

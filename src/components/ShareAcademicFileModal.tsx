@@ -343,6 +343,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
                     onPress={() => setCategory(cat)}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: selected }}
+                    aria-checked={selected}
                     accessibilityLabel={cat}
                     style={{
                       paddingHorizontal: spacing.md,
@@ -365,6 +366,7 @@ export function ShareAcademicFileModal({ visible, onClose, onUpload }: ShareAcad
             <Pressable
               accessibilityRole="checkbox"
               accessibilityState={{ checked: rightsConfirmed }}
+              aria-checked={rightsConfirmed}
               onPress={() => {
                 setRightsConfirmed((v) => !v);
                 if (errorMessage) setErrorMessage(null);

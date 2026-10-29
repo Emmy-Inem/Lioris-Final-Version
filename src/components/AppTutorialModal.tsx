@@ -334,6 +334,7 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
                       }}
                       accessibilityRole="tab"
                       accessibilityState={{ selected: isActive }}
+                      aria-selected={isActive}
                       accessibilityLabel={s.tabName}
                       style={{
                         flexDirection: 'row',

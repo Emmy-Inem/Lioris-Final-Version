@@ -97,6 +97,7 @@ export default function AdminFeatureControlsScreen() {
                       </View>
 
                       <Switch
+                        accessibilityLabel={flag.label}
                         value={isEnabled}
                         onValueChange={(next) => handleToggleFlag(flag.key, next, flag.label)}
                         trackColor={{ false: colors.divider, true: colors.brandPrimary }}

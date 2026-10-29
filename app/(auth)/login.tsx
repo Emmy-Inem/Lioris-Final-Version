@@ -130,6 +130,7 @@ export default function LoginScreen() {
  onPress={() => setPortal(p)}
  accessibilityRole="tab"
  accessibilityState={{ selected }}
+ aria-selected={selected}
  style={{
  flex: 1,
  flexDirection: 'row',

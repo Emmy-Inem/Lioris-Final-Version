@@ -99,9 +99,11 @@ interface AvatarProps {
   uri?: string | null;
   size?: number;
   role?: 'student' | 'staff' | 'alumni' | 'admin';
+  /** Text alternative for the picture. Defaults to "<name>'s profile photo"; pass '' when the name is already read next to it. */
+  alt?: string;
 }
 
-export function Avatar({ name, uri, size = 44, role }: AvatarProps) {
+export function Avatar({ name, uri, size = 44, role, alt }: AvatarProps) {
   const { colors, isDark } = useTheme();
 
   const imageSource = (() => {
@@ -141,6 +143,7 @@ export function Avatar({ name, uri, size = 44, role }: AvatarProps) {
       {imageSource ? (
         <Image
           source={imageSource}
+          accessibilityLabel={alt ?? ((name || '').trim() ? `${name.trim()}'s profile photo` : '')}
           style={{ width: '100%', height: '100%' }}
           contentFit="cover"
           transition={200}

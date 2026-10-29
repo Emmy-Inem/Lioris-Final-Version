@@ -319,7 +319,7 @@ export function AcademicLibraryModal({
                       {/* Cover Thumbnail */}
                       <View style={[styles.coverContainer, { backgroundColor: `${colors.border}40` }]}>
                         {book.coverUrl ? (
-                          <Image source={{ uri: book.coverUrl }} style={styles.coverImage} resizeMode="cover" />
+                          <Image source={{ uri: book.coverUrl }} accessibilityLabel="" style={styles.coverImage} resizeMode="cover" />
                         ) : (
                           <View style={styles.placeholderCover}>
                             <Ionicons name="book-outline" size={24} color={colors.brandPrimary} />

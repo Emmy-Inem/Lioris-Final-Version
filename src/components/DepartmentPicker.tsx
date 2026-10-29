@@ -266,6 +266,7 @@ export function DepartmentPicker({
                           onPress={() => handleSelect(dept, group.faculty)}
                           accessibilityRole="button"
                           accessibilityState={{ selected: isSelected }}
+                          aria-pressed={isSelected}
                           style={{
                             flexDirection: 'row',
                             alignItems: 'center',

@@ -25,6 +25,7 @@ import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModa
 import { submitVerificationRequest } from '@/api/verification';
 import { usePermissions } from '@/context/RolePermissionsContext';
 import { queryErrorMode } from '@/utils/queryError';
+import { accentTextOnTint } from '@/theme/contrast';
 
 const CATEGORIES = ['All', 'Academic & Tech', 'Campus Life', 'Union & Polls'] as const;
 type CategoryFilter = typeof CATEGORIES[number];
@@ -422,7 +423,7 @@ export default function ExploreForumsScreen() {
                           {ch.label}
                         </AppText>
                         <View style={{ backgroundColor: ch.accentColor + '20', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill }}>
-                          <AppText weight="bold" style={{ color: ch.accentColor, fontSize: 10.5 }}>
+                          <AppText weight="bold" style={{ color: accentTextOnTint(ch.accentColor, [colors.surface, colors.background]), fontSize: 10.5 }}>
                             {ch.slug}
                           </AppText>
                         </View>

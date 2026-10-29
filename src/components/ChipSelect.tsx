@@ -81,6 +81,7 @@ export function ChipSelect<T extends string>({ options, selected, onToggle, scro
               onPress={() => handlePressChip(option)}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: isSelected }}
+              aria-checked={isSelected}
               accessibilityLabel={option}
               style={{
                 flexShrink: 0,
@@ -112,6 +113,7 @@ export function ChipSelect<T extends string>({ options, selected, onToggle, scro
             onPress={() => onToggle(option)}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: isSelected }}
+            aria-checked={isSelected}
             accessibilityLabel={option}
             style={{
               paddingHorizontal: spacing.md,

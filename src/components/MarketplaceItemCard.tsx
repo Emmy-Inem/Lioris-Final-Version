@@ -37,7 +37,7 @@ interface MarketplaceItemOverrides {
 function MarketplaceImageItem({ path, style }: { path: string; style?: any }) {
   const { url } = useSignedUrl('campus-media', path);
   if (!url) return null;
-  return <Image source={{ uri: url }} style={style} contentFit="cover" transition={200} />;
+  return <Image source={{ uri: url }} accessibilityLabel="Marketplace listing photo" style={style} contentFit="cover" transition={200} />;
 }
 
 function trustLabel(level: number) {
@@ -290,6 +290,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
         ) : resolvedImageUrl ? (
           <Image
             source={{ uri: resolvedImageUrl }}
+            accessibilityLabel="Marketplace listing photo"
             style={StyleSheet.absoluteFill}
             contentFit="cover"
             transition={200}
@@ -336,7 +337,7 @@ export function MarketplaceItemCard({ item }: { item: MarketplaceListing }) {
  ) : null}
  <Pressable
  onPress={handleToggleWishlist}
- accessibilityRole="button"accessibilityState={{ selected: saved }}
+ accessibilityRole="button"accessibilityState={{ selected: saved }} aria-pressed={saved}
  accessibilityLabel={saved ? 'Remove from wishlist' : 'Add to wishlist'}
  style={{
  width: 24,

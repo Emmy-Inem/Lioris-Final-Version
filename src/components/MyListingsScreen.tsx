@@ -109,6 +109,7 @@ export function MyListingsScreen() {
               onPress={() => setFilter(f.key)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
+              aria-pressed={selected}
               accessibilityLabel={`${f.label}, ${count} listings`}
               style={{
                 flexDirection: 'row',

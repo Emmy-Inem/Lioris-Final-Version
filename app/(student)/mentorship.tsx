@@ -170,6 +170,7 @@ export default function StudentMentorshipScreen() {
                 }}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: showPaused }}
+                aria-checked={showPaused}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginLeft: 'auto' }}
               >
                 <Ionicons name={showPaused ? 'checkbox' : 'square-outline'} size={16} color={showPaused ? colors.brandPrimary : colors.textSecondary} />

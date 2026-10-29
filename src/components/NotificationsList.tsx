@@ -352,7 +352,7 @@ export function NotificationsScreen() {
               }}
             >
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' }} />
-              <AppText variant="caption" weight="bold" style={{ color: '#059669', fontSize: 11 }}>
+              <AppText variant="caption" weight="bold" style={{ color: isDark ? '#34D399' : '#047857', fontSize: 11 }}>
                 Campus Sync: Real-Time Active
               </AppText>
             </View>
@@ -509,6 +509,7 @@ export function NotificationsScreen() {
       {/* Mobile Tab Switcher */}
       {!isDesktop && connectionsEnabled && (
         <View
+          accessibilityRole="tablist"
           style={{
             flexDirection: 'row',
             backgroundColor: colors.surface,
@@ -527,6 +528,7 @@ export function NotificationsScreen() {
                 onPress={() => setTab(t)}
                 accessibilityRole="tab"
                 accessibilityState={{ selected }}
+                aria-selected={selected}
                 style={{
                   flex: 1,
                   paddingVertical: 8,

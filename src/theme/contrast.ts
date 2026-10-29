@@ -54,6 +54,25 @@ export function ensureContrast(fg: string, bg: string, min = 4.5): string {
   return toHex(target);
 }
 
+/**
+ * Text colour for an accent that is also used as a translucent fill behind that text (the
+ * `${accent}20` chips: ~12.5% accent over the surface). Returns `accent` itself when it already
+ * reaches AA (4.5:1) on that tinted fill over every base in `bases`, otherwise a darker (light
+ * themes) or lighter (dark themes) shade of the same hue.
+ */
+export function accentTextOnTint(accent: string, bases: string[], alpha = 0.126, min = 4.5): string {
+  const a = hexToRgb(accent);
+  if (!a) return accent;
+  let fg = accent;
+  for (const base of bases) {
+    const b = hexToRgb(base);
+    if (!b) continue;
+    const tint = toHex([0, 1, 2].map((i) => a[i] * alpha + b[i] * (1 - alpha)) as [number, number, number]);
+    fg = ensureContrast(fg, tint, min);
+  }
+  return fg;
+}
+
 /** Picks near-black or white text, whichever reads better on `bg`. */
 export function readableOn(bg: string, dark = '#0A1326', light = '#FFFFFF'): string {
   return contrastRatio(dark, bg) >= contrastRatio(light, bg) ? dark : light;

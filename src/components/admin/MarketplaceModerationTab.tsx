@@ -185,6 +185,7 @@ export function MarketplaceModerationTab() {
               hitSlop={8}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: selectedIds.has(listing.id) }}
+              aria-checked={selectedIds.has(listing.id)}
               accessibilityLabel={`Select ${listing.title}`}
               style={{ paddingTop: 2 }}
             >

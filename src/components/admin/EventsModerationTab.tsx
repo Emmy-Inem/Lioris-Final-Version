@@ -45,6 +45,7 @@ function EventModerationThumbnail({
     return (
       <Image
         source={{ uri: effectiveUrl }}
+        accessibilityLabel="Event cover image"
         style={{ width: 85, height: 85, borderRadius: radius.md }}
         contentFit="cover"
       />
@@ -686,6 +687,7 @@ export function EventsModerationTab() {
  hitSlop={8}
  accessibilityRole="checkbox"
  accessibilityState={{ checked: selectedIds.has(event.id) }}
+ aria-checked={selectedIds.has(event.id)}
  accessibilityLabel={`Select ${event.title}`}
  style={{ paddingTop: 2 }}
  >

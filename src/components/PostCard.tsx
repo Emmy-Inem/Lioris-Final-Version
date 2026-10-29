@@ -78,9 +78,12 @@ function PostImageItem({
   style,
   onPress,
   children,
+  alt = 'Image attached to this post',
 }: {
   path: string;
   style?: any;
+  /** Text alternative for the picture (web alt / native accessibility label). */
+  alt?: string;
   onPress?: () => void;
   children?: React.ReactNode;
 }) {
@@ -97,7 +100,7 @@ function PostImageItem({
       style={[{ position: 'relative', overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.05)' }, style]}
     >
       {source ? (
-        <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} recyclingKey={path} cachePolicy="memory-disk" />
+        <Image source={source} accessibilityLabel={alt} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} recyclingKey={path} cachePolicy="memory-disk" />
       ) : loading ? (
         <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center' }]}>
           <ActivityIndicator size="small" color="#999999" />
@@ -440,7 +443,7 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
         {post.authorName}
       </AppText>
       {post.authorVerified || post.authorRole === 'admin' ? (
-        <VerifiedBadge size={14} role={post.authorRole} name={post.authorName} />
+        <VerifiedBadge size={14} role={post.authorRole} name={post.authorName} showModalOnPress={false} />
       ) : null}
       
     </View>
@@ -502,6 +505,7 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
         <PostImageItem
           key={url + index}
           path={url}
+          alt={`Photo ${index + 1} of ${mediaList.length} attached to ${post.authorName}'s post`}
           style={{ width: '49.5%', height: mediaList.length <= 2 ? 200 : 99 }}
           onPress={() => {
             haptics.light();
@@ -515,6 +519,7 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
   ) : mediaList.length === 1 ? (
     <PostImageItem
       path={mediaList[0]}
+      alt={isVideoPost ? `Video thumbnail for ${post.authorName}'s post` : `Image attached to ${post.authorName}'s post`}
       style={{ width: '100%', height: 200, borderRadius: 16, marginBottom: spacing.sm }}
       onPress={() => {
         haptics.light();
@@ -567,6 +572,8 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  disabled={pollClosed}
  accessibilityRole="button"
  accessibilityState={{ selected: !!opt.isVotedByMe, disabled: pollClosed }}
+ aria-pressed={!!opt.isVotedByMe}
+ aria-disabled={pollClosed}
  accessibilityLabel={opt.isVotedByMe ? `${opt.label}, your vote. Tap to remove it.` : `Vote for ${opt.label}`}
  style={{
  position: 'relative',
@@ -664,6 +671,7 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  onPress={handleToggleLike}
  accessibilityRole="button"accessibilityLabel={liked ? 'Remove helpful mark' : 'Mark thread as helpful'}
  accessibilityState={{ selected: liked }}
+ aria-pressed={liked}
  style={{
  flexDirection: 'row',
  alignItems: 'center',
@@ -700,7 +708,7 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  onPress={handleToggleBookmark}
  disabled={savingBookmark}
  accessibilityRole="button"accessibilityLabel={bookmarked ? 'Remove from saved items' : 'Save this post'}
- accessibilityState={{ selected: bookmarked }}style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
+ accessibilityState={{ selected: bookmarked }} aria-pressed={bookmarked} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm, paddingVertical: 6 }}
  >
  <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={17} color={bookmarked ? colors.brandPrimary : colors.textSecondary} />
  <AppText variant="bodySmall"tone={bookmarked ? 'brand' : 'secondary'} weight={bookmarked ? 'bold' : 'regular'}>

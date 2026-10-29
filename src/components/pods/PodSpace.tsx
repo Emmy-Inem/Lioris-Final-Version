@@ -506,6 +506,7 @@ function ReportPostSheet({ visible, postId, onClose }: { visible: boolean; postI
             onPress={() => setReason(x)}
             accessibilityRole="radio"
             accessibilityState={{ checked: reason === x }}
+            aria-checked={reason === x}
             style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, borderWidth: 1.5, borderColor: reason === x ? colors.brandPrimary : colors.border, backgroundColor: reason === x ? `${colors.brandPrimary}18` : 'transparent' }}
           >
             <AppText variant="caption" weight="semiBold" tone={reason === x ? 'brand' : 'secondary'}>

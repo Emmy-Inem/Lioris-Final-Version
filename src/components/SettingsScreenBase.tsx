@@ -116,6 +116,7 @@ function SettingsAccordionHeader({
       accessibilityRole="button"
       accessibilityLabel={`${section.fullLabel}, ${isCollapsed ? 'collapsed' : 'expanded'}`}
       accessibilityState={{ expanded: !isCollapsed }}
+      aria-expanded={!isCollapsed}
       onPress={onToggle}
       style={({ pressed }) => ({
         flexDirection: 'row',
@@ -1336,6 +1337,7 @@ export function SettingsScreen() {
                               accessibilityRole="button"
                               accessibilityLabel={t.fullLabel}
                               accessibilityState={{ selected: active }}
+                              aria-pressed={active}
                               onPress={() => {
                                 haptics.light();
                                 setThemeMode(t.id as any);
@@ -1463,6 +1465,7 @@ export function SettingsScreen() {
                               accessibilityRole="button"
                               accessibilityLabel={`${preset.label} palette`}
                               accessibilityState={{ selected: isSelected }}
+                              aria-pressed={isSelected}
                               onPress={async () => {
                                 haptics.light();
                                 await setCustomAccent(preset.id);
@@ -1564,6 +1567,7 @@ export function SettingsScreen() {
                               accessibilityRole="button"
                               accessibilityLabel={step.label}
                               accessibilityState={{ selected: active }}
+                              aria-pressed={active}
                               onPress={() => {
                                 haptics.light();
                                 setFontScale(step.value as FontScale);
@@ -1609,6 +1613,7 @@ export function SettingsScreen() {
                         </AppText>
                       </View>
                       <Switch
+                        accessibilityLabel="Reduce motion"
                         value={reduceMotionOverride === true}
                         onValueChange={(v) => {
                           haptics.light();
@@ -1667,6 +1672,7 @@ export function SettingsScreen() {
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>Instant alerts for course updates and official broadcasts</AppText>
                   </View>
                   <Switch
+                    accessibilityLabel="Push notifications"
                     value={pushEnabled}
                     onValueChange={handleTogglePush}
                     trackColor={{ false: colors.divider, true: colors.brandPrimary }}
@@ -1679,6 +1685,7 @@ export function SettingsScreen() {
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>Dean bulletins, lecture hall shifts & academic calendar</AppText>
                   </View>
                   <Switch
+                    accessibilityLabel="Campus announcements"
                     value={announcementAlerts}
                     onValueChange={handleToggleAnnouncements}
                     trackColor={{ false: colors.divider, true: colors.brandPrimary }}
@@ -1691,6 +1698,7 @@ export function SettingsScreen() {
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>Reminders 1 hour before RSVP'd events commence</AppText>
                   </View>
                   <Switch
+                    accessibilityLabel="Events and workshops"
                     value={eventAlerts}
                     onValueChange={handleToggleEvents}
                     trackColor={{ false: colors.divider, true: colors.brandPrimary }}
@@ -1706,6 +1714,7 @@ export function SettingsScreen() {
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>We're not sending this digest yet - toggling it does nothing for now</AppText>
                   </View>
                   <Switch
+                    accessibilityLabel="Weekly academic digest (coming soon)"
                     value={emailDigestAlerts}
                     onValueChange={handleToggleEmailDigest}
                     disabled
@@ -1743,6 +1752,7 @@ export function SettingsScreen() {
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>Require FaceID/TouchID or device PIN upon launch</AppText>
                   </View>
                   <Switch
+                    accessibilityLabel="Biometric and passkey shield"
                     value={biometricShield}
                     onValueChange={handleToggleBiometrics}
                     trackColor={{ false: colors.divider, true: colors.brandPrimary }}
@@ -1759,6 +1769,7 @@ export function SettingsScreen() {
                       </AppText>
                     </View>
                     <Switch
+                      accessibilityLabel="Two-step authentication"
                       value={Boolean(mfaFactorId && !mfaPendingFactorId)}
                       onValueChange={(val) => {
                         if (val) {
@@ -2051,6 +2062,7 @@ export function SettingsScreen() {
                     <AppText tone="secondary" variant="caption" style={{ marginTop: 2 }}>Allow verified classmates to discover your academic profile in search and study pods</AppText>
                   </View>
                   <Switch
+                    accessibilityLabel="Campus directory discovery"
                     value={directoryDiscovery}
                     onValueChange={handleToggleDirectoryDiscovery}
                     trackColor={{ false: colors.divider, true: colors.brandPrimary }}
@@ -2064,15 +2076,15 @@ export function SettingsScreen() {
                   </AppText>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
                     <AppText variant="bodySmall">Company</AppText>
-                    <Switch value={hideCompany} onValueChange={(v) => handleToggleHideField('company', v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+                    <Switch accessibilityLabel="Hide company from my profile" value={hideCompany} onValueChange={(v) => handleToggleHideField('company', v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
                     <AppText variant="bodySmall">Job Title</AppText>
-                    <Switch value={hideJobTitle} onValueChange={(v) => handleToggleHideField('jobTitle', v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+                    <Switch accessibilityLabel="Hide job title from my profile" value={hideJobTitle} onValueChange={(v) => handleToggleHideField('jobTitle', v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
                     <AppText variant="bodySmall">Location</AppText>
-                    <Switch value={hideLocation} onValueChange={(v) => handleToggleHideField('location', v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+                    <Switch accessibilityLabel="Hide location from my profile" value={hideLocation} onValueChange={(v) => handleToggleHideField('location', v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
                   </View>
                 </View>
 
@@ -2525,6 +2537,7 @@ export function SettingsScreen() {
                               accessibilityRole="button"
                               accessibilityLabel={`Set academic level to ${lvl}`}
                               accessibilityState={{ selected: isSelected }}
+                              aria-pressed={isSelected}
                               onPress={() => setEditAcademicLevel(lvl)}
                               style={{
                                 paddingHorizontal: 12,

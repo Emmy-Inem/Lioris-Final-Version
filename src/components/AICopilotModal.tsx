@@ -726,6 +726,7 @@ export function AICopilotModal({
             >
               <Image
                 source={{ uri: attachedImage.previewUri }}
+                accessibilityLabel="Attached photo preview"
                 style={{ width: 40, height: 40, borderRadius: 6 }}
                 resizeMode="cover"
               />
@@ -793,6 +794,7 @@ export function AICopilotModal({
               onPress={() => handleSend()}
               disabled={(!prompt.trim() && !attachedImage) || loading || promptTooLong}
               accessibilityState={{ disabled: (!prompt.trim() && !attachedImage) || loading || promptTooLong }}
+              aria-disabled={(!prompt.trim() && !attachedImage) || loading || promptTooLong}
               style={[
                 styles.sendBtn,
                 {

@@ -218,6 +218,7 @@ export function JobsModerationTab() {
                 hitSlop={8}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: selectedIds.has(job.id) }}
+                aria-checked={selectedIds.has(job.id)}
                 accessibilityLabel={`Select ${job.title}`}
                 style={{ paddingTop: 2 }}
               >

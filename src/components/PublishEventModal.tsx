@@ -543,6 +543,7 @@ export function PublishEventModal({
                     onPress={() => setCategory(cat)}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: selected }}
+                    aria-checked={selected}
                     style={{
                       paddingHorizontal: 12,
                       paddingVertical: 6,
@@ -573,6 +574,7 @@ export function PublishEventModal({
                     onPress={() => setEventType(type)}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: selected }}
+                    aria-checked={selected}
                     style={{
                       paddingHorizontal: 12,
                       paddingVertical: 6,
@@ -965,7 +967,7 @@ export function PublishEventModal({
               }}
             >
               {bannerUri ? (
-                <Image source={{ uri: bannerUri }} style={{ width: '100%', height: 140 }} contentFit="cover" transition={200} />
+                <Image source={{ uri: bannerUri }} accessibilityLabel="Event banner preview" style={{ width: '100%', height: 140 }} contentFit="cover" transition={200} />
               ) : (
                 <>
                   <Ionicons name="cloud-upload" size={24} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />

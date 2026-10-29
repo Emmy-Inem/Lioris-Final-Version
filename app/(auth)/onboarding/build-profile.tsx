@@ -267,7 +267,7 @@ export default function BuildProfileScreen() {
           }}
         >
           {photoUri ? (
-            <Image source={{ uri: photoUri }} style={{ width: 90, height: 90 }} contentFit="cover" transition={200} />
+            <Image source={{ uri: photoUri }} accessibilityLabel="Your profile photo preview" style={{ width: 90, height: 90 }} contentFit="cover" transition={200} />
           ) : (
             <AppText tone="inverse" variant="h2" weight="bold">
               {initials}

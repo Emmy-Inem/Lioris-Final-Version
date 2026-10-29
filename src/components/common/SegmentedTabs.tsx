@@ -31,6 +31,7 @@ export function SegmentedTabs({
     <ScrollView
       ref={scrollRef}
       horizontal
+      accessibilityRole="tablist"
       showsHorizontalScrollIndicator={false}
       scrollEventThrottle={16}
       onScroll={(e) => {
@@ -50,6 +51,7 @@ export function SegmentedTabs({
             key={tab.key}
             accessibilityRole="tab"
             accessibilityState={{ selected }}
+            aria-selected={selected}
             onLayout={(e) => {
               tabLayoutsRef.current[tab.key] = {
                 x: e.nativeEvent.layout.x,

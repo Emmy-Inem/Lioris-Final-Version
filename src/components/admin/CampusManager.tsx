@@ -493,6 +493,7 @@ export function CampusManager() {
                 accessibilityRole="button"
                 accessibilityLabel={`Colour ${hex}`}
                 accessibilityState={{ selected: form.color.toLowerCase() === hex.toLowerCase() }}
+                aria-pressed={form.color.toLowerCase() === hex.toLowerCase()}
                 style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: hex, alignItems: 'center', justifyContent: 'center', borderWidth: form.color.toLowerCase() === hex.toLowerCase() ? 3 : 0, borderColor: colors.textPrimary }}
               >
                 {form.color.toLowerCase() === hex.toLowerCase() ? <Ionicons name="checkmark" size={16} color="#FFFFFF" /> : null}

@@ -252,7 +252,7 @@ export default function SystemHealthScreen() {
             <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
               <View style={{ alignItems: 'flex-end' }}>
                 <AppText variant="caption" tone="secondary">Round-Trip Latency</AppText>
-                <AppText weight="bold" style={{ fontSize: 18, color: (health?.latencyMs ?? 0) < 500 ? '#10B981' : '#F59E0B' }}>
+                <AppText weight="bold" style={{ fontSize: 18, color: (health?.latencyMs ?? 0) < 500 ? colors.success : colors.warning }}>
                   {health?.latencyMs ?? 0} ms
                 </AppText>
               </View>

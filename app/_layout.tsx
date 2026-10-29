@@ -37,6 +37,7 @@ import { RolePermissionsProvider } from '@/context/RolePermissionsContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { LiquidGlassProvider } from '@/context/LiquidGlassContext';
 import { installWebAlertPolyfill, AlertHost } from '@/polyfills/webAlert';
+import { installWebA11yFixes } from '@/polyfills/webA11yFixes';
 
 // Export root ErrorBoundary for Expo Router file-system routing
 export { RouteErrorBoundary as ErrorBoundary };
@@ -46,6 +47,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 });
 
 installWebAlertPolyfill();
+installWebA11yFixes();
 
 setupNetworkAwareQueries();
 

@@ -162,6 +162,7 @@ export function SavedItemsScreen() {
               onPress={() => setFilter(f.key)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
+              aria-pressed={selected}
               accessibilityLabel={`${f.label}, ${count} saved`}
               style={{
                 flexDirection: 'row',

@@ -163,7 +163,7 @@ export default function MinorsConsentScreen() {
         </SolidCard>
       ) : null}
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: spacing.md }} contentContainerStyle={{ gap: spacing.xs }}>
+      <ScrollView horizontal accessibilityRole="tablist" showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: spacing.md }} contentContainerStyle={{ gap: spacing.xs }}>
         {FILTERS.map((f) => {
           const selected = filter === f.key;
           return (
@@ -171,6 +171,7 @@ export default function MinorsConsentScreen() {
               key={f.key}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
+              aria-selected={selected}
               onPress={() => setFilter(f.key)}
               style={{
                 paddingHorizontal: 14,
@@ -468,6 +469,7 @@ function MinorRecordModal({ minorId, onClose, onChanged }: { minorId: string | n
                                 onPress={() => setGRelationship(r.value)}
                                 accessibilityRole="radio"
                                 accessibilityState={{ selected }}
+                                aria-checked={selected}
                                 style={{
                                   paddingHorizontal: 12,
                                   paddingVertical: 6,

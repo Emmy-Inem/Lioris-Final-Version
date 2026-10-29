@@ -169,7 +169,7 @@ export function JobAlertsModal({ visible, onClose, initialKeywords }: { visible:
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <AppText variant="bodySmall">Remote only</AppText>
-                <Switch value={remoteOnly} onValueChange={setRemoteOnly} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+                <Switch value={remoteOnly} onValueChange={setRemoteOnly} accessibilityLabel="Remote only" trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
               </View>
               <AppButton label={creating ? 'Creating…' : 'Create Alert'} onPress={handleCreate} loading={creating} />
             </View>
@@ -217,7 +217,7 @@ export function JobAlertsModal({ visible, onClose, initialKeywords }: { visible:
                         {a.lastNotifiedAt ? `Last matched ${new Date(a.lastNotifiedAt).toLocaleDateString()}` : 'No matches yet'}
                       </AppText>
                     </View>
-                    <Switch value={a.isActive} onValueChange={(v) => handleToggleActive(a, v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+                    <Switch value={a.isActive} onValueChange={(v) => handleToggleActive(a, v)} accessibilityLabel={`Alert active: ${describeAlert(a)}`} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
                     <Pressable onPress={() => handleDelete(a)} hitSlop={8}>
                       <Ionicons name="trash-outline" size={18} color={colors.critical} />
                     </Pressable>

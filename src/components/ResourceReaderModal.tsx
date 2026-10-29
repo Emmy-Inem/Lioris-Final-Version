@@ -235,6 +235,7 @@ export function ResourceReaderModal({
               hitSlop={8}
               accessibilityRole="button"
               accessibilityState={{ selected: bookmarked }}
+              aria-pressed={bookmarked}
               accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark this lecture note'}
               style={{
                 width: 44,
@@ -267,6 +268,7 @@ export function ResourceReaderModal({
 
           {/* Row 2: full-width segmented tabs - each half is tappable edge to edge */}
           <View
+            accessibilityRole="tablist"
             style={{
               flexDirection: 'row',
               backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
@@ -284,6 +286,7 @@ export function ResourceReaderModal({
                 onPress={() => setActiveTab(tab.key)}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: activeTab === tab.key }}
+                aria-selected={activeTab === tab.key}
                 style={{
                   flex: 1,
                   minHeight: 44,

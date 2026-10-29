@@ -258,6 +258,7 @@ export function DesktopTopBar() {
             accessibilityRole="button"
             accessibilityLabel="Notifications"
             accessibilityState={{ expanded: notifDropdownOpen }}
+            aria-expanded={notifDropdownOpen}
             style={({ hovered }: any) => [
               styles.iconButton,
               {

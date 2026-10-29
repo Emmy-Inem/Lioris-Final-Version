@@ -265,6 +265,7 @@ export const ResourceCard = React.memo(function ResourceCard({
  accessibilityRole="button"
  accessibilityLabel={`${upvoted ? 'Remove upvote' : 'Upvote'}, ${upvotes} upvotes`}
  accessibilityState={{ selected: upvoted }}
+ aria-pressed={upvoted}
  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Ionicons
               name={upvoted ? 'thumbs-up' : 'thumbs-up-outline'}

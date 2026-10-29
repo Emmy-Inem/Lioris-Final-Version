@@ -118,6 +118,7 @@ export function ReportResourceForm({ resource, onClose, onSubmitted }: ReportRes
               key={opt.type}
               accessibilityRole="radio"
               accessibilityState={{ checked: selected }}
+              aria-checked={selected}
               onPress={() => {
                 haptics.light();
                 setClaimType(opt.type);
@@ -209,6 +210,7 @@ export function ReportResourceForm({ resource, onClose, onSubmitted }: ReportRes
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: confirmed }}
+          aria-checked={confirmed}
           onPress={() => {
             haptics.light();
             setConfirmed((v) => !v);

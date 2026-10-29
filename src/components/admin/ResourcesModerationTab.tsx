@@ -533,6 +533,7 @@ export function ResourcesModerationTab() {
  hitSlop={8}
  accessibilityRole="checkbox"
  accessibilityState={{ checked: selectedIds.has(resource.id) }}
+ aria-checked={selectedIds.has(resource.id)}
  accessibilityLabel={`Select ${resource.title}`}
  style={{ paddingTop: 2 }}
  >

@@ -229,6 +229,7 @@ export default function RegisterScreen() {
  onPress={() => setPortal(p.value)}
  accessibilityRole="tab"
  accessibilityState={{ selected }}
+ aria-selected={selected}
  accessibilityLabel={p.label}
  style={{
  flex: 1,
