@@ -37,7 +37,8 @@ export default function ExploreForumsScreen() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const segments = useSegments();
-  const roleGroup = segments[0] ?? '(student)';
+  const roleGroup = String(segments[0] ?? '(student)');
+  const forumHomeRoute = roleGroup === '(ambassador)' ? '/(ambassador)/discussions' : `/${roleGroup}/feed`;
 
   const { scope: forumScope, globalEnabled } = useForumScope();
   const { campusCode: activeCampus, homeInstitutionCode } = useCampusScope();
@@ -195,7 +196,7 @@ export default function ExploreForumsScreen() {
             <Pressable
               onPress={() => {
                 if (router.canGoBack()) router.back();
-                else router.replace(`/${roleGroup}/feed` as any);
+                else router.replace(forumHomeRoute as any);
               }}
               hitSlop={8}
               style={{
@@ -499,7 +500,7 @@ export default function ExploreForumsScreen() {
                     <Pressable
                       onPress={() => {
                         haptics.light();
-                        router.push(`/${roleGroup}/feed?category=${encodeURIComponent(ch.category)}` as any);
+                        router.push(`${forumHomeRoute}?category=${encodeURIComponent(ch.category)}` as any);
                       }}
                       hitSlop={8}
                       style={{

@@ -52,7 +52,7 @@ const ROLE_TABS: RoleTabDef[] = [
     key: 'campus_admin',
     label: 'Campus Admin',
     badge: 'Campus Moderator',
-    description: 'Campus ambassadors and local moderators scoped to their university.',
+    description: 'Appointed campus administrators and local moderators scoped to their university. Student ambassadors remain a separate, limited appointment.',
     icon: 'shield-outline',
   },
   {

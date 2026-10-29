@@ -87,6 +87,7 @@ export function DesktopTopBar() {
     enabled: !!user?.id,
   });
  const role = user?.role || 'student';
+ const navigationGroup = user?.workspaceMode === 'ambassador' && user?.isCampusAmbassador ? 'ambassador' : role;
  const isSuperAdmin = user?.actualRole === 'admin' && user?.isSuperAdmin === true;
 
  // Listen for global Cmd+K / Ctrl+K keyboard shortcut on web
@@ -112,7 +113,7 @@ export function DesktopTopBar() {
  const handleSearchSubmit = () => {
  if (searchQuery.trim()) {
  router.push({
- pathname: `/(${role})/search` as any,
+ pathname: `/(${navigationGroup})/search` as any,
  params: { q: searchQuery.trim() },
  });
  } else {

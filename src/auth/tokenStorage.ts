@@ -80,6 +80,10 @@ export interface StoredSessionUser {
   department?: string | null;
   avatarUrl?: string | null;
   coverUrl?: string | null;
+  /** Database-backed student appointment; this is not an admin role. */
+  isCampusAmbassador?: boolean;
+  /** Which UI workspace the appointed student last chose. */
+  workspaceMode?: 'default' | 'ambassador';
 }
 
 const PII_FIELDS = ['fullName', 'email', 'department', 'avatarUrl', 'coverUrl'] as const;

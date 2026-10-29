@@ -85,7 +85,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const segments = useSegments();
-  const roleGroup = segments[0] ?? '(student)';
+  const roleGroup = String(segments[0] ?? '(student)');
   // The Forum's own campus/global toggle. With the admin's Global toggle off it is always
   // 'campus' (never even a stale 'global' on first render) and the Global controls are hidden.
   const { scope: viewScope, setScope: setViewScope, globalEnabled: globalWorkspaceEnabled } = useForumScope();
@@ -226,7 +226,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
     activeSubForum.id !== 'all' &&
     (isAdmin || activeSubForum.createdBy === user?.id || myManagedCategories.has(activeSubForum.category));
 
-  const canCreateSpaces = hasPermission('can_create_spaces') || !!((user as any)?.isCampusAmbassador || isAdmin || user?.role === 'staff');
+  const canCreateSpaces = hasPermission('can_create_spaces') || !!(user?.isCampusAmbassador || isAdmin || user?.role === 'staff');
 
   async function handleProposeCommunity() {
     if (!newCommunityName.trim()) return;
@@ -313,7 +313,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
             onPress={() => {
               haptics.light();
               if (user?.role === 'student') {
-                router.push('/(student)/forum/explore' as any);
+                router.push((roleGroup === '(ambassador)' ? '/(ambassador)/forum/explore' : '/(student)/forum/explore') as any);
               } else {
                 setSubForumsDirectoryOpen(true);
               }
@@ -763,7 +763,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         </View>
         <Pressable
           onPress={() => {
-            if (roleGroup === '(student)') router.push('/(student)/forum/explore' as any);
+            if (roleGroup === '(student)' || roleGroup === '(ambassador)') router.push(`/${roleGroup}/forum/explore` as any);
             else setSubForumsDirectoryOpen(true);
           }}
           hitSlop={8}
@@ -875,7 +875,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         <Pressable
           onPress={() => {
             haptics.light();
-            if (roleGroup === '(student)') router.push('/(student)/forum/explore' as any);
+            if (roleGroup === '(student)' || roleGroup === '(ambassador)') router.push(`/${roleGroup}/forum/explore` as any);
             else setSubForumsDirectoryOpen(true);
           }}
           accessibilityRole="button"
@@ -1643,7 +1643,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </AppText>
                   <Pressable
                     onPress={() => {
-                      if (roleGroup === '(student)') router.push('/(student)/forum/explore' as any);
+                      if (roleGroup === '(student)' || roleGroup === '(ambassador)') router.push(`/${roleGroup}/forum/explore` as any);
                       else setSubForumsDirectoryOpen(true);
                     }}
                   >

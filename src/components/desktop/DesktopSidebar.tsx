@@ -47,6 +47,19 @@ export function DesktopSidebar() {
  const unreadNotificationsCount = unread.notifications;
 
  const role = user?.role || 'student';
+ const isAmbassadorWorkspace = user?.workspaceMode === 'ambassador' && user?.isCampusAmbassador === true;
+
+  const rawAmbassadorNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
+    { id: 'home', label: 'Ambassador Overview', href: '/(ambassador)/dashboard', icon: 'grid-outline' },
+    { id: 'forum', label: 'Discussion Spaces', href: '/(ambassador)/discussions', icon: 'chatbubbles-outline', flagKey: 'discussion_workspaces', match: ['/discussions', '/post', '/forum'] },
+    { id: 'events', label: 'Campus Events', href: '/(ambassador)/events-list', icon: 'calendar-outline', flagKey: 'campus_events', match: ['/events-list', '/events'] },
+    { id: 'messages', label: 'Messages', href: '/(ambassador)/messages', icon: 'chatbubble-ellipses-outline', badgeCount: unreadMessagesCount, flagKey: 'e2ee_messaging' },
+    { id: 'notifications', label: 'Notifications', href: '/(ambassador)/notifications', icon: 'notifications-outline', badgeCount: unreadNotificationsCount },
+    { id: 'profile', label: 'My Profile', href: '/(ambassador)/profile', icon: 'person-outline' },
+    { id: 'settings', label: 'Settings', href: '/(ambassador)/settings', icon: 'settings-outline' },
+    { id: 'student', label: 'Return to Student Portal', href: '/(ambassador)/student-portal', icon: 'swap-horizontal' },
+  ];
+  const ambassadorNavItems = rawAmbassadorNavItems.filter((item) => (item.flagKey ? isFeatureEnabled(item.flagKey) : true));
 
   const rawStudentNavItems: (NavItem & { flagKey?: FeatureKey })[] = [
     { id: 'home', label: 'Dashboard', href: '/(student)/dashboard', icon: 'home' },
@@ -116,7 +129,9 @@ export function DesktopSidebar() {
   });
 
   const navItems: (NavItem & { flagKey?: FeatureKey })[] =
-    role === 'admin'
+    isAmbassadorWorkspace
+      ? ambassadorNavItems
+      : role === 'admin'
       ? adminNavItems
       : role === 'staff' && isFeatureEnabled('staff_role')
       ? staffNavItems
@@ -151,7 +166,7 @@ export function DesktopSidebar() {
       <View style={[styles.brandHeader, { paddingHorizontal: collapsed ? 10 : 14 }]}>
  <View style={[styles.logoRow, { justifyContent: collapsed ? 'center' : 'space-between' }]}>
         <Pressable
-          onPress={() => router.push(role === 'admin' ? ('/(admin)/dashboard' as any) : (`/(${role})/dashboard` as any))}
+          onPress={() => router.push(isAmbassadorWorkspace ? ('/(ambassador)/dashboard' as any) : role === 'admin' ? ('/(admin)/dashboard' as any) : (`/(${role})/dashboard` as any))}
           accessibilityRole="link"
           accessibilityLabel="Lioris home"
           style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
@@ -346,7 +361,7 @@ export function DesktopSidebar() {
         ]}
       >
         <Pressable
-          onPress={() => router.push(`/(${role})/profile` as any)}
+          onPress={() => router.push(isAmbassadorWorkspace ? ('/(ambassador)/profile' as any) : (`/(${role})/profile` as any))}
           accessibilityRole="link"
           accessibilityLabel={`Open profile for ${user?.fullName || 'your account'}`}
           style={[styles.userCard, { justifyContent: collapsed ? 'center' : 'flex-start' }]}
@@ -376,7 +391,7 @@ export function DesktopSidebar() {
                     weight="bold"
                     style={{ fontSize: 9, textTransform: 'capitalize', color: colors.textPrimary }}
                   >
-                    {role}
+                    {isAmbassadorWorkspace ? 'Ambassador' : role}
                   </AppText>
                 </View>
                 <AppText variant="caption" style={{ fontSize: 10.5, flex: 1, minWidth: 0, color: colors.textPrimary }}>

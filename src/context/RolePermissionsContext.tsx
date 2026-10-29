@@ -127,9 +127,15 @@ export function RolePermissionsProvider({ children }: { children: React.ReactNod
 
   const hasPermission = useCallback(
     (key: PermissionKey): boolean => {
+      // Appointment capabilities are additive to the student's baseline.
+      // They never confer campus moderation, verification, role-management,
+      // announcement or platform-configuration authority.
+      if (user?.isCampusAmbassador && (key === 'can_create_spaces' || key === 'can_create_events')) {
+        return true;
+      }
       return can(currentSystemRole, key);
     },
-    [can, currentSystemRole],
+    [can, currentSystemRole, user?.isCampusAmbassador],
   );
 
   const setPermission = useCallback(

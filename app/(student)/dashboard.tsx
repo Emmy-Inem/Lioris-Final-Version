@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, View, Pressable, RefreshControl, Modal, StyleSheet } from 'react-native';
+import { Alert, ScrollView, View, Pressable, RefreshControl, Modal, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,7 +52,7 @@ import {
 
 export default function StudentDashboard() {
   const { colors, spacing, radius, isDark } = useTheme();
-  const { user } = useAuth();
+  const { user, enterAmbassadorWorkspace } = useAuth();
   const queryClient = useQueryClient();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
@@ -419,6 +419,38 @@ export default function StudentDashboard() {
             </View>
           </View>
         </GlassCard>
+
+        {user?.isCampusAmbassador || profile?.isCampusAmbassador ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open Campus Ambassador Console"
+            onPress={async () => {
+              haptics.light();
+              try {
+                await enterAmbassadorWorkspace();
+                router.push('/(ambassador)/dashboard' as any);
+              } catch (error: any) {
+                haptics.error();
+                Alert.alert('Ambassador access unavailable', error?.message || 'Your appointment could not be verified.');
+              }
+            }}
+          >
+            <SolidCard style={{ borderColor: colors.brandPrimary, borderWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="star" size={21} color={colors.brandPrimary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText weight="bold">Campus Ambassador Console</AppText>
+                  <AppText variant="bodySmall" tone="secondary" style={{ marginTop: 2 }}>
+                    Manage your discussion space proposals and campus events.
+                  </AppText>
+                </View>
+                <Ionicons name="arrow-forward" size={19} color={colors.brandPrimary} />
+              </View>
+            </SolidCard>
+          </Pressable>
+        ) : null}
 
         {/* Verification Notice for unverified personal email accounts */}
         <UnverifiedAccountNotice />

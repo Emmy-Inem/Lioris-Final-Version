@@ -190,6 +190,9 @@ export interface SessionUser {
  coverUrl?: string;
  isSuperAdmin: boolean;
  isCampusAdmin: boolean;
+ /** Campus Ambassador is an appointment layered on a real student account, never an admin role. */
+ isCampusAmbassador: boolean;
+ workspaceMode: 'default' | 'ambassador';
  onboardingComplete: boolean;
  onboardingStep?: string;
  /** See src/auth/mfaPolicy.ts - only meaningful when the role requires MFA. */
@@ -241,6 +244,9 @@ interface AuthContextValue {
   * function itself can never have altered).
   */
  switchRole: (role: UserRole) => Promise<void>;
+ /** Enter/leave the campus-scoped Ambassador Console without changing the authenticated role. */
+ enterAmbassadorWorkspace: () => Promise<void>;
+ exitAmbassadorWorkspace: () => Promise<void>;
  /** Current "View As / Support Mode" impersonation status - see beginImpersonation/endImpersonation below. */
  impersonation: ImpersonationState;
  /**
@@ -284,6 +290,8 @@ async function persist(user: SessionUser) {
  onboardingComplete: user.onboardingComplete,
  onboardingStep: user.onboardingStep,
  mfaVerified: user.mfaVerified,
+ isCampusAmbassador: user.isCampusAmbassador,
+ workspaceMode: user.workspaceMode,
  };
  await setSessionUser(stored);
 }
@@ -311,6 +319,7 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
   const adminRole = isMasterAdminEmail ? 'super_admin' : (profile?.admin_role as AdminRoleType | null | undefined);
   const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && adminRole === 'super_admin');
   const isCampusAdmin = role === 'admin' && !isSuperAdmin;
+  const isCampusAmbassador = role === 'student' && profile?.is_campus_ambassador === true;
   const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || null);
   const fullName =
     profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Campus Member';
@@ -328,6 +337,8 @@ async function fetchSessionUserForSession(session: NonNullable<Awaited<ReturnTyp
     coverUrl: profile?.banner_url || undefined,
     isSuperAdmin,
     isCampusAdmin,
+    isCampusAmbassador,
+    workspaceMode: 'default',
     onboardingComplete: isMasterAdminEmail || role === 'admin' || role === 'staff' || profile?.onboarding_complete === true,
     onboardingStep: profile?.onboarding_step || undefined,
     mfaVerified: !roleRequiresMfa(role),
@@ -377,6 +388,8 @@ function defaultSessionUser(userEmail: string, role: UserRole, fullName: string,
     department: null,
     isSuperAdmin,
     isCampusAdmin,
+    isCampusAmbassador: false,
+    workspaceMode: 'default',
     onboardingComplete: false,
     mfaVerified: !roleRequiresMfa(role),
   };
@@ -448,6 +461,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             coverUrl: stored.coverUrl || undefined,
             isSuperAdmin,
             isCampusAdmin,
+            isCampusAmbassador: actualRole === 'student' && stored.isCampusAmbassador === true,
+            workspaceMode:
+              actualRole === 'student' && stored.isCampusAmbassador === true && stored.workspaceMode === 'ambassador'
+                ? 'ambassador'
+                : 'default',
             onboardingComplete: isComplete,
             onboardingStep: isComplete ? undefined : (stored.onboardingStep || firstOnboardingStep(role)),
             mfaVerified: stored.mfaVerified ?? !roleRequiresMfa(role),
@@ -512,6 +530,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || storedUser?.campusCode || null);
           const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && adminRole === 'super_admin');
           const isCampusAdmin = role === 'admin' && !isSuperAdmin;
+          const isCampusAmbassador = role === 'student' && (profile?.is_campus_ambassador === true || (!profile && storedUser?.isCampusAmbassador === true));
           const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || storedUser?.fullName || userRef.current?.fullName || userEmail.split('@')[0] || 'Campus Member';
 
           const activeRole =
@@ -543,6 +562,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             coverUrl: profile?.banner_url || storedUser?.coverUrl || userRef.current?.coverUrl || undefined,
             isSuperAdmin,
             isCampusAdmin,
+            isCampusAmbassador,
+            workspaceMode:
+              isCampusAmbassador && (userRef.current?.workspaceMode === 'ambassador' || storedUser?.workspaceMode === 'ambassador')
+                ? 'ambassador'
+                : 'default',
             onboardingComplete: isOnboarded,
             onboardingStep: isOnboarded
               ? undefined
@@ -704,6 +728,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const campusCode = isMasterAdminEmail ? 'GLOBAL' : (profile?.campus_code || storedUser?.campusCode || null);
         const isSuperAdmin = isMasterAdminEmail || (role === 'admin' && adminRole === 'super_admin');
         const isCampusAdmin = role === 'admin' && !isSuperAdmin;
+        const isCampusAmbassador = role === 'student' && (profile?.is_campus_ambassador === true || (!profile && storedUser?.isCampusAmbassador === true));
         const fullName = profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || userRef.current?.fullName || storedUser?.fullName || userEmail.split('@')[0] || 'Campus Member';
 
         const activeRole =
@@ -739,6 +764,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           coverUrl: profile?.banner_url || (sameAccount ? current?.coverUrl : undefined) || storedUser?.coverUrl || undefined,
           isSuperAdmin,
           isCampusAdmin,
+          isCampusAmbassador,
+          workspaceMode:
+            isCampusAmbassador && (current?.workspaceMode === 'ambassador' || storedUser?.workspaceMode === 'ambassador')
+              ? 'ambassador'
+              : 'default',
           onboardingComplete: isOnboarded,
           onboardingStep: isOnboarded ? undefined : ((sameAccount ? current?.onboardingStep : undefined) ?? profile?.onboarding_step ?? undefined),
           mfaVerified:
@@ -756,6 +786,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           current.department === nextUser.department &&
           current.onboardingComplete === nextUser.onboardingComplete &&
           current.mfaVerified === nextUser.mfaVerified
+          && current.isCampusAmbassador === nextUser.isCampusAmbassador
+          && current.workspaceMode === nextUser.workspaceMode
         ) {
           return;
         }
@@ -862,17 +894,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         newRole === 'admin' ? ((row.admin_role ?? current.adminRole ?? 'campus_admin') as AdminRoleType) : null;
       const isSuperAdmin = isRoot || (newRole === 'admin' && newTier === 'super_admin');
       const isCampusAdmin = newRole === 'admin' && !isSuperAdmin;
+      const isCampusAmbassador = newRole === 'student' && row.is_campus_ambassador === true;
       const newCampus = isSuperAdmin ? 'GLOBAL' : ((row.campus_code ?? current.campusCode) as string | null);
 
       const roleChanged = newRole !== current.actualRole;
       const tierChanged = (isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null) !== (current.adminRole ?? null);
       const campusChanged = (newCampus ?? null) !== (current.campusCode ?? null);
+      const ambassadorChanged = isCampusAmbassador !== current.isCampusAmbassador;
       const verification = typeof row.verification_status === 'string' ? (row.verification_status as string) : undefined;
       // The first sighting only sets the baseline (see the initial checkNow below) - it is not a change.
       const verificationChanged = verification !== undefined && lastVerification !== undefined && verification !== lastVerification;
       lastVerification = verification ?? lastVerification;
 
-      if (roleChanged || tierChanged || campusChanged) {
+      if (roleChanged || tierChanged || campusChanged || ambassadorChanged) {
         const nextUser: SessionUser = {
           ...current,
           actualRole: newRole,
@@ -881,6 +915,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
           isSuperAdmin,
           isCampusAdmin,
+          isCampusAmbassador,
+          workspaceMode: isCampusAmbassador ? current.workspaceMode : 'default',
           campusCode: newCampus,
           department: row.department ?? current.department,
           mfaVerified: roleChanged && newRole !== current.role ? !roleRequiresMfa(newRole) : current.mfaVerified,
@@ -1018,6 +1054,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const campusCode = isMasterAdminEmail ? 'GLOBAL' : (prof?.campus_code || null);
         const isSuperAdmin = isMasterAdminEmail || (userRole === 'admin' && adminRole === 'super_admin');
         const isCampusAdmin = userRole === 'admin' && !isSuperAdmin;
+        const isCampusAmbassador = userRole === 'student' && prof?.is_campus_ambassador === true;
 
         const nextUser: SessionUser = {
           ...session.user,
@@ -1030,6 +1067,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           coverUrl: prof?.banner_url || undefined,
           isSuperAdmin,
           isCampusAdmin,
+          isCampusAmbassador,
+          workspaceMode:
+            isCampusAmbassador && cachedForAccount?.workspaceMode === 'ambassador' ? 'ambassador' : 'default',
           onboardingComplete: isOnboarded,
           onboardingStep: isOnboarded ? undefined : (prof?.onboarding_step || cachedForAccount?.onboardingStep || firstOnboardingStep(userRole)),
           mfaVerified: !roleRequiresMfa(userRole),
@@ -1043,6 +1083,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         clearAccountSessionCaches();
         setIsPasswordRecovery(false);
+        userRef.current = nextUser;
         setUser(nextUser);
         if (userRole === 'student') {
           resetToDefaultCampusScope();
@@ -1065,11 +1106,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           department: (payload as any).department || null,
           isSuperAdmin: false,
           isCampusAdmin: false,
+          isCampusAmbassador: false,
+          workspaceMode: 'default',
           onboardingComplete: false,
           onboardingStep: firstOnboardingStep(session.user.role),
           mfaVerified: !roleRequiresMfa(session.user.role),
         };
         await persist(nextUser);
+        userRef.current = nextUser;
         setUser(nextUser);
         if (session.user.role === 'student') {
           resetToDefaultCampusScope();
@@ -1192,6 +1236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const nextUser: SessionUser = {
           ...user,
           role: newRole,
+          workspaceMode: 'default',
         };
         await persist(nextUser);
         userRef.current = nextUser;
@@ -1213,6 +1258,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch {
           // Non-blocking
         }
+      },
+      async enterAmbassadorWorkspace() {
+        const current = userRef.current;
+        if (!current?.id || current.actualRole !== 'student') {
+          throw new Error('The Ambassador Console is only available to appointed students.');
+        }
+        const profile = await getOwnProfileRow(current.id);
+        if (profile?.is_campus_ambassador !== true) {
+          const corrected: SessionUser = { ...current, isCampusAmbassador: false, workspaceMode: 'default' };
+          await persist(corrected);
+          userRef.current = corrected;
+          setUser(corrected);
+          throw new Error('Your Campus Ambassador appointment is not active. Ask your Campus Admin to review it.');
+        }
+        const next: SessionUser = { ...current, isCampusAmbassador: true, workspaceMode: 'ambassador' };
+        await persist(next);
+        userRef.current = next;
+        setUser(next);
+      },
+      async exitAmbassadorWorkspace() {
+        const current = userRef.current;
+        if (!current) return;
+        const next: SessionUser = { ...current, workspaceMode: 'default' };
+        await persist(next);
+        userRef.current = next;
+        setUser(next);
       },
       impersonation,
       async beginImpersonation(targetUserId: string, reason: string) {
@@ -1252,6 +1323,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const resolvedRole = isMaster ? 'admin' : ((profile.role || current.actualRole) as UserRole);
             const isSuper = isMaster || (resolvedRole === 'admin' && profile.admin_role === 'super_admin');
             const isCampus = resolvedRole === 'admin' && !isSuper;
+            const isAmbassador = resolvedRole === 'student' && profile.is_campus_ambassador === true;
             const next: SessionUser = {
               ...current,
               fullName: profile.full_name || current.fullName,
@@ -1260,6 +1332,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               adminRole: isSuper ? 'super_admin' : isCampus ? 'campus_admin' : null,
               isSuperAdmin: isSuper,
               isCampusAdmin: isCampus,
+              isCampusAmbassador: isAmbassador,
+              workspaceMode: isAmbassador ? current.workspaceMode : 'default',
               campusCode: (isSuper && profile.campus_code === 'GLOBAL') ? 'GLOBAL' : (profile.campus_code || current.campusCode),
               department: profile.department || current.department,
               avatarUrl: profile.avatar_url || current.avatarUrl,

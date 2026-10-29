@@ -1,5 +1,5 @@
 import React, { useState } from'react';
-import { Platform, Pressable, StyleSheet, View } from'react-native';
+import { Alert, Platform, Pressable, StyleSheet, View } from'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from'@expo/vector-icons';
 import { router, useSegments } from'expo-router';
@@ -34,11 +34,11 @@ export function AppHeader() {
   const { colors, spacing, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
-  const { user } = useAuth();
+  const { user, enterAmbassadorWorkspace, exitAmbassadorWorkspace } = useAuth();
   const [workspaceModalOpen, setWorkspaceModalOpen] = useState(false);
 
  const segments = useSegments();
- const roleGroup = segments[0] || '(student)';
+ const roleGroup = String(segments[0] || '(student)');
 
   // One shared head-count query for both badges (no notification / conversation lists downloaded).
   const unread = useUnreadCounts();
@@ -122,6 +122,40 @@ export function AppHeader() {
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+        {user?.isCampusAmbassador && user.actualRole === 'student' && (
+          <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={roleGroup === '(ambassador)' ? 'Return to Student Portal' : 'Open Campus Ambassador Console'}
+            onPress={async () => {
+              haptics.light();
+              try {
+                if (roleGroup === '(ambassador)') {
+                  await exitAmbassadorWorkspace();
+                  router.replace('/(student)/dashboard' as any);
+                } else {
+                  await enterAmbassadorWorkspace();
+                  router.push('/(ambassador)/dashboard' as any);
+                }
+              } catch (error: any) {
+                haptics.error();
+                Alert.alert('Ambassador access unavailable', error?.message || 'Your appointment could not be verified.');
+              }
+            }}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: roleGroup === '(ambassador)' ? colors.brandPrimary : colors.pastelPrimaryBg,
+              borderWidth: 1,
+              borderColor: roleGroup === '(ambassador)' ? colors.brandPrimary : colors.border,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name={roleGroup === '(ambassador)' ? 'swap-horizontal' : 'star'} size={16} color={roleGroup === '(ambassador)' ? '#FFFFFF' : colors.brandPrimary} />
+          </Pressable>
+        )}
         {canSwitchCampus && (roleGroup === '(student)' || roleGroup === '(alumni)') && (
           <Pressable
             hitSlop={8}
