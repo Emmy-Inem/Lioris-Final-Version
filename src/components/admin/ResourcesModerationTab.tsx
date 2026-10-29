@@ -9,6 +9,8 @@ import { AppTextField } from '@/components/AppTextField';
 import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listResources, createResource, updateResource, approveResource, rejectResource, deleteResource } from '@/api/resources';
@@ -55,10 +57,14 @@ export function ResourcesModerationTab() {
  // Preview Document Modal State
  const [previewModalResource, setPreviewModalResource] = useState<Resource | null>(null);
 
- const { data: allResources = [], isLoading, refetch } = useQuery({
+ const { data: allResourcesData, isLoading, isError, error, refetch } = useQuery({
  queryKey: ['resources', 'admin-all-with-pending', campusFilter],
  queryFn: () => listResources({ approvalStatus: 'all', campusCode: campusFilter }),
  });
+ const allResources = allResourcesData ?? [];
+ // A failed load is not "Review queue is empty": with nothing cached the error replaces the list and the counts.
+ const errorMode = queryErrorMode({ isError, data: allResourcesData });
+ const countLabel = (n: number) => (allResourcesData ? ` (${n})` : '');
 
  const pendingSubmissions = allResources.filter((r) => r.approvalStatus === 'pending');
  const approvedResources = allResources.filter((r) => r.approvalStatus !== 'pending');
@@ -389,7 +395,7 @@ export function ResourcesModerationTab() {
  }}
  >
  <AppText variant="caption"weight="bold"tone={section === 'approved' ? 'inverse' : 'secondary'}>
- Live Library Archive ({approvedResources.length})
+ Live Library Archive{countLabel(approvedResources.length)}
  </AppText>
  </Pressable>
 
@@ -407,7 +413,7 @@ export function ResourcesModerationTab() {
  }}
  >
  <AppText variant="caption"weight="bold"tone={section === 'pending' ? 'inverse' : 'secondary'}>
- Pending Review Queue ({pendingSubmissions.length})
+ Pending Review Queue{countLabel(pendingSubmissions.length)}
  </AppText>
  </Pressable>
  </View>
@@ -443,7 +449,7 @@ export function ResourcesModerationTab() {
  }}
  >
  <AppText variant="caption"weight="bold"tone={selectedCategory === 'all' ? 'inverse' : 'secondary'}>
- All ({section === 'approved' ? approvedResources.length : pendingSubmissions.length})
+ All{countLabel(section === 'approved' ? approvedResources.length : pendingSubmissions.length)}
  </AppText>
  </Pressable>
  {CATEGORIES.map((cat) => {
@@ -464,7 +470,7 @@ export function ResourcesModerationTab() {
  }}
  >
  <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
- {cat} ({count})
+ {cat}{countLabel(count)}
  </AppText>
  </Pressable>
  );
@@ -491,6 +497,9 @@ export function ResourcesModerationTab() {
  )}
 
  {/* Review Queue or Live Catalog List */}
+ {errorMode === 'inline' ? (
+ <ErrorStateView compact subject="resources" title="Couldn't refresh resources" error={error} onRetry={refetch} style={{ marginBottom: spacing.sm }} />
+ ) : null}
  {displayedResources.map((resource) => {
  const isPending = resource.approvalStatus === 'pending';
 
@@ -635,7 +644,9 @@ export function ResourcesModerationTab() {
  );
  })}
 
- {!isLoading && displayedResources.length === 0 ? (
+ {!isLoading && errorMode === 'blocking' ? (
+ <ErrorStateView subject="resources" error={error} onRetry={refetch} />
+ ) : !isLoading && displayedResources.length === 0 ? (
  <EmptyState
  title={section === 'pending' ? 'Review queue is empty' : 'No library resources found'}
  description={section === 'pending' ? 'All student and faculty upload submissions have been reviewed.' : 'Try uploading a new academic file.'}

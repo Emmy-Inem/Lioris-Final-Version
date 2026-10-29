@@ -120,36 +120,27 @@ export async function fetchAdminAnalyticsSummary(
     console.warn('[Analytics] fetchAdminAnalyticsSummary RPC invocation failed:', err);
   }
 
-  // Pure real data fallback computed directly from database tables
-  try {
+  // Fallback computed directly from the permitted tables. It is a deliberate degradation for databases without the
+  // scoped RPC, but if it fails too the error is thrown: a failed load must never be reported as zero users.
+  {
     let all: any[] = [];
-    try {
-      let profileQuery = supabase
-        .from('profiles')
-        .select('id, is_bot, campus_code, verification_status, last_active_at, created_at');
-
-      if (normalizedCampus) {
-        profileQuery = profileQuery.ilike('campus_code', normalizedCampus);
-      }
-
-      const { data, error } = await profileQuery;
-      if (!error && data) {
-        all = data;
-      } else {
-        // Fallback without is_bot if column not present in schema cache
-        let q2 = supabase
-          .from('profiles')
-          .select('id, campus_code, verification_status, last_active_at, created_at');
-        if (normalizedCampus) q2 = q2.ilike('campus_code', normalizedCampus);
-        const { data: data2 } = await q2;
-        all = data2 ?? [];
-      }
-    } catch {
+    let profileQuery = supabase
+      .from('profiles')
+      .select('id, is_bot, campus_code, verification_status, last_active_at, created_at');
+    if (normalizedCampus) {
+      profileQuery = profileQuery.ilike('campus_code', normalizedCampus);
+    }
+    const { data: profileData, error: profileError } = await profileQuery;
+    if (!profileError) {
+      all = profileData ?? [];
+    } else {
+      // Retry without is_bot in case the column is not in the schema cache
       let q2 = supabase
         .from('profiles')
         .select('id, campus_code, verification_status, last_active_at, created_at');
       if (normalizedCampus) q2 = q2.ilike('campus_code', normalizedCampus);
-      const { data: data2 } = await q2;
+      const { data: data2, error: error2 } = await q2;
+      if (error2) throw error2;
       all = data2 ?? [];
     }
 
@@ -198,18 +189,22 @@ export async function fetchAdminAnalyticsSummary(
 
     let postsQ = supabase.from('posts').select('id', { count: 'exact', head: true }).gte('created_at', sinceDate);
     if (normalizedCampus) postsQ = postsQ.ilike('campus_code', normalizedCampus);
-    const { count: postsCount } = await postsQ;
+    const { count: postsCount, error: postsError } = await postsQ;
+    if (postsError) throw postsError;
 
     let resQ = supabase.from('resources').select('id', { count: 'exact', head: true }).gte('created_at', sinceDate);
     if (normalizedCampus) resQ = resQ.eq('campus_code', normalizedCampus);
-    const { count: resCount } = await resQ;
+    const { count: resCount, error: resError } = await resQ;
+    if (resError) throw resError;
 
     let eventsQ = supabase.from('events').select('id', { count: 'exact', head: true }).gte('created_at', sinceDate);
     if (normalizedCampus) eventsQ = eventsQ.eq('campus_code', normalizedCampus);
-    const { count: eventsCount } = await eventsQ;
+    const { count: eventsCount, error: eventsError } = await eventsQ;
+    if (eventsError) throw eventsError;
 
     let commentsQ = supabase.from('post_comments').select('id', { count: 'exact', head: true }).gte('created_at', sinceDate);
-    const { count: commentsCount } = await commentsQ;
+    const { count: commentsCount, error: commentsError } = await commentsQ;
+    if (commentsError) throw commentsError;
 
     // Real analytics events for visited pages & feature uses
     let eventsQuery = supabase
@@ -221,7 +216,8 @@ export async function fetchAdminAnalyticsSummary(
       eventsQuery = eventsQuery.eq('campus_code', normalizedCampus);
     }
 
-    const { data: rawEvents } = await eventsQuery;
+    const { data: rawEvents, error: rawEventsError } = await eventsQuery;
+    if (rawEventsError) throw rawEventsError;
     const pageViewCounts = new Map<string, { visits: number; visitors: Set<string> }>();
     const featureUseCounts = new Map<string, { uses: number; users: Set<string> }>();
     let rsvpsCount = 0;
@@ -282,29 +278,6 @@ export async function fetchAdminAnalyticsSummary(
       most_visited_pages: mostVisitedPages,
       most_used_features: mostUsedFeatures,
       campus_metrics: campusMetrics,
-    };
-  } catch (fallbackErr) {
-    console.warn('[Analytics] Real fallback computation encountered error:', fallbackErr);
-    // Real zero state - never return synthetic numbers!
-    return {
-      total_users: 0,
-      real_users: 0,
-      bot_users: 0,
-      new_signups: 0,
-      active_15m: 0,
-      active_24h: 0,
-      active_7d: 0,
-      active_30d: 0,
-      total_posts: 0,
-      total_comments: 0,
-      total_resources: 0,
-      total_events: 0,
-      total_rsvps: 0,
-      total_poll_votes: 0,
-      pending_verifications: 0,
-      most_visited_pages: [],
-      most_used_features: [],
-      campus_metrics: [],
     };
   }
 }

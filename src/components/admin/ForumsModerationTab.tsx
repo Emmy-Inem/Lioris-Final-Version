@@ -7,6 +7,8 @@ import { AppText } from '@/components/AppText';
 import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { listCommunities, approveCommunity, rejectCommunity, deleteCommunity, ForumCommunityRecord } from '@/api/communities';
@@ -37,10 +39,19 @@ export function ForumsModerationTab() {
   const { user } = useAuth();
   const campusFilter = user?.isCampusAdmin && user?.campusCode ? user.campusCode : undefined;
 
-  const { data: communities = [], isLoading: loadingCommunities, refetch: refetchCommunities } = useQuery({
+  const {
+    data: communitiesData,
+    isLoading: loadingCommunities,
+    isError: communitiesError,
+    error: communitiesErrorObj,
+    refetch: refetchCommunities,
+  } = useQuery({
     queryKey: ['communities', 'admin', campusFilter || 'all'],
     queryFn: () => listCommunities(campusFilter),
   });
+  const communities = communitiesData ?? [];
+  // A failed load is not "No communities yet": with nothing cached the error replaces the list.
+  const errorMode = queryErrorMode({ isError: communitiesError, data: communitiesData });
 
   const filteredCommunities = communities
     .filter((c) => {
@@ -292,6 +303,17 @@ export function ForumsModerationTab() {
         </SolidCard>
       )}
 
+      {errorMode === 'inline' ? (
+        <ErrorStateView
+          compact
+          subject="communities"
+          title="Couldn't refresh communities"
+          error={communitiesErrorObj}
+          onRetry={refetchCommunities}
+          style={{ marginBottom: spacing.sm }}
+        />
+      ) : null}
+
       {filteredCommunities.map((community) => {
         const badge =
           community.approvalStatus === 'pending'
@@ -400,7 +422,9 @@ export function ForumsModerationTab() {
         );
       })}
 
-      {!loadingCommunities && filteredCommunities.length === 0 ? (
+      {!loadingCommunities && errorMode === 'blocking' ? (
+        <ErrorStateView subject="communities" error={communitiesErrorObj} onRetry={refetchCommunities} />
+      ) : !loadingCommunities && filteredCommunities.length === 0 ? (
         <EmptyState
           title={communityStatusFilter === 'All' ? 'No communities yet' : `No ${communityStatusFilter.toLowerCase()} communities`}
           description={

@@ -9,6 +9,8 @@ import { AppTextField } from '@/components/AppTextField';
 import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { useTheme } from '@/theme/ThemeProvider';
 import { listEvents, createEvent, updateEvent, revokeEventApproval, approveEvent, purgeEvent, cancelEvent, listEventAttendees } from '@/api/events';
 import { CampusEvent, EventCategory } from '@/api/types';
@@ -135,16 +137,20 @@ export function EventsModerationTab() {
  // Attendee Roster Modal State
  const [rosterEvent, setRosterEvent] = useState<CampusEvent | null>(null);
 
- const { data: eventAttendees = [], isLoading: isLoadingAttendees } = useQuery({
+ const { data: eventAttendees = [], isLoading: isLoadingAttendees, isError: attendeesError, error: attendeesErrorObj, refetch: refetchAttendees } = useQuery({
  queryKey: ['event-attendees', rosterEvent?.id],
  queryFn: () => (rosterEvent ? listEventAttendees(rosterEvent.id) : Promise.resolve([])),
  enabled: !!rosterEvent,
  });
 
- const { data: allEvents = [], isLoading, refetch } = useQuery({
+ const { data: allEventsData, isLoading, isError, error, refetch } = useQuery({
  queryKey: ['events', 'admin-all-with-pending', campusFilter],
  queryFn: () => listEvents({ approvalStatus: 'all', campusCode: campusFilter }),
  });
+ const allEvents = allEventsData ?? [];
+ // A failed load is not "No pending events": with nothing cached the error replaces the list and the tab counts.
+ const errorMode = queryErrorMode({ isError, data: allEventsData });
+ const countLabel = (n: number) => (allEventsData ? ` (${n})` : '');
 
  const pendingEvents = allEvents.filter((e) => e.approvalStatus === 'pending');
  const approvedEvents = allEvents.filter((e) => e.approvalStatus !== 'pending');
@@ -528,7 +534,7 @@ export function EventsModerationTab() {
  }}
  >
  <AppText variant="caption"weight="bold"tone={section === 'approved' ? 'inverse' : 'secondary'}>
- Live Events Catalog ({approvedEvents.length})
+ Live Events Catalog{countLabel(approvedEvents.length)}
  </AppText>
  </Pressable>
 
@@ -546,7 +552,7 @@ export function EventsModerationTab() {
  }}
  >
  <AppText variant="caption"weight="bold"tone={section === 'pending' ? 'inverse' : 'secondary'}>
- Pending Review ({pendingEvents.length})
+ Pending Review{countLabel(pendingEvents.length)}
  </AppText>
  </Pressable>
 
@@ -605,7 +611,7 @@ export function EventsModerationTab() {
  }}
  >
  <AppText variant="caption"weight="bold"tone={selectedCategory === 'all' ? 'inverse' : 'secondary'}>
- All ({section === 'approved' ? approvedEvents.length : pendingEvents.length})
+ All{countLabel(section === 'approved' ? approvedEvents.length : pendingEvents.length)}
  </AppText>
  </Pressable>
  {EVENT_CATEGORIES.map((cat) => {
@@ -626,7 +632,7 @@ export function EventsModerationTab() {
  }}
  >
  <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
- {cat.charAt(0).toUpperCase() + cat.slice(1)} ({count})
+ {cat.charAt(0).toUpperCase() + cat.slice(1)}{countLabel(count)}
  </AppText>
  </Pressable>
  );
@@ -653,6 +659,9 @@ export function EventsModerationTab() {
  )}
 
  {/* Events List */}
+ {errorMode === 'inline' ? (
+ <ErrorStateView compact subject="events" title="Couldn't refresh events" error={error} onRetry={refetch} style={{ marginBottom: spacing.sm }} />
+ ) : null}
  {displayedEvents.map((event) => {
  const isPending = section === 'pending';
  const isApproved = section === 'approved';
@@ -815,7 +824,9 @@ export function EventsModerationTab() {
  );
  })}
 
- {!isLoading && displayedEvents.length === 0 ? (
+ {!isLoading && errorMode === 'blocking' ? (
+ <ErrorStateView subject="events" error={error} onRetry={refetch} />
+ ) : !isLoading && displayedEvents.length === 0 ? (
  <EmptyState
  title={section === 'pending' ? 'No pending events to review' : 'No campus events found'}
  description={section === 'pending' ? 'All student club and faculty event submissions have been approved.' : 'Try a different search query or publish a new event.'}
@@ -1097,6 +1108,8 @@ export function EventsModerationTab() {
           Loading registered students...
         </AppText>
       </View>
+    ) : attendeesError ? (
+      <ErrorStateView compact subject="the roster" error={attendeesErrorObj} onRetry={refetchAttendees} />
     ) : eventAttendees.length > 0 ? (
       eventAttendees.map((att, i) => (
         <View key={att.userId || i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: i < eventAttendees.length - 1 ? 1 : 0, borderBottomColor: colors.border }}>

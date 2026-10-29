@@ -382,7 +382,7 @@ export default function StaffDashboard() {
                     Moderation
                   </AppText>
                   <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
-                    {openReportsCount > 0 ? `${openReportsCount} flags` : 'Queue clear'}
+                    {!openReports ? 'Open the queue' : openReportsCount > 0 ? `${openReportsCount} flags` : 'Queue clear'}
                   </AppText>
                 </View>
               </GlassCard>
@@ -446,7 +446,7 @@ export default function StaffDashboard() {
             </View>
             <Pressable onPress={() => router.push('/(staff)/events-list' as any)} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                All ({events?.length ?? 0}) →
+                {events ? `All (${events.length}) →` : 'All →'}
               </AppText>
             </Pressable>
           </View>
@@ -485,6 +485,8 @@ export default function StaffDashboard() {
                 <EventCard key={evt.id} event={evt} />
               ))}
             </View>
+          ) : eventsQuery.isError && !events ? (
+            <ErrorStateView compact subject="events" title="Couldn't load events" error={eventsQuery.error} onRetry={eventsQuery.refetch} />
           ) : (
             <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
               <Ionicons name="calendar-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8 }} />

@@ -5,6 +5,7 @@ import { getAllSupportTickets } from '@/api/supportTickets';
 import { listTakedownRequests } from '@/api/takedown';
 import { listMinors } from '@/api/adminMinors';
 import { useAuth } from '@/auth/AuthContext';
+import { classifyQueryError, refetchFailedQueries } from '@/utils/queryError';
 
 /**
  * How many things are waiting in each admin area. One place, shared by the Overview cards and the
@@ -38,7 +39,7 @@ export function useAdminBadges() {
   const takedowns = useQuery({
     queryKey: ['takedown-requests', 'pending'],
     queryFn: () => listTakedownRequests('pending'),
-    // The table may not exist on a project that has not applied the migration yet; a count of 0 is fine.
+    // The table may not exist on a project that has not applied the migration yet; that shows as an unknown count, not 0.
     retry: false,
     refetchInterval: BADGE_REFETCH_INTERVAL_MS,
   });
@@ -46,16 +47,30 @@ export function useAdminBadges() {
   const minors = useQuery({
     queryKey: ['admin-minors', 'pending-count', campusFilter || 'all'],
     queryFn: () => listMinors('pending', campusFilter),
-    // Refused for anyone who is not a campus administrator / Super Admin, and absent before the migration: 0 is fine.
+    // Refused for anyone who is not a campus administrator / Super Admin, and absent before the migration: unknown, not 0.
     retry: false,
     refetchInterval: BADGE_REFETCH_INTERVAL_MS,
   });
 
+  // A count is undefined (not 0) while it is loading or when its load failed, so no screen can show "0 waiting"
+  // for a queue it could not read. `hasError` / `error` / `refetch` let a screen say so and offer a retry.
+  const all = [reports, verification, support, takedowns, minors];
+  // Two counts are legitimately unavailable to some admins (a refusal) or on a database that has not been migrated
+  // yet (missing table): those stay unknown, but are not reported as a failed load.
+  const notApplicable = (q: (typeof all)[number]) => {
+    const code = String((q.error as { code?: unknown } | null)?.code ?? '');
+    return classifyQueryError(q.error) === 'permission' || code === '42P01' || code === 'PGRST205' || code === 'PGRST202';
+  };
+  const failed = all.filter((q) => q.isError && !((q === takedowns || q === minors) && notApplicable(q)));
+
   return {
-    reports: reports.data?.length ?? 0,
-    verification: verification.data?.length ?? 0,
-    support: support.data?.length ?? 0,
-    takedowns: takedowns.data?.length ?? 0,
-    minors: minors.data?.length ?? 0,
+    reports: reports.data?.length,
+    verification: verification.data?.length,
+    support: support.data?.length,
+    takedowns: takedowns.data?.length,
+    minors: minors.data?.length,
+    hasError: failed.length > 0,
+    error: failed[0]?.error ?? null,
+    refetch: () => refetchFailedQueries(all),
   };
 }

@@ -9,6 +9,7 @@ import { SolidCard } from '@/components/SolidCard';
 import { AppButton } from '@/components/AppButton';
 import { AnalyticsSummarySkeleton, ListItemSkeletonList } from '@/components/Skeleton';
 import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { GlassCard } from '@/components/GlassCard';
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
@@ -123,8 +124,12 @@ export default function AdminAnalyticsScreen() {
     staleTime: 30_000,
   });
 
+  // A failed summary must never read as "0 users": with nothing cached, the figures below are replaced by the error state.
+  const summaryErrorMode = queryErrorMode({ isError: summaryError, data: summary });
+  const summaryUnavailable = summaryErrorMode === 'blocking';
+
   // Fetch recent users via SECURITY DEFINER RPC (bypasses profile RLS for admin view)
-  const { data: recentUsers = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<RecentActiveUser[]>({
+  const { data: recentUsers = [], isLoading: usersLoading, isError: usersError, error: usersErrObj, refetch: refetchUsers } = useQuery<RecentActiveUser[]>({
     queryKey: ['admin-active-users-roster', campusFilter],
     queryFn: async () => {
       // Use admin_get_user_profiles RPC which uses SECURITY DEFINER to bypass
@@ -169,7 +174,8 @@ export default function AdminAnalyticsScreen() {
       const { data, error } = await query;
       if (error) {
         console.warn('[Analytics] Fallback profile fetch failed:', error.message);
-        return [];
+        // Throw (never []): an empty roster would read as "No members found".
+        throw error;
       }
 
       return (data ?? [])
@@ -463,15 +469,24 @@ export default function AdminAnalyticsScreen() {
         {/* Real User Activity KPI Cards */}
         {summaryLoading ? (
           <AnalyticsSummarySkeleton />
-        ) : summaryError ? (
+        ) : summaryUnavailable ? (
           <ErrorStateView
             title="Analytics summary unavailable"
+            subject="analytics"
+            error={summaryErrObj}
+            onRetry={refetchSummary}
+          />
+        ) : summaryErrorMode === 'inline' ? (
+          <ErrorStateView
+            compact
+            subject="analytics"
+            title="Couldn't refresh analytics"
             error={summaryErrObj}
             onRetry={refetchSummary}
           />
         ) : null}
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, display: summaryLoading || summaryError ? 'none' : 'flex' }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, display: summaryLoading || summaryUnavailable ? 'none' : 'flex' }}>
           {/* Active Now */}
           <SolidCard style={{ flex: 1, minWidth: isDesktop ? 220 : '45%', padding: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
@@ -580,7 +595,10 @@ export default function AdminAnalyticsScreen() {
             { label: 'Verifications', count: adminBadges.verification, icon: 'shield-checkmark-outline' as const },
             { label: 'Support Tickets', count: adminBadges.support, icon: 'help-buoy-outline' as const },
             { label: 'Takedowns', count: adminBadges.takedowns, icon: 'alert-circle-outline' as const },
-          ].map((item) => (
+          ].map((item) => {
+            // An unknown count (still loading, or the load failed) shows a dash, never "0".
+            const hot = item.count !== undefined && item.count > 0;
+            return (
             <View
               key={item.label}
               style={{
@@ -590,17 +608,21 @@ export default function AdminAnalyticsScreen() {
                 paddingHorizontal: 10,
                 paddingVertical: 5,
                 borderRadius: radius.pill,
-                backgroundColor: item.count > 0 ? (isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2') : colors.divider,
+                backgroundColor: hot ? (isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2') : colors.divider,
               }}
             >
-              <Ionicons name={item.icon} size={13} color={item.count > 0 ? '#EF4444' : colors.textSecondary} />
-              <AppText variant="caption" weight="bold" style={{ color: item.count > 0 ? '#EF4444' : colors.textSecondary }}>
-                {item.count} {item.label}
+              <Ionicons name={item.icon} size={13} color={hot ? '#EF4444' : colors.textSecondary} />
+              <AppText variant="caption" weight="bold" style={{ color: hot ? '#EF4444' : colors.textSecondary }}>
+                {item.count ?? '-'} {item.label}
               </AppText>
             </View>
-          ))}
+            );
+          })}
         </View>
 
+        {/* Nothing below can be trusted when the summary failed to load: no zeros, just the error above. */}
+        {!summaryUnavailable && (
+        <>
         {/* Content & Campus Velocity Dashboard */}
         <SolidCard style={{ padding: spacing.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.md }}>
@@ -1025,6 +1047,8 @@ export default function AdminAnalyticsScreen() {
             </View>
           </SolidCard>
         )}
+        </>
+        )}
 
         {/* Live User Activity & Login Tracker */}
         <SolidCard style={{ padding: spacing.lg }}>
@@ -1181,6 +1205,8 @@ export default function AdminAnalyticsScreen() {
 
             {usersLoading ? (
               <ListItemSkeletonList count={6} />
+            ) : usersError ? (
+              <ErrorStateView compact subject="the member list" error={usersErrObj} onRetry={refetchUsers} />
             ) : filteredUsers.length === 0 ? (
               <View style={{ paddingVertical: spacing.xl, alignItems: 'center', gap: spacing.xs }}>
                 <Ionicons name="people-outline" size={32} color={colors.textSecondary} />

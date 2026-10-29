@@ -20,6 +20,7 @@ import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { AmbassadorBadge } from '@/components/AmbassadorBadge';
 import { ActionSheetModal } from'@/components/ActionSheetModal';
 import { EmptyState } from'@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { ShimmerCardList } from'@/components/ShimmerSkeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -95,7 +96,7 @@ export default function UserDirectoryScreen() {
   const [botFilter, setBotFilter] = useState<'all' | 'real_only' | 'bots_only'>('all');
  const [users, setUsers] = useState<DirectoryUser[]>([]);
  const [loading, setLoading] = useState(true);
- const [loadError, setLoadError] = useState<string | null>(null);
+ const [loadError, setLoadError] = useState<unknown>(null);
  const { data: institutions = [] } = useQuery({ queryKey: ['campuses'], queryFn: listCampuses });
  const activeInstitutions = React.useMemo(
    () => institutions.filter((institution) => institution.isActive !== false),
@@ -139,7 +140,7 @@ export default function UserDirectoryScreen() {
  }
  } catch (err: any) {
  console.warn('[UserDirectory] Supabase profiles load error:', err);
- setLoadError(err?.message || 'Could not load the user directory.');
+ setLoadError(err ?? new Error('Could not load the user directory.'));
  } finally {
  setLoading(false);
  }
@@ -185,22 +186,32 @@ export default function UserDirectoryScreen() {
  // instead of reviewing this identity in isolation. Best-effort; see
  // getReportCountForUser (src/api/moderation.ts).
  const [userReportCount, setUserReportCount] = useState(0);
+ // True when the report-history or audit-trail lookup failed (so "none" is never shown for a failed load).
+ const [userReportCountFailed, setUserReportCountFailed] = useState(false);
+ const [userAuditFailed, setUserAuditFailed] = useState(false);
 
  React.useEffect(() => {
  if (!detailModalUser) {
  setUserAuditEntries([]);
  setUserReportCount(0);
+ setUserReportCountFailed(false);
+ setUserAuditFailed(false);
  return;
  }
  let cancelled = false;
  setUserAuditLoading(true);
+ setUserAuditFailed(false);
+ setUserReportCountFailed(false);
  listAuditLogEntries({ involvingUserId: detailModalUser.id })
  .then((entries) => {
  if (!cancelled) setUserAuditEntries(entries.slice(0, 5));
  })
  .catch((err) => {
  console.warn('[UserDirectory] Audit trail load error:', err);
- if (!cancelled) setUserAuditEntries([]);
+ if (!cancelled) {
+ setUserAuditEntries([]);
+ setUserAuditFailed(true);
+ }
  })
  .finally(() => {
  if (!cancelled) setUserAuditLoading(false);
@@ -210,7 +221,10 @@ export default function UserDirectoryScreen() {
  if (!cancelled) setUserReportCount(count);
  })
  .catch(() => {
- if (!cancelled) setUserReportCount(0);
+ if (!cancelled) {
+ setUserReportCount(0);
+ setUserReportCountFailed(true);
+ }
  });
  return () => {
  cancelled = true;
@@ -1076,16 +1090,14 @@ export default function UserDirectoryScreen() {
       )}
 
       {loadError && !loading ? (
-        <SolidCard radius={16} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: `${colors.critical}55` }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
-            <Ionicons name="alert-circle-outline" size={20} color={colors.critical} />
-            <View style={{ flex: 1, minWidth: 160 }}>
-              <AppText weight="bold" variant="bodySmall">Could not load the directory</AppText>
-              <AppText tone="secondary" variant="caption">{loadError}</AppText>
-            </View>
-            <AppButton label="Retry" size="sm" variant="secondary" onPress={loadProfiles} />
-          </View>
-        </SolidCard>
+        <ErrorStateView
+          compact={users.length > 0}
+          subject="the user directory"
+          title={users.length > 0 ? "Couldn't refresh the directory" : undefined}
+          error={loadError}
+          onRetry={loadProfiles}
+          style={{ marginBottom: spacing.md }}
+        />
       ) : null}
 
       {loading && users.length === 0 ? (
@@ -1169,7 +1181,7 @@ export default function UserDirectoryScreen() {
             <SolidCard radius={20} style={{ padding: spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <AppText variant="caption" tone="secondary">Total Filtered</AppText>
-                <Badge label={`${filtered.length} Users`} tone="neutral" />
+                {loadError && users.length === 0 ? <Badge label="- Users" tone="neutral" /> : <Badge label={`${filtered.length} Users`} tone="neutral" />}
               </View>
               <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
                 Live synchronized with multi-campus profiles table.
@@ -1256,7 +1268,7 @@ export default function UserDirectoryScreen() {
                   </SolidCard>
                 </View>
               )}
-              ListEmptyComponent={<EmptyState title="No matching campus users" description="Try clearing your filters or search terms." />}
+              ListEmptyComponent={loadError && users.length === 0 ? null : <EmptyState title="No matching campus users" description="Try clearing your filters or search terms." />}
             />
           </View>
         </View>
@@ -1358,7 +1370,7 @@ export default function UserDirectoryScreen() {
                 </View>
               </SolidCard>
             )}
-            ListEmptyComponent={<EmptyState title="No matching campus users" description="Try clearing your filters or search terms." />}
+            ListEmptyComponent={loadError && users.length === 0 ? null : <EmptyState title="No matching campus users" description="Try clearing your filters or search terms." />}
           />
         </>
       )}
@@ -1539,6 +1551,8 @@ export default function UserDirectoryScreen() {
  label={`⚠ ${userReportCount} other report${userReportCount === 1 ? '' : 's'} against this user`}
  tone="warning"
  />
+ ) : userReportCountFailed ? (
+ <Badge label="Report history unavailable" tone="neutral" />
  ) : null}
  </View>
  </View>
@@ -1575,6 +1589,8 @@ export default function UserDirectoryScreen() {
  </View>
  {userAuditLoading ? (
  <AppText tone="secondary" variant="caption">Loading activity...</AppText>
+ ) : userAuditFailed ? (
+ <AppText tone="secondary" variant="caption">Could not load this user's activity. Close and reopen this profile to try again.</AppText>
  ) : userAuditEntries.length === 0 ? (
  <AppText tone="secondary" variant="caption">No audit log entries involving this user yet.</AppText>
  ) : (

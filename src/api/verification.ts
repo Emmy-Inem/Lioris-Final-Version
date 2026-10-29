@@ -339,26 +339,18 @@ function mapVerificationRow(row: any): VerificationRequest {
  * worst wait in the system.
  */
 export async function listVerificationRequests(campusCode?: string): Promise<VerificationRequest[]> {
- try {
-  let q = supabase
-   .from('verifications')
-   .select('*, profiles!verifications_user_id_fkey(full_name, role, campus_code)')
-   .eq('status', 'pending');
-  if (campusCode && campusCode !== 'ALL' && campusCode !== 'GLOBAL') {
-   q = q.eq('campus_code', campusCode);
-  }
-  const { data, error } = await q.order('created_at', { ascending: true });
-
-  if (!error && data) {
-   return data.map(mapVerificationRow);
-  }
- } catch {
-  // fallback
+ let q = supabase
+  .from('verifications')
+  .select('*, profiles!verifications_user_id_fkey(full_name, role, campus_code)')
+  .eq('status', 'pending');
+ if (campusCode && campusCode !== 'ALL' && campusCode !== 'GLOBAL') {
+  q = q.eq('campus_code', campusCode);
  }
+ const { data, error } = await q.order('created_at', { ascending: true });
+ // A failed load must surface as an error: returning an empty list here read as "All applications reviewed".
+ if (error) throw error;
 
- return verificationState
-  .filter((v) => v.status === 'pending')
-  .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+ return (data ?? []).map(mapVerificationRow);
 }
 
 /** What the signed-in applicant needs to know about their own verification. */

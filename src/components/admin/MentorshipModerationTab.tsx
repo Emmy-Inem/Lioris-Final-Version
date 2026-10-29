@@ -7,6 +7,8 @@ import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { AppTextField } from '@/components/AppTextField';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { useTheme } from '@/theme/ThemeProvider';
 import { endMentorship, listMentorshipsForAdmin } from '@/api/mentorship';
 import { mentorshipStatusLabel, mentorshipStatusTone } from '@/utils/mentorship';
@@ -24,10 +26,13 @@ export function MentorshipModerationTab() {
   const queryClient = useQueryClient();
   const [actingId, setActingId] = useState<string | null>(null);
 
-  const { data: mentorships = [], isLoading, refetch } = useQuery({
+  const { data: mentorshipsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['mentorships', 'admin-active'],
     queryFn: () => listMentorshipsForAdmin('active'),
   });
+  const mentorships = mentorshipsData ?? [];
+  // A failed load is not "No active mentorships": with nothing cached the error replaces the list and the count.
+  const errorMode = queryErrorMode({ isError, data: mentorshipsData });
 
   // The reason goes to BOTH participants, so it must be written for this pairing: no pre-filled
   // default (a one-tap "End Pairing" used to send the same stock accusation every time) and no
@@ -73,13 +78,17 @@ export function MentorshipModerationTab() {
     <View>
       <View style={{ marginBottom: spacing.md }}>
         <AppText variant="h3" weight="bold">
-          Active Mentorships ({mentorships.length})
+          Active Mentorships{mentorshipsData ? ` (${mentorships.length})` : ''}
         </AppText>
         <AppText tone="secondary" variant="caption">
           Every active mentor/mentee pairing platform-wide. Use this to step in on an abusive match - both
           sides are notified when a pairing is ended.
         </AppText>
       </View>
+
+      {errorMode === 'inline' ? (
+        <ErrorStateView compact subject="mentorships" title="Couldn't refresh mentorships" error={error} onRetry={refetch} style={{ marginBottom: spacing.sm }} />
+      ) : null}
 
       {mentorships.map((m) => (
         <SolidCard key={m.id} radius={18} style={{ padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border }}>
@@ -143,7 +152,9 @@ export function MentorshipModerationTab() {
         </View>
       </Modal>
 
-      {!isLoading && mentorships.length === 0 ? (
+      {!isLoading && errorMode === 'blocking' ? (
+        <ErrorStateView subject="mentorships" error={error} onRetry={refetch} />
+      ) : !isLoading && mentorships.length === 0 ? (
         <EmptyState icon="people-outline" title="No active mentorships" description="Nothing needs your attention right now." />
       ) : null}
     </View>

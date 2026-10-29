@@ -159,6 +159,8 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<SearchCategory>('all');
   const [loading, setLoading] = useState(false);
+  // True when a lookup failed, so "No matching admin records" is never shown for a search that did not complete.
+  const [searchFailed, setSearchFailed] = useState(false);
 
   const [memberResults, setMemberResults] = useState<any[]>([]);
   const [postResults, setPostResults] = useState<any[]>([]);
@@ -181,6 +183,7 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
       setMemberResults([]);
       setPostResults([]);
       setResourceResults([]);
+      setSearchFailed(false);
       setLoading(false);
       return;
     }
@@ -226,10 +229,14 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
           );
           setPostResults(postsRes.data ?? []);
           setResourceResults(resourcesRes.data ?? []);
+          setSearchFailed(!!(membersRes.error || postsRes.error || resourcesRes.error));
           setLoading(false);
         }
       } catch {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setSearchFailed(true);
+          setLoading(false);
+        }
       }
     }, 250);
 
@@ -640,10 +647,12 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
               <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
                 <Ionicons name="search-outline" size={36} color={colors.textSecondary} style={{ marginBottom: spacing.xs }} />
                 <AppText weight="bold" style={{ fontSize: 15 }}>
-                  No matching admin records found
+                  {searchFailed ? "Couldn't complete the search" : 'No matching admin records found'}
                 </AppText>
                 <AppText tone="secondary" variant="caption" style={{ marginTop: 4, textAlign: 'center' }}>
-                  Try searching for 'verification', 'bots', 'audit', or a student's name
+                  {searchFailed
+                    ? 'Something went wrong on our side. Edit your search or try again in a moment.'
+                    : "Try searching for 'verification', 'bots', 'audit', or a student's name"}
                 </AppText>
               </View>
             )}

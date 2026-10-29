@@ -119,8 +119,9 @@ export async function getUserSupportTickets(): Promise<SupportTicket[]> {
     .order('created_at', { ascending: false });
 
   if (error) {
+    // Throw (never []): an empty list would read as "you have no tickets" when the load actually failed.
     console.warn('[SupportTickets] getUserSupportTickets error:', error);
-    return [];
+    throw error;
   }
 
   // Every row here belongs to the caller (filtered by their own user_id
@@ -173,8 +174,9 @@ export async function getAllSupportTickets(query?: {
 
   const { data, error } = await builder;
   if (error) {
+    // Throw (never []): an empty desk would read as "no tickets" when the load actually failed.
     console.warn('[SupportTickets] getAllSupportTickets error:', error);
-    return [];
+    throw error;
   }
 
   // This lists every submitter's ticket, so email/matric come from the

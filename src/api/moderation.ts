@@ -22,7 +22,6 @@ export interface ReportsQuery {
 
 // GET /reports?status=&targetType=&institutionCode=
 export async function listReports(query: ReportsQuery = {}): Promise<Report[]> {
- try {
  let queryBuilder = supabase.from('moderation_queue').select('*').order('created_at', { ascending: false });
 
  if (query.institutionCode) {
@@ -67,14 +66,6 @@ export async function listReports(query: ReportsQuery = {}): Promise<Report[]> {
  }
  }
  return merged;
- } catch (err) {
- console.warn('[Moderation] Failed to list from supabase, showing local pool only:', err);
- let results = [...locallyCreatedReports];
- if (query.status) results = results.filter((r) => r.status === query.status);
- if (query.targetType) results = results.filter((r) => r.targetType === query.targetType);
- if (query.institutionCode) results = results.filter((r) => r.institutionCode === query.institutionCode);
- return results;
- }
 }
 
 // Best-effort lookup of the user an enforcement decision actually lands on
@@ -155,23 +146,20 @@ export async function getOtherReportCountForAuthor(report: Report): Promise<numb
 /**
  * Same repeat-offender count as getOtherReportCountForAuthor above, but
  * keyed directly by user id for callers that already have one (the admin
- * user directory's identity panel) instead of a Report row. 'user_profile'
+ * user directory's identity panel) instead of a Report row. Unlike the
+ * per-card chip above it throws on failure. 'user_profile'
  * matches the moderation_queue.item_type a user-targeted report is filed
  * under (see submitReport/TARGET_TYPE_TO_DB_ITEM_TYPE above) - the RPC then
  * resolves it straight back to p_item_id, no author lookup needed.
  */
 export async function getReportCountForUser(userId: string): Promise<number> {
- try {
  const { data, error } = await supabase.rpc('get_report_count_for_author', {
  p_item_type: 'user_profile',
  p_item_id: userId,
  });
+ // Throws on failure: the caller shows "history unavailable" instead of silently reading it as "no other reports".
  if (error) throw error;
  return typeof data === 'number' ? data : 0;
- } catch (err) {
- console.warn('[Moderation] getReportCountForUser failed:', err);
- return 0;
- }
 }
 
 const TARGET_TYPE_LABEL: Record<Report['targetType'], string> = {

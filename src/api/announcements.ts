@@ -15,25 +15,24 @@ let locallyCreatedAnnouncements: Announcement[] = [];
 
 
 export async function listAnnouncements(options?: { campusCode?: string; [key: string]: any }): Promise<Announcement[]> {
-  try {
-    let q = supabase
-      .from('announcements')
-      .select('*, author:profiles!announcements_author_id_fkey(full_name)')
-      .order('published_at', { ascending: false });
+  let q = supabase
+    .from('announcements')
+    .select('*, author:profiles!announcements_author_id_fkey(full_name)')
+    .order('published_at', { ascending: false });
 
-    const targetCampus = options && typeof options === 'object' && typeof options.campusCode === 'string'
-      ? options.campusCode
-      : undefined;
+  const targetCampus = options && typeof options === 'object' && typeof options.campusCode === 'string'
+    ? options.campusCode
+    : undefined;
 
-    if (targetCampus && targetCampus !== 'ALL') {
-      // Campus codes are plain identifiers: strip anything else before it goes into a PostgREST filter string.
-      const safeCampus = escapePostgrestLike(targetCampus).replace(/[^A-Za-z0-9_-]/g, '');
-      q = safeCampus
-        ? q.or(`campus_code.eq.${safeCampus},campus_code.eq.GLOBAL,campus_code.is.null`)
-        : q.or('campus_code.eq.GLOBAL,campus_code.is.null');
-    }
+  if (targetCampus && targetCampus !== 'ALL') {
+    // Campus codes are plain identifiers: strip anything else before it goes into a PostgREST filter string.
+    const safeCampus = escapePostgrestLike(targetCampus).replace(/[^A-Za-z0-9_-]/g, '');
+    q = safeCampus
+      ? q.or(`campus_code.eq.${safeCampus},campus_code.eq.GLOBAL,campus_code.is.null`)
+      : q.or('campus_code.eq.GLOBAL,campus_code.is.null');
+  }
 
-    const { data, error } = await q;
+  const { data, error } = await q;
 
  if (error) throw error;
 
@@ -57,10 +56,6 @@ export async function listAnnouncements(options?: { campusCode?: string; [key: s
  }
  }
  return merged;
- } catch (err) {
- console.warn('[Announcements] Fetch error, showing local pool only:', err);
- return [...locallyCreatedAnnouncements];
- }
 }
 
 export interface PublishAnnouncementPayload {

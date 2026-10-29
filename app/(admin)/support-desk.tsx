@@ -21,6 +21,8 @@ import { Badge } from '@/components/Badge';
 import { Avatar } from '@/components/Avatar';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { QueueItemSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -102,7 +104,7 @@ export default function SupportDeskScreen() {
   const [newCampusInput, setNewCampusInput] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  const { data: tickets, isLoading, refetch } = useQuery({
+  const { data: tickets, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['support_tickets', statusFilter, categoryFilter, searchQuery],
     queryFn: () =>
       getAllSupportTickets({
@@ -111,6 +113,9 @@ export default function SupportDeskScreen() {
         q: searchQuery.trim() || undefined,
       }),
   });
+
+  // A failed load is not an empty desk: with nothing cached the error replaces the list and the header counts.
+  const errorMode = queryErrorMode({ isError, data: tickets });
 
   // Diagnostics: lets an admin cross-reference this ticket with what the
   // reporting user's app was actually doing (client_errors, Admin > System
@@ -305,11 +310,13 @@ export default function SupportDeskScreen() {
               Industry-standard support console: triage requests, fix user issues, and apply 1-click remedies.
             </AppText>
           </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Badge label={`${openCount} Open`} tone="warning" />
-            <Badge label={`${inProgressCount} In Progress`} tone="neutral" />
-            <Badge label={`${resolvedCount} Resolved`} tone="success" />
-          </View>
+          {tickets ? (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Badge label={`${openCount} Open`} tone="warning" />
+              <Badge label={`${inProgressCount} In Progress`} tone="neutral" />
+              <Badge label={`${resolvedCount} Resolved`} tone="success" />
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -373,8 +380,20 @@ export default function SupportDeskScreen() {
       </View>
 
       {/* Tickets List */}
+      {errorMode === 'inline' && (
+        <ErrorStateView
+          compact
+          subject="support tickets"
+          title="Couldn't refresh support tickets"
+          error={error}
+          onRetry={refetch}
+          style={{ marginBottom: spacing.sm }}
+        />
+      )}
       {isLoading ? (
         <QueueItemSkeletonList count={4} />
+      ) : errorMode === 'blocking' ? (
+        <ErrorStateView subject="support tickets" error={error} onRetry={refetch} />
       ) : (
         <FlatList
           key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}

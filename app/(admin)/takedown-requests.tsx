@@ -12,6 +12,8 @@ import { AppTextField } from '@/components/AppTextField';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { QueueItemSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -51,10 +53,13 @@ export default function TakedownRequestsScreen() {
   const [bulkDeciding, setBulkDeciding] = useState<'uphold' | 'reject' | null>(null);
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['takedown-requests', tab],
     queryFn: () => listTakedownRequests(tab),
   });
+
+  // A failed load is not an empty queue: with nothing cached the error replaces the list.
+  const errorMode = queryErrorMode({ isError, data });
 
   function toggleSelected(id: string) {
     haptics.light();
@@ -224,16 +229,21 @@ export default function TakedownRequestsScreen() {
         </SolidCard>
       )}
 
+      {errorMode === 'inline' && (
+        <ErrorStateView
+          compact
+          subject="takedown requests"
+          title="Couldn't refresh takedown requests"
+          error={error}
+          onRetry={refetch}
+          style={{ marginBottom: spacing.sm }}
+        />
+      )}
+
       {isLoading ? (
         <QueueItemSkeletonList count={4} />
-      ) : error ? (
-        <SolidCard radius={16} style={{ borderWidth: 1, borderColor: `${colors.critical}55` }}>
-          <AppText weight="bold" variant="bodySmall">Could not load requests</AppText>
-          <AppText tone="secondary" variant="caption" style={{ marginVertical: spacing.xs }}>
-            {(error as Error).message} - if this says the table does not exist, the takedown migration has not been applied yet.
-          </AppText>
-          <AppButton label="Retry" size="sm" variant="secondary" onPress={() => refetch()} />
-        </SolidCard>
+      ) : errorMode === 'blocking' ? (
+        <ErrorStateView subject="takedown requests" error={error} onRetry={refetch} />
       ) : (
         <FlatList
           key={isDesktop ? 'desktop-2-col' : 'mobile-1-col'}

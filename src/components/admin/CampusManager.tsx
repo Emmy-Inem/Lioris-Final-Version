@@ -8,6 +8,7 @@ import { AppButton } from '../AppButton';
 import { SolidCard } from '../SolidCard';
 import { Badge } from '../Badge';
 import { EmptyState } from '../EmptyState';
+import { ErrorStateView } from '../ErrorStateView';
 import { FormSheet } from '../common/FormSheet';
 import { TagInput } from '../common/TagInput';
 import { MfaStepUpModal } from './MfaStepUpModal';
@@ -284,6 +285,10 @@ export function CampusManager() {
         <AppText variant="caption" tone="secondary">
           {liveCount}/{nonGlobal.length} live · {domainReadyCount} with auto-verify domains{hasCounts ? ` · ${totalMembers} total members` : ''}
         </AppText>
+      ) : null}
+      {requests.isError ? (
+        // An unreadable request list must not look like "no requests waiting".
+        <ErrorStateView compact subject="university requests" title="Couldn't load university requests" error={requests.error} onRetry={requests.refetch} />
       ) : null}
       {(requests.data ?? []).length > 0 ? (
         <SolidCard radius={18} style={{ borderWidth: 1, borderColor: colors.brandPrimary, gap: spacing.sm }}>

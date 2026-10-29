@@ -9,6 +9,7 @@ import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { AnalyticsSummarySkeleton } from '@/components/Skeleton';
 import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
@@ -57,6 +58,13 @@ export default function StaffAnalyticsScreen() {
     enabled: !!effectiveCampus,
     staleTime: 30_000,
   });
+
+  // A failed summary must never read as "0 students": with nothing cached, the figures are replaced by the error state.
+  const summaryErrorMode = queryErrorMode({ isError: summaryError, data: summary });
+  const summaryUnavailable = summaryErrorMode === 'blocking';
+  // The query does not run until the campus is known; until then there is nothing to show (not zeros).
+  const summaryPending = !summary && !summaryLoading && !summaryUnavailable;
+  const summaryHidden = summaryUnavailable || summaryPending;
 
   const maxUses = Math.max(1, ...(summary?.most_used_features.map((f) => f.uses) ?? [1]));
 
@@ -171,15 +179,28 @@ export default function StaffAnalyticsScreen() {
         {/* KPI Cards */}
         {summaryLoading ? (
           <AnalyticsSummarySkeleton />
-        ) : summaryError ? (
+        ) : summaryUnavailable ? (
           <ErrorStateView
             title="Analytics summary unavailable"
+            subject="analytics"
+            error={summaryErrObj}
+            onRetry={refetchSummary}
+          />
+        ) : summaryPending ? (
+          <AppText tone="secondary" variant="bodySmall">
+            Analytics will appear once your campus has been identified.
+          </AppText>
+        ) : summaryErrorMode === 'inline' ? (
+          <ErrorStateView
+            compact
+            subject="analytics"
+            title="Couldn't refresh analytics"
             error={summaryErrObj}
             onRetry={refetchSummary}
           />
         ) : null}
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, display: summaryLoading || summaryError ? 'none' : 'flex' }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, display: summaryLoading || summaryHidden ? 'none' : 'flex' }}>
           {/* Active Now */}
           <SolidCard style={{ flex: 1, minWidth: isDesktop ? 220 : '45%', padding: spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
@@ -266,6 +287,9 @@ export default function StaffAnalyticsScreen() {
           </SolidCard>
         </View>
 
+        {/* Nothing below can be trusted when the summary did not load: no zeros, just the message above. */}
+        {!summaryHidden && (
+        <>
         {/* Campus Engagement */}
         <SolidCard style={{ padding: spacing.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.md }}>
@@ -392,6 +416,8 @@ export default function StaffAnalyticsScreen() {
             </View>
           )}
         </SolidCard>
+        </>
+        )}
       </ScrollView>
     </ScreenContainer>
   );

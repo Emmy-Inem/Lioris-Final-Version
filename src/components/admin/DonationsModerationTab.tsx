@@ -8,6 +8,8 @@ import { AppTextField } from '@/components/AppTextField';
 import { Badge } from '@/components/Badge';
 import { AppButton } from '@/components/AppButton';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { useTheme } from '@/theme/ThemeProvider';
 import {
   GivingCampaign,
@@ -75,16 +77,20 @@ export function DonationsModerationTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  const { data: pending = [], isLoading: pendingLoading, refetch: refetchPending } = useQuery({
+  const pendingQuery = useQuery({
     queryKey: ['giving-campaigns', 'admin-pending'],
     queryFn: listPendingGivingCampaigns,
     enabled: section === 'pending',
   });
-  const { data: approved = [], isLoading: approvedLoading, refetch: refetchApproved } = useQuery({
+  const approvedQuery = useQuery({
     queryKey: ['giving-campaigns', 'admin-approved'],
     queryFn: () => listGivingCampaigns(),
     enabled: section === 'approved',
   });
+
+  const pending = pendingQuery.data ?? [];
+  const { refetch: refetchPending } = pendingQuery;
+  const { refetch: refetchApproved } = approvedQuery;
 
   function refreshAll() {
     queryClient.invalidateQueries({ queryKey: ['giving-campaigns'] });
@@ -149,8 +155,11 @@ export function DonationsModerationTab() {
     }
   }
 
-  const list = section === 'pending' ? pending : approved;
-  const isLoading = section === 'pending' ? pendingLoading : approvedLoading;
+  const activeQuery = section === 'pending' ? pendingQuery : approvedQuery;
+  const list = activeQuery.data ?? [];
+  const isLoading = activeQuery.isLoading;
+  // A failed load is not "No pending campaigns": with nothing cached the error replaces the list.
+  const errorMode = queryErrorMode({ isError: activeQuery.isError, data: activeQuery.data });
 
   function toggleSelected(id: string) {
     haptics.light();
@@ -255,7 +264,7 @@ export function DonationsModerationTab() {
       <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
         <View style={{ flex: 1 }}>
           <AppButton
-            label={`Pending (${pending.length})`}
+            label={pendingQuery.data ? `Pending (${pending.length})` : 'Pending'}
             variant={section === 'pending' ? 'primary' : 'secondary'}
             size="sm"
             fullWidth
@@ -291,6 +300,10 @@ export function DonationsModerationTab() {
           </View>
         </SolidCard>
       )}
+
+      {errorMode === 'inline' ? (
+        <ErrorStateView compact subject="campaigns" title="Couldn't refresh campaigns" error={activeQuery.error} onRetry={activeQuery.refetch} style={{ marginBottom: spacing.sm }} />
+      ) : null}
 
       {list.map((c) => (
         <SolidCard key={c.id} radius={18} style={{ padding: spacing.md, marginBottom: spacing.md }}>
@@ -358,7 +371,9 @@ export function DonationsModerationTab() {
         </SolidCard>
       ))}
 
-      {!isLoading && list.length === 0 ? (
+      {!isLoading && errorMode === 'blocking' ? (
+        <ErrorStateView subject="campaigns" error={activeQuery.error} onRetry={activeQuery.refetch} />
+      ) : !isLoading && list.length === 0 ? (
         <EmptyState
           icon="heart-outline"
           title={section === 'pending' ? 'No pending campaigns' : 'No live campaigns'}

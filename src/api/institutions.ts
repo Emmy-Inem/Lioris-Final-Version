@@ -276,14 +276,14 @@ export async function joinWaitlist(payload: JoinWaitlistPayload): Promise<Waitli
 }
 
 export async function listWaitlist(): Promise<WaitlistEntry[]> {
- try {
  const { data, error } = await supabase
  .from('waitlist_entries')
  .select('*')
  .order('submitted_at', { ascending: false });
+ // A failed load must surface as an error: falling back to this session's own entries read as "no pending campus nodes".
+ if (error) throw error;
 
- if (!error && data && data.length > 0) {
- const dbEntries: WaitlistEntry[] = data.map((row: any) => ({
+ const dbEntries: WaitlistEntry[] = (data ?? []).map((row: any) => ({
  id: row.id,
  universityName: row.university_name,
  email: row.email,
@@ -298,12 +298,6 @@ export async function listWaitlist(): Promise<WaitlistEntry[]> {
  }
  }
  return merged.filter((w) => w.status === 'pending');
- }
- } catch {
- // fallback
- }
-
- return waitlistState.filter((w) => w.status === 'pending');
 }
 
 export async function respondToWaitlistEntry(id: string, status: 'approved' | 'rejected'): Promise<void> {

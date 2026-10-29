@@ -16,6 +16,8 @@ import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { SuperAdminGate } from '@/auth/SuperAdminGate';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -112,11 +114,13 @@ export default function SystemHealthScreen() {
   const [cleaning, setCleaning] = useState(false);
   const [expandedError, setExpandedError] = useState<string | null>(null);
 
-  const { data: health, isLoading, refetch, isFetching } = useQuery<SystemHealthReport>({
+  const { data: health, isLoading, isError, error, refetch, isFetching } = useQuery<SystemHealthReport>({
     queryKey: ['system_health_report'],
     queryFn: fetchSystemHealth,
     refetchInterval: 15000,
   });
+  // A failed load is not a health report of zeros: with nothing cached the error replaces the status cards.
+  const healthErrorMode = queryErrorMode({ isError, data: health });
 
   const {
     data: clientErrors,
@@ -218,6 +222,13 @@ export default function SystemHealthScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: isDesktop ? 60 : 150, gap: spacing.md }}
       >
+        {healthErrorMode === 'inline' ? (
+          <ErrorStateView compact subject="system health" title="Couldn't refresh system health" error={error} onRetry={refetch} />
+        ) : null}
+        {healthErrorMode === 'blocking' ? (
+          <ErrorStateView subject="system health" error={error} onRetry={refetch} />
+        ) : (
+        <>
         {/* Connection Status Card */}
         <SolidCard frosted style={{ padding: spacing.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
@@ -277,14 +288,14 @@ export default function SystemHealthScreen() {
             }}
           >
             {[
-              { label: 'User Profiles', count: health?.counts.profiles ?? 0, icon: 'people', color: '#3B82F6' },
-              { label: 'Feed Posts', count: health?.counts.posts ?? 0, icon: 'newspaper', color: '#10B981' },
-              { label: 'Comments', count: health?.counts.comments ?? 0, icon: 'chatbubbles', color: '#8B5CF6' },
-              { label: 'Academic Resources', count: health?.counts.resources ?? 0, icon: 'document-text', color: '#F59E0B' },
-              { label: 'Campus Events', count: health?.counts.events ?? 0, icon: 'calendar', color: '#EC4899' },
-              { label: 'Support Tickets', count: health?.counts.supportTickets ?? 0, icon: 'help-buoy', color: '#06B6D4' },
-              { label: 'Moderation Queue', count: health?.counts.moderationQueue ?? 0, icon: 'shield', color: '#EF4444' },
-              { label: 'Active Sessions', count: health?.counts.activeSessions ?? 0, icon: 'pulse', color: '#10B981' },
+              { label: 'User Profiles', count: health?.counts.profiles ?? null, icon: 'people', color: '#3B82F6' },
+              { label: 'Feed Posts', count: health?.counts.posts ?? null, icon: 'newspaper', color: '#10B981' },
+              { label: 'Comments', count: health?.counts.comments ?? null, icon: 'chatbubbles', color: '#8B5CF6' },
+              { label: 'Academic Resources', count: health?.counts.resources ?? null, icon: 'document-text', color: '#F59E0B' },
+              { label: 'Campus Events', count: health?.counts.events ?? null, icon: 'calendar', color: '#EC4899' },
+              { label: 'Support Tickets', count: health?.counts.supportTickets ?? null, icon: 'help-buoy', color: '#06B6D4' },
+              { label: 'Moderation Queue', count: health?.counts.moderationQueue ?? null, icon: 'shield', color: '#EF4444' },
+              { label: 'Active Sessions', count: health?.counts.activeSessions ?? null, icon: 'pulse', color: '#10B981' },
             ].map((item) => (
               <SolidCard
                 key={item.label}
@@ -297,7 +308,7 @@ export default function SystemHealthScreen() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Ionicons name={item.icon as any} size={20} color={item.color} />
                   <AppText weight="bold" style={{ fontSize: 20 }}>
-                    {item.count.toLocaleString()}
+                    {item.count === null ? '-' : item.count.toLocaleString()}
                   </AppText>
                 </View>
                 <AppText tone="secondary" variant="caption" style={{ marginTop: 6 }}>
@@ -389,6 +400,10 @@ export default function SystemHealthScreen() {
                 </View>
               ))}
             </View>
+          ) : health && !health.integrityChecked ? (
+            <AppText tone="secondary" variant="bodySmall">
+              The integrity scan could not run just now, so nothing can be said about orphaned records. Refresh to try again.
+            </AppText>
           ) : (
             <View
               style={{
@@ -407,6 +422,9 @@ export default function SystemHealthScreen() {
             </View>
           )}
         </SolidCard>
+
+        </>
+        )}
 
         {/* Client-side errors reported by the app (self-hosted sink) */}
         <SolidCard frosted style={{ padding: spacing.lg }}>

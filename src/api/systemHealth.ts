@@ -22,17 +22,20 @@ export interface SystemHealthReport {
   latencyMs: number;
   status: 'optimal' | 'degraded' | 'offline';
   timestamp: string;
+  /** Row counts. null = that count could not be read (never shown as 0). */
   counts: {
-    profiles: number;
-    posts: number;
-    comments: number;
-    resources: number;
-    events: number;
-    supportTickets: number;
-    moderationQueue: number;
-    activeSessions: number;
+    profiles: number | null;
+    posts: number | null;
+    comments: number | null;
+    resources: number | null;
+    events: number | null;
+    supportTickets: number | null;
+    moderationQueue: number | null;
+    activeSessions: number | null;
   };
   integrityIssues: IntegrityIssue[];
+  /** False when the orphan scan could not run, so an empty `integrityIssues` does not mean "all clean". */
+  integrityChecked: boolean;
   edgeFunctions: EdgeFunctionHealth[];
 }
 
@@ -68,42 +71,37 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
   const startTime = Date.now();
   let latencyMs = 0;
   let status: 'optimal' | 'degraded' | 'offline' = 'optimal';
+  let pingFailure: unknown = null;
 
   try {
     const { error: pingError } = await supabase.from('campuses').select('code').limit(1);
     latencyMs = Date.now() - startTime;
     if (pingError) {
       status = 'degraded';
+      pingFailure = pingError;
     } else if (latencyMs > 1500) {
       status = 'degraded';
     }
-  } catch {
+  } catch (err) {
     status = 'offline';
     latencyMs = -1;
+    pingFailure = err;
   }
 
-  // Row count monitors
-  const counts = {
-    profiles: 0,
-    posts: 0,
-    comments: 0,
-    resources: 0,
-    events: 0,
-    supportTickets: 0,
-    moderationQueue: 0,
-    activeSessions: 0,
+  // Row count monitors. A count that fails to load stays null (shown as a dash), never 0.
+  const counts: SystemHealthReport['counts'] = {
+    profiles: null,
+    posts: null,
+    comments: null,
+    resources: null,
+    events: null,
+    supportTickets: null,
+    moderationQueue: null,
+    activeSessions: null,
   };
 
   try {
-    const [
-      { count: profCount },
-      { count: postCount },
-      { count: commentCount },
-      { count: resCount },
-      { count: eventCount },
-      { count: ticketCount },
-      { count: modCount },
-    ] = await Promise.all([
+    const results = await Promise.all([
       supabase.from('profiles').select('id', { count: 'exact', head: true }),
       supabase.from('posts').select('*', { count: 'exact', head: true }),
       supabase.from('post_comments').select('*', { count: 'exact', head: true }),
@@ -112,16 +110,22 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
       supabase.from('support_tickets').select('*', { count: 'exact', head: true }),
       supabase.from('moderation_queue').select('*', { count: 'exact', head: true }),
     ]);
-
-    counts.profiles = profCount ?? 0;
-    counts.posts = postCount ?? 0;
-    counts.comments = commentCount ?? 0;
-    counts.resources = resCount ?? 0;
-    counts.events = eventCount ?? 0;
-    counts.supportTickets = ticketCount ?? 0;
-    counts.moderationQueue = modCount ?? 0;
+    const countOf = (r: { count: number | null; error: unknown }) => (r.error ? null : (r.count ?? 0));
+    counts.profiles = countOf(results[0]);
+    counts.posts = countOf(results[1]);
+    counts.comments = countOf(results[2]);
+    counts.resources = countOf(results[3]);
+    counts.events = countOf(results[4]);
+    counts.supportTickets = countOf(results[5]);
+    counts.moderationQueue = countOf(results[6]);
   } catch (err) {
     console.warn('[SystemHealth] Table count error:', err);
+  }
+
+  // Nothing could be read from the database at all: that is a failed load (the screen shows an error with a retry),
+  // not a report of zeros. A partial failure still reports what it could read.
+  if (pingFailure && Object.values(counts).every((c) => c === null)) {
+    throw pingFailure;
   }
 
   try {
@@ -140,22 +144,25 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
 
   // Integrity scanner: check for dangling/orphaned rows
   const integrityIssues: IntegrityIssue[] = [];
+  let integrityChecked = true;
 
   try {
     // Check for comments referencing deleted posts
-    const { data: orphanedComments } = await supabase
+    const { data: orphanedComments, error: commentsError } = await supabase
       .from('post_comments')
       .select('id, post_id')
       .limit(100);
+    if (commentsError) throw commentsError;
 
     // If any comment has no matching post in DB, flag it
     if (orphanedComments && orphanedComments.length > 0) {
       // In healthy DB foreign keys cascade delete, but if raw rows were inserted without FK:
       const postIds = Array.from(new Set(orphanedComments.map((c) => c.post_id)));
-      const { data: existingPosts } = await supabase
+      const { data: existingPosts, error: postsError } = await supabase
         .from('posts')
         .select('id')
         .in('id', postIds);
+      if (postsError) throw postsError;
       const existingSet = new Set((existingPosts || []).map((p) => p.id));
       const orphans = orphanedComments.filter((c) => !existingSet.has(c.post_id));
       if (orphans.length > 0) {
@@ -170,7 +177,8 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
       }
     }
   } catch {
-    // Non-blocking
+    // Non-blocking, but reported: an empty list must not read as "no orphaned records".
+    integrityChecked = false;
   }
 
   const edgeFunctions = await Promise.all([
@@ -184,6 +192,7 @@ export async function fetchSystemHealth(): Promise<SystemHealthReport> {
     timestamp: new Date().toISOString(),
     counts,
     integrityIssues,
+    integrityChecked,
     edgeFunctions,
   };
 }
@@ -207,16 +216,19 @@ export async function cleanupOrphanedRecords(): Promise<{ success: boolean; prun
     let prunedTickets = 0;
 
     // 1. Prune orphaned post_comments referencing deleted posts
-    const { data: recentComments } = await supabase
+    const { data: recentComments, error: recentError } = await supabase
       .from('post_comments')
       .select('id, post_id')
       .limit(200);
+    if (recentError) throw recentError;
     if (recentComments && recentComments.length > 0) {
       const postIds = Array.from(new Set(recentComments.map((c) => c.post_id)));
-      const { data: existingPosts } = await supabase
+      const { data: existingPosts, error: existingError } = await supabase
         .from('posts')
         .select('id')
         .in('id', postIds);
+      // If this lookup failed, every comment would look orphaned and be deleted - stop instead.
+      if (existingError) throw existingError;
       const existingSet = new Set((existingPosts || []).map((p) => p.id));
       const orphanCommentIds = recentComments.filter((c) => !existingSet.has(c.post_id)).map((c) => c.id);
       if (orphanCommentIds.length > 0) {

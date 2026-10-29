@@ -8,6 +8,8 @@ import { AppText } from'@/components/AppText';
 import { Badge } from'@/components/Badge';
 import { AppButton } from'@/components/AppButton';
 import { EmptyState } from'@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listVerificationRequests, respondToVerificationRequest, getVerificationDocumentUrl } from '@/api/verification';
@@ -35,30 +37,39 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  const [actingId, setActingId] = useState<string | null>(null);
  const [previewResource, setPreviewResource] = useState<Resource | null>(null);
 
- const { data: allResources = [], isLoading: loadingResources } = useQuery({
+ const { data: allResourcesData, isLoading: loadingResources, isError: resourcesError, error: resourcesErrorObj, refetch: refetchResources } = useQuery({
  queryKey: ['resources', 'admin-approvals', isStaffScope ? campusCode ?? 'none' : 'all'],
  queryFn: () => listResources({ approvalStatus: 'pending', ...(isStaffScope && campusCode ? { campusCode } : {}) }),
  });
 
- const { data: verificationsRaw = [], isLoading: loadingVerifications } = useQuery({
+ const { data: verificationsData, isLoading: loadingVerifications, isError: verificationsError, error: verificationsErrorObj, refetch: refetchVerifications } = useQuery({
  queryKey: ['verification-requests', isStaffScope ? 'staff-desk' : 'admin-desk', isStaffScope ? campusCode ?? 'none' : 'all'],
  queryFn: () => listVerificationRequests(isStaffScope && campusCode ? campusCode : undefined),
  });
 
  // listVerificationRequests has no server-side campus filter, so staff scoping is applied
  // client-side against the claimed institution on each request.
+ const verificationsRaw = verificationsData ?? [];
  const verifications = isStaffScope && campusCode
  ? verificationsRaw.filter((v) => (v.institutionClaimed || '').toUpperCase() === campusCode.toUpperCase())
  : verificationsRaw;
 
- const { data: waitlist = [], isLoading: loadingWaitlist } = useQuery({
+ const { data: waitlistData, isLoading: loadingWaitlist, isError: waitlistError, error: waitlistErrorObj, refetch: refetchWaitlist } = useQuery({
  queryKey: ['waitlist', 'admin-desk'],
  queryFn: listWaitlist,
  // Campus-node federation approval is platform-governance and admin-only; never fetched for staff.
  enabled: !isStaffScope,
  });
 
+ const allResources = allResourcesData ?? [];
+ const waitlist = waitlistData ?? [];
  const pendingResources = allResources.filter((r) => r.approvalStatus === 'pending');
+
+ // A failed load is not "All ... reviewed": with nothing cached the error replaces the list and the tab counts.
+ const resourcesErrorMode = queryErrorMode({ isError: resourcesError, data: allResourcesData });
+ const verificationsErrorMode = queryErrorMode({ isError: verificationsError, data: verificationsData });
+ const waitlistErrorMode = queryErrorMode({ isError: waitlistError, data: waitlistData });
+ const countLabel = (loaded: unknown, n: number) => (loaded ? ` (${n})` : '');
 
  async function handleApproveResource(resource: Resource) {
  haptics.medium();
@@ -159,7 +170,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  }}
  >
  <AppText variant="caption"weight="bold"tone={section === 'resources' ? 'inverse' : 'secondary'}>
- Resource Submissions ({pendingResources.length})
+ Resource Submissions{countLabel(allResourcesData, pendingResources.length)}
  </AppText>
  </Pressable>
 
@@ -177,7 +188,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  }}
  >
  <AppText variant="caption"weight="bold"tone={section === 'credentials' ? 'inverse' : 'secondary'}>
- ID Verifications ({verifications.length})
+ ID Verifications{countLabel(verificationsData, verifications.length)}
  </AppText>
  </Pressable>
 
@@ -196,7 +207,7 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  }}
  >
  <AppText variant="caption"weight="bold"tone={section === 'nodes' ? 'inverse' : 'secondary'}>
- Campus Nodes ({waitlist.length})
+ Campus Nodes{countLabel(waitlistData, waitlist.length)}
  </AppText>
  </Pressable>
  )}
@@ -212,6 +223,9 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  {/* Resource Upload Submissions Queue */}
  {section === 'resources' ? (
  <View>
+ {resourcesErrorMode === 'inline' ? (
+ <ErrorStateView compact subject="resource submissions" title="Couldn't refresh submissions" error={resourcesErrorObj} onRetry={refetchResources} style={{ marginBottom: spacing.sm }} />
+ ) : null}
  {pendingResources.map((res) => (
  <SolidCard key={res.id} radius={18} frosted style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
@@ -274,7 +288,9 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  </SolidCard>
  ))}
 
- {!loadingResources && pendingResources.length === 0 ? (
+ {!loadingResources && resourcesErrorMode === 'blocking' ? (
+ <ErrorStateView subject="resource submissions" error={resourcesErrorObj} onRetry={refetchResources} />
+ ) : !loadingResources && pendingResources.length === 0 ? (
  <EmptyState title="All resource submissions reviewed"description="No pending course materials awaiting moderator indexing." />
  ) : null}
  </View>
@@ -283,6 +299,9 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  {/* ID & Credential Verifications */}
  {section === 'credentials' ? (
  <View>
+ {verificationsErrorMode === 'inline' ? (
+ <ErrorStateView compact subject="verification requests" title="Couldn't refresh verification requests" error={verificationsErrorObj} onRetry={refetchVerifications} style={{ marginBottom: spacing.sm }} />
+ ) : null}
  {verifications.map((v) => (
  <SolidCard key={v.id} radius={18} frosted style={{ marginBottom: spacing.md }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
@@ -337,7 +356,9 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  </View>
  </SolidCard>
  ))}
- {!loadingVerifications && verifications.length === 0 ? (
+ {!loadingVerifications && verificationsErrorMode === 'blocking' ? (
+ <ErrorStateView subject="verification requests" error={verificationsErrorObj} onRetry={refetchVerifications} />
+ ) : !loadingVerifications && verifications.length === 0 ? (
  <EmptyState title="All credential verifications reviewed"description="No pending student or faculty ID requests." />
  ) : null}
  </View>
@@ -346,6 +367,9 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  {/* Campus Node Federations - platform-governance, admin-only */}
  {!isStaffScope && section === 'nodes' ? (
  <View>
+ {waitlistErrorMode === 'inline' ? (
+ <ErrorStateView compact subject="campus node requests" title="Couldn't refresh requests" error={waitlistErrorObj} onRetry={refetchWaitlist} style={{ marginBottom: spacing.sm }} />
+ ) : null}
  {waitlist.map((w) => (
  <SolidCard key={w.id} radius={18} frosted style={{ marginBottom: spacing.md }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
@@ -375,7 +399,9 @@ export function ApprovalsModerationTab({ scope = 'admin', campusCode }: Approval
  </View>
  </SolidCard>
  ))}
- {!loadingWaitlist && waitlist.length === 0 ? (
+ {!loadingWaitlist && waitlistErrorMode === 'blocking' ? (
+ <ErrorStateView subject="campus node requests" error={waitlistErrorObj} onRetry={refetchWaitlist} />
+ ) : !loadingWaitlist && waitlist.length === 0 ? (
  <EmptyState title="No pending campus nodes"description="All university federation requests have been processed." />
  ) : null}
  </View>

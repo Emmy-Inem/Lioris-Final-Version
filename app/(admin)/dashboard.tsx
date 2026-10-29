@@ -9,6 +9,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { GlassCard } from '@/components/GlassCard';
 import { SolidCard } from '@/components/SolidCard';
 import { AppText } from '@/components/AppText';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { Avatar } from '@/components/Avatar';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { useAdminBadges } from '@/components/admin/useAdminBadges';
@@ -94,7 +95,7 @@ export default function AdminOverviewScreen() {
     { key: 'takedowns', label: 'Copyright takedown requests', count: badges.takedowns, icon: 'document-lock-outline' as const, tint: '#F59E0B', route: '/(admin)/takedown-requests' },
     { key: 'support', label: 'Open support tickets', count: badges.support, icon: 'help-buoy-outline' as const, tint: '#06B6D4', route: '/(admin)/support-desk' },
     { key: 'minors', label: 'Members under 18 awaiting guardian consent', count: badges.minors, icon: 'shield-half-outline' as const, tint: '#8B5CF6', route: '/(admin)/minors-consent' },
-  ].filter((row) => row.count > 0);
+  ].filter((row) => row.count !== undefined && row.count > 0);
 
   const hubs = getVisibleAdminGroups(user?.isSuperAdmin).filter((group) => group.key !== 'overview');
 
@@ -252,7 +253,17 @@ export default function AdminOverviewScreen() {
         {/* Needs attention */}
         <View style={{ gap: spacing.sm }}>
           <AppText variant="h3" weight="bold">Needs attention</AppText>
-          {attention.length === 0 ? (
+          {badges.hasError ? (
+            // An unreadable queue must never look like an empty one, so "All clear" is replaced by the error.
+            <ErrorStateView
+              compact
+              subject="the waiting queues"
+              title="Couldn't check what needs attention"
+              error={badges.error}
+              onRetry={badges.refetch}
+            />
+          ) : null}
+          {attention.length === 0 && !badges.hasError ? (
             <SolidCard radius={18} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border }}>
               <Ionicons name="checkmark-circle" size={22} color="#10B981" />
               <AppText tone="secondary" style={{ flex: 1 }}>

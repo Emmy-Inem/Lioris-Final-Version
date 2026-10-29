@@ -13,6 +13,8 @@ import { AppButton } from'@/components/AppButton';
 import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { EmptyState } from'@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { QueueItemSkeletonList } from '@/components/Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -205,10 +207,12 @@ export default function VerificationRequestsScreen() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const campusFilter = user?.isCampusAdmin && user?.campusCode ? user.campusCode : undefined;
-  const { data: requests, isLoading } = useQuery({
+  const { data: requests, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['verification-requests', campusFilter],
     queryFn: () => listVerificationRequests(campusFilter),
   });
+  // A failed load is not an empty queue: with nothing cached the error replaces the list (and its "0 Pending" / "All applications reviewed").
+  const errorMode = queryErrorMode({ isError, data: requests });
 
   const [inspectDocRequest, setInspectDocRequest] = useState<VerificationRequest | null>(null);
   const [fullScreenDocument, setFullScreenDocument] = useState<VerificationDocument | null>(null);
@@ -399,7 +403,7 @@ export default function VerificationRequestsScreen() {
             <AppText tone="secondary" variant="caption">Review student ID records & verification</AppText>
           </View>
           <View style={{ flexShrink: 0 }}>
-            <Badge label={`${requests?.length ?? 0} Pending`} tone="neutral" />
+            {requests ? <Badge label={`${requests.length} Pending`} tone="neutral" /> : null}
           </View>
         </View>
 
@@ -425,8 +429,21 @@ export default function VerificationRequestsScreen() {
           </SolidCard>
         )}
 
+        {errorMode === 'inline' && (
+          <ErrorStateView
+            compact
+            subject="verification requests"
+            title="Couldn't refresh verification requests"
+            error={error}
+            onRetry={refetch}
+            style={{ marginBottom: spacing.sm }}
+          />
+        )}
+
         {isLoading ? (
           <QueueItemSkeletonList count={4} />
+        ) : errorMode === 'blocking' ? (
+          <ErrorStateView subject="verification requests" error={error} onRetry={refetch} />
         ) : (
           <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
           {requests?.map((req) => (
@@ -525,7 +542,7 @@ export default function VerificationRequestsScreen() {
         </View>
         )}
 
-        {!isLoading && (requests?.length ?? 0) === 0 ? (
+        {!isLoading && errorMode !== 'blocking' && (requests?.length ?? 0) === 0 ? (
           <EmptyState title="All applications reviewed" description="There are no pending identity verification requests right now." />
         ) : null}
       </ScrollView>

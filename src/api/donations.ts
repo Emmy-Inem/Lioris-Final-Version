@@ -77,8 +77,9 @@ export async function listGivingCampaigns(campusCode?: string): Promise<GivingCa
 
   const { data, error } = await req;
   if (error) {
+    // Throw (never []): an empty list would read as "no campaigns" when the load actually failed.
     console.warn('[Donations] listGivingCampaigns error:', error.message);
-    return [];
+    throw error;
   }
   return (data ?? []).map(mapCampaign);
 }
@@ -93,7 +94,7 @@ export async function listMyGivingCampaigns(): Promise<GivingCampaign[]> {
     .select('*')
     .eq('creator_id', uid)
     .order('created_at', { ascending: false });
-  if (error) return [];
+  if (error) throw error;
   return (data ?? []).map(mapCampaign);
 }
 
@@ -154,7 +155,7 @@ export async function listPendingGivingCampaigns(): Promise<GivingCampaign[]> {
     .select('*, creator:profiles(full_name)')
     .eq('review_status', 'pending')
     .order('created_at', { ascending: true });
-  if (error) return [];
+  if (error) throw error;
   return (data ?? []).map(mapCampaign);
 }
 
