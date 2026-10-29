@@ -466,6 +466,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
                         hitSlop={8}
                         accessibilityRole="checkbox"
                         accessibilityState={{ checked: selectedIds.has(item.id) }}
+                        aria-checked={selectedIds.has(item.id)}
                         accessibilityLabel={`Select report ${item.id}`}
                       >
                         <Ionicons
@@ -544,6 +545,7 @@ export function ModerationQueue({ institutionCode, emptyTitle = 'Queue is clear'
                     hitSlop={8}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: selectedIds.has(item.id) }}
+                    aria-checked={selectedIds.has(item.id)}
                     accessibilityLabel={`Select report ${item.id}`}
                   >
                     <Ionicons

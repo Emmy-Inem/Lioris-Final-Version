@@ -223,6 +223,7 @@ export function ImageCropperModal({ visible, uri, kind, onCancel, onDone }: Imag
             {natural && uri ? (
               <Image
                 source={{ uri }}
+                accessibilityLabel="Image being cropped"
                 resizeMode="stretch"
                 style={{
                   position: 'absolute',

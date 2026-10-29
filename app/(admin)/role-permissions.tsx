@@ -276,6 +276,7 @@ export default function RolePermissionsScreen() {
                   }}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
+                  aria-pressed={selected}
                   accessibilityLabel={`${tab.label} role permissions`}
                   style={{
                     flexDirection: 'row',
@@ -296,7 +297,7 @@ export default function RolePermissionsScreen() {
                   <View style={{ marginLeft: 4 }}>
                     <Badge
                       label={tab.badge}
-                      tone={selected ? 'neutral' : 'brand'}
+                      tone={selected ? 'inverse' : 'brand'}
                     />
                   </View>
                 </Pressable>
@@ -445,6 +446,7 @@ export default function RolePermissionsScreen() {
 
                         <View style={{ alignItems: 'center', gap: 4 }}>
                           <Switch
+                            accessibilityLabel={item.label}
                             value={item.enabled}
                             onValueChange={() => handleTogglePermission(item)}
                             disabled={isProtectedCritical}

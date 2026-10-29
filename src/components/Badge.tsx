@@ -3,7 +3,7 @@ import { useTheme } from'@/theme/ThemeProvider';
 import { AppText } from'./AppText';
 import { ensureContrast } from'@/theme/contrast';
 
-type BadgeTone = 'neutral' | 'brand' | 'accent' | 'success' | 'warning' | 'critical';
+type BadgeTone = 'neutral' | 'brand' | 'accent' | 'success' | 'warning' | 'critical' | 'inverse';
 
 interface BadgeProps {
  label: string;
@@ -21,6 +21,8 @@ export function Badge({ label, tone = 'neutral' }: BadgeProps) {
 
  const fg: Record<BadgeTone, string> = {
  neutral: colors.textSecondary,
+ // For use on a solid brand/critical fill (selected chips), where every other tone would vanish.
+ inverse: colors.textInverse,
  brand: ensureContrast(colors.brandPrimary, colors.surface),
  accent: ensureContrast(colors.brandAccent, colors.surface),
  success: ensureContrast(colors.success, colors.surface),

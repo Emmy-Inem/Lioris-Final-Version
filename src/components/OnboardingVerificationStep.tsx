@@ -241,6 +241,7 @@ export function OnboardingVerificationStep({ currentPath }: OnboardingVerificati
                     }}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: selected }}
+                    aria-checked={selected}
                     accessibilityLabel={type}
                     style={{
                       paddingHorizontal: spacing.md,
@@ -278,7 +279,7 @@ export function OnboardingVerificationStep({ currentPath }: OnboardingVerificati
           >
             {photoUri ? (
               <>
-                <Image source={{ uri: photoUri }} style={{ width: '100%', height: 170 }} contentFit="cover" transition={200} />
+                <Image source={{ uri: photoUri }} accessibilityLabel="Photo of your verification document" style={{ width: '100%', height: 170 }} contentFit="cover" transition={200} />
                 <View style={{ paddingVertical: spacing.sm }}>
                   <AppText variant="caption" tone="brand" weight="semiBold">
                     Tap to change photo

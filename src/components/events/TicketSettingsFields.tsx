@@ -25,6 +25,7 @@ function Pill({ label, selected, onPress, disabled }: { label: string; selected:
       disabled={disabled}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected, disabled: !!disabled }}
+      aria-disabled={!!disabled}
       aria-checked={selected}
       style={{
         paddingHorizontal: 12,

@@ -170,7 +170,7 @@ function FilterSection({
  <Pressable
  key={opt}
  onPress={() => onSelect(opt)}
- accessibilityRole="radio"accessibilityState={{ checked: isSelected }}
+ accessibilityRole="radio"accessibilityState={{ checked: isSelected }} aria-checked={isSelected}
  accessibilityLabel={opt}
  style={{
  paddingHorizontal: spacing.md,

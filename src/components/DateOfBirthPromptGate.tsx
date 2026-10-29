@@ -85,7 +85,7 @@ export function DateOfBirthPromptGate() {
   const canSave = (parsed.status === 'minor' || parsed.status === 'adult' || parsed.status === 'under_13') && understood;
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={phase === 'blocked' ? () => {} : handleLater} statusBarTranslucent>
+    <Modal visible transparent animationType="none" onRequestClose={phase === 'blocked' ? () => {} : handleLater} statusBarTranslucent>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
         <View
           role="dialog"

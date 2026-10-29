@@ -161,7 +161,7 @@ export const EventCard = React.memo(function EventCard({ event }: { event: Campu
  style={{ width: '100%', height: 130, position: 'relative', overflow: 'hidden' }}
  >
         {hasRealImage ? (
-          <Image source={{ uri: effectiveCoverUrl! }} style={{ width: '100%', height: 130 }} contentFit="cover" recyclingKey={event.id} cachePolicy="memory-disk" />
+          <Image source={{ uri: effectiveCoverUrl! }} accessibilityLabel="" style={{ width: '100%', height: 130 }} contentFit="cover" recyclingKey={event.id} cachePolicy="memory-disk" />
         ) : (
           <View
             style={{

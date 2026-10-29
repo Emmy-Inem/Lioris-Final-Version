@@ -321,7 +321,7 @@ function ChipRow<T extends string>({
  <Pressable
  key={option}
  onPress={() => onSelect(option)}
- accessibilityRole="radio"accessibilityState={{ checked: isSelected }}
+ accessibilityRole="radio"accessibilityState={{ checked: isSelected }} aria-checked={isSelected}
  accessibilityLabel={option}
  style={{
  paddingHorizontal: 11,

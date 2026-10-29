@@ -47,9 +47,12 @@ function PostImageItem({
   style,
   onPress,
   children,
+  alt = 'Image attached to this post',
 }: {
   path: string;
   style?: any;
+  /** Text alternative for the picture (web alt / native accessibility label). */
+  alt?: string;
   onPress?: () => void;
   children?: React.ReactNode;
 }) {
@@ -66,7 +69,7 @@ function PostImageItem({
       style={[{ position: 'relative', overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.05)' }, style]}
     >
       {source ? (
-        <Image source={source} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+        <Image source={source} accessibilityLabel={alt} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
       ) : loading ? (
         <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center' }]}>
           <ActivityIndicator size="small" color="#999999" />
@@ -601,7 +604,7 @@ export function PostDetailScreen() {
   {post.authorName}
   </AppText>
   {post.authorVerified || post.authorRole === 'admin' ? (
-  <VerifiedBadge size={16} role={post.authorRole} name={post.authorName} />
+  <VerifiedBadge size={16} role={post.authorRole} name={post.authorName} showModalOnPress={false} />
   ) : null}
   
   </View>
@@ -752,6 +755,7 @@ export function PostDetailScreen() {
  accessibilityRole="button"
  accessibilityLabel={liked ? 'Remove helpful mark' : 'Mark discussion as helpful'}
  accessibilityState={{ selected: liked }}
+ aria-pressed={liked}
  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
  >
  <Ionicons name={liked ? 'bulb' : 'bulb-outline'} size={20} color={liked ? colors.brandPrimary : colors.textSecondary} />
@@ -766,6 +770,7 @@ export function PostDetailScreen() {
  accessibilityRole="button"
  accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark thread'}
  accessibilityState={{ selected: bookmarked }}
+ aria-pressed={bookmarked}
  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}
  >
  <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={20} color={bookmarked ? colors.brandPrimary : colors.textSecondary} />

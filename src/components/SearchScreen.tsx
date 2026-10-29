@@ -197,7 +197,7 @@ export function SearchScreen() {
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingRight: spacing.md }} style={{ flexGrow: 0, marginBottom: spacing.md }}>
+      <ScrollView horizontal accessibilityRole="tablist" showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingRight: spacing.md }} style={{ flexGrow: 0, marginBottom: spacing.md }}>
         {visibleTabs.map((t) => {
           const selected = tab === t;
           return (
@@ -206,6 +206,7 @@ export function SearchScreen() {
               onPress={() => setTab(t)}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
+              aria-selected={selected}
               accessibilityLabel={TAB_LABEL[t]}
               style={{
                 paddingHorizontal: spacing.md,
@@ -234,6 +235,7 @@ export function SearchScreen() {
                 onPress={() => setSchool(opt.code)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
+                aria-pressed={selected}
                 accessibilityLabel={`Filter by ${opt.label}`}
                 style={{
                   paddingHorizontal: spacing.md,

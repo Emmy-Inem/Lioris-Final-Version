@@ -80,7 +80,7 @@ export function MonthCalendarGrid({ events }: { events: CampusEvent[] }) {
  <Pressable
  key={i}
  onPress={() => setSelectedDay(cell.date)}
- accessibilityRole="button"accessibilityState={{ selected: isSelected }}
+ accessibilityRole="button"accessibilityState={{ selected: isSelected }} aria-pressed={isSelected}
  accessibilityLabel={`${cell.date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}${
  dayEvents.length > 0 ? `, ${dayEvents.length} event${dayEvents.length > 1 ? 's' : ''}` : ''
  }${isToday ? ', today' : ''}`}

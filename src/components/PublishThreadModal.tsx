@@ -587,6 +587,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                   <View key={uri + index} style={{ width: customMediaUris.length === 1 ? '100%' : '47%', height: customMediaUris.length === 1 ? 160 : 100, position: 'relative' }}>
                     <Image
                       source={{ uri }}
+                      accessibilityLabel={`Attached image ${index + 1} preview`}
                       style={{ width: '100%', height: '100%', borderRadius: radius.md, backgroundColor: '#000' }}
                       contentFit="cover"
                     />
@@ -646,6 +647,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                 accessibilityRole="button"
                 accessibilityLabel={attachPoll ? 'Remove poll' : 'Attach a poll'}
                 accessibilityState={{ selected: attachPoll }}
+                aria-pressed={attachPoll}
                 style={{
                   flex: 1,
                   flexDirection: 'row',
@@ -721,6 +723,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
                         onPress={() => { haptics.light(); setPollDurationHours(d.hours); }}
                         accessibilityRole="button"
                         accessibilityState={{ selected }}
+                        aria-pressed={selected}
                         style={{
                           paddingHorizontal: 12,
                           paddingVertical: 8,
@@ -839,6 +842,7 @@ export function PublishThreadModal({ visible, onClose, onPublish }: PublishThrea
               }}
               accessibilityRole="button"
               accessibilityState={{ selected: showSchedule }}
+              aria-pressed={showSchedule}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',

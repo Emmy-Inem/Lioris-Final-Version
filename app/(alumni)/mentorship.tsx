@@ -276,7 +276,7 @@ export default function AlumniMentorshipScreen() {
                   Accepting new requests
                 </AppText>
               </View>
-              <Switch value={profile.isAccepting} onValueChange={toggleAccepting} disabled={isUnverified} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+              <Switch value={profile.isAccepting} onValueChange={toggleAccepting} disabled={isUnverified} accessibilityLabel="Accepting new requests" trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
             </View>
             <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
               <AppButton label="Edit profile" size="sm" variant="secondary" icon="create-outline" onPress={() => {

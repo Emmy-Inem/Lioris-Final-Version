@@ -88,9 +88,11 @@ const palette = {
  adminRedBgDark: 'rgba(252, 165, 165, 0.18)',
  adminRedTextDark: '#FCA5A5',
 
- success: '#177E44', // AA (was #1FAA59, 3.0:1)
- warning: '#996600', // AA (was #E8A400, 2.2:1)
- critical: '#D02F34', // AA (was #E5484D, 3.9:1)
+ // AA (>= 4.5:1) on white AND on the tinted surfaces these colours sit on as text (lavender/teal/slate pastels,
+ // the #E6E8EF border fill): success was #177E44 (4.34 on #F1E9FE), warning #996600 (4.03 on #E6E8EF), critical #D02F34 (4.15).
+ success: '#14753E',
+ warning: '#8F5F00',
+ critical: '#C42A30',
 } as const;
 
 export interface ThemeColors {

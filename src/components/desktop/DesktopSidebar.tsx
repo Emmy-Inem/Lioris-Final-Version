@@ -189,6 +189,7 @@ export function DesktopSidebar() {
  accessibilityRole="button"
  accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
  accessibilityState={{ expanded: !collapsed }}
+ aria-expanded={!collapsed}
  style={({ hovered }: any) => [
  styles.collapseBtn,
  {

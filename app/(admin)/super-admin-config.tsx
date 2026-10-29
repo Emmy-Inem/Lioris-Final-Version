@@ -237,6 +237,7 @@ export default function CampusesAndSecurityScreen() {
                   </AppText>
                 </View>
                 <Switch
+                  accessibilityLabel="Maintenance mode"
                   value={maintenance}
                   disabled={maintenanceBusy}
                   onValueChange={toggleMaintenance}

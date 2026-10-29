@@ -61,6 +61,7 @@ export function AppTextField({
  <TextInput
  accessibilityLabel={accessibleLabel}
  accessibilityState={{ disabled: rest.editable === false }}
+ aria-disabled={rest.editable === false}
  aria-invalid={error ? true : undefined}
  aria-describedby={error ? errorId : undefined}
  placeholderTextColor={colors.textSecondary}

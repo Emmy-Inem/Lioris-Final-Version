@@ -398,7 +398,7 @@ export default function AlumniJobsScreen() {
                     <AppText
                       variant="caption"
                       weight={active ? 'bold' : 'regular'}
-                      style={{ color: active ? '#10B981' : colors.textSecondary, fontSize: 11.5 }}
+                      style={{ color: active ? (isDark ? '#34D399' : '#047857') : colors.textSecondary, fontSize: 11.5 }}
                     >
                       {jt === 'All' ? 'All Types' : jt}
                     </AppText>
@@ -429,7 +429,7 @@ export default function AlumniJobsScreen() {
                     <AppText
                       variant="caption"
                       weight={active ? 'bold' : 'regular'}
-                      style={{ color: active ? '#8B5CF6' : colors.textSecondary, fontSize: 11.5 }}
+                      style={{ color: active ? (isDark ? '#A78BFA' : '#6D28D9') : colors.textSecondary, fontSize: 11.5 }}
                     >
                       {exp === 'All' ? 'Any Experience' : exp}
                     </AppText>
@@ -460,7 +460,7 @@ export default function AlumniJobsScreen() {
                     <AppText
                       variant="caption"
                       weight={active ? 'bold' : 'regular'}
-                      style={{ color: active ? '#EC4899' : colors.textSecondary, fontSize: 11.5 }}
+                      style={{ color: active ? (isDark ? '#F472B6' : '#BE185D') : colors.textSecondary, fontSize: 11.5 }}
                     >
                       {dp.label}
                     </AppText>

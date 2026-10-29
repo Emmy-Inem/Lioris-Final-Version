@@ -24,6 +24,7 @@ function Chip({ label, selected, onPress, icon }: { label: string; selected: boo
       }}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
+      aria-checked={selected}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -244,7 +245,7 @@ export function MentorProfileEditor({
             Switch off to pause. Your current mentees are not affected.
           </AppText>
         </View>
-        <Switch value={form.isAccepting} onValueChange={(v) => set('isAccepting', v)} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+        <Switch value={form.isAccepting} onValueChange={(v) => set('isAccepting', v)} accessibilityLabel="Accepting new requests" trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
       </View>
     </FormSheet>
   );

@@ -232,6 +232,7 @@ function FloatingTabBar({ tabs, active, onSelect }: { tabs: MockTab[]; active: s
               key={tab.key}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
+              aria-selected={isActive}
               accessibilityLabel={tab.label}
               onPress={() => onSelect(tab.key)}
               hitSlop={4}

@@ -315,6 +315,7 @@ export function DonationsModerationTab() {
                   hitSlop={8}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: selectedIds.has(c.id) }}
+                  aria-checked={selectedIds.has(c.id)}
                   accessibilityLabel={`Select ${c.title}`}
                   style={{ paddingTop: 2 }}
                 >

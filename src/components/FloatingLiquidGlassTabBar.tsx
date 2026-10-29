@@ -177,6 +177,7 @@ function TabItem({
         style={styles.tabPressable}
         accessibilityRole="tab"
         accessibilityState={{ selected: isFocused }}
+        aria-selected={isFocused}
         accessibilityLabel={label}
         hitSlop={8}
       >

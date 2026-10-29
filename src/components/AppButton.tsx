@@ -58,6 +58,8 @@ export function AppButton({
  accessibilityRole="button"
  accessibilityLabel={label}
  accessibilityState={{ disabled: !!disabled || !!loading, busy: !!loading }}
+ aria-disabled={!!disabled || !!loading}
+ aria-busy={!!loading}
  disabled={disabled || loading}
  hitSlop={isSmall ? { top: 6, bottom: 6, left: 4, right: 4 } : undefined}
  onPressIn={() => (scale.value = withTiming(0.97, { duration: 100 }))}

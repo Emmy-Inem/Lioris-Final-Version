@@ -68,6 +68,7 @@ export function GuardianDetailsForm({ initial, submitLabel = 'Save guardian deta
               onPress={() => setRelationship(r.value)}
               accessibilityRole="radio"
               accessibilityState={{ selected }}
+              aria-checked={selected}
               accessibilityLabel={r.label}
               style={{
                 paddingHorizontal: 14,

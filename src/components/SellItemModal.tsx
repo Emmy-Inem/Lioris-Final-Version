@@ -39,7 +39,7 @@ function PhotoThumb({ value, radius, onRemove }: { value: string; radius: number
   return (
     <View style={{ width: '47%', height: 100, position: 'relative' }}>
       {uri ? (
-        <Image source={{ uri }} style={{ width: '100%', height: '100%', borderRadius: radius, backgroundColor: '#000' }} contentFit="cover" transition={200} />
+        <Image source={{ uri }} accessibilityLabel="Selected listing photo" style={{ width: '100%', height: '100%', borderRadius: radius, backgroundColor: '#000' }} contentFit="cover" transition={200} />
       ) : (
         <View
           style={{
@@ -320,6 +320,7 @@ export function SellItemModal({ visible, onClose, onPublish, listing, onUpdated 
                     onPress={() => setCategory(cat)}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: selected }}
+                    aria-checked={selected}
                     accessibilityLabel={cat}
                     style={{
                       paddingHorizontal: spacing.md,
@@ -350,6 +351,7 @@ export function SellItemModal({ visible, onClose, onPublish, listing, onUpdated 
                     onPress={() => setCondition(cond)}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: selected }}
+                    aria-checked={selected}
                     accessibilityLabel={cond}
                     style={{
                       paddingHorizontal: spacing.md,

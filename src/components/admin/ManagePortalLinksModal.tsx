@@ -280,6 +280,7 @@ export function ManagePortalLinksModal({
         onPress={() => setFilter(code)}
         accessibilityRole="button"
         accessibilityState={{ selected }}
+        aria-pressed={selected}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: selected ? colors.brandPrimary : colors.surface, borderWidth: 1, borderColor: selected ? colors.brandPrimary : colors.border }}
       >
         <AppText variant="caption" weight={selected ? 'bold' : 'medium'} style={{ color: selected ? '#FFFFFF' : colors.textPrimary }}>
@@ -314,7 +315,7 @@ export function ManagePortalLinksModal({
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Switch value={showHidden} onValueChange={setShowHidden} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+          <Switch value={showHidden} onValueChange={setShowHidden} accessibilityLabel="Show hidden links" trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
           <AppText variant="caption" tone="secondary">
             Show hidden links
           </AppText>
@@ -350,6 +351,7 @@ export function ManagePortalLinksModal({
                     onPress={() => setCampusCode(c.code)}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: selected }}
+                    aria-checked={selected}
                     style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, borderWidth: 1.5, borderColor: selected ? colors.brandPrimary : colors.border, backgroundColor: selected ? `${colors.brandPrimary}18` : 'transparent' }}
                   >
                     <AppText variant="caption" weight="semiBold" tone={selected ? 'brand' : 'secondary'}>
@@ -388,6 +390,7 @@ export function ManagePortalLinksModal({
                     accessibilityRole="button"
                     accessibilityLabel={`Icon ${ic}`}
                     accessibilityState={{ selected }}
+                    aria-pressed={selected}
                     style={{ width: 38, height: 38, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: selected ? colors.brandPrimary : colors.surface, borderWidth: 1, borderColor: selected ? colors.brandPrimary : colors.border }}
                   >
                     <Ionicons name={ic} size={18} color={selected ? '#FFFFFF' : colors.textPrimary} />
@@ -406,7 +409,7 @@ export function ManagePortalLinksModal({
                 Hidden links stay here but students do not see them.
               </AppText>
             </View>
-            <Switch value={active} onValueChange={setActive} trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
+            <Switch value={active} onValueChange={setActive} accessibilityLabel="Visible to students" trackColor={{ false: colors.divider, true: colors.brandPrimary }} />
           </View>
 
           {formError ? (

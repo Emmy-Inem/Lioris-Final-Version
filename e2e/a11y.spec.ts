@@ -77,3 +77,56 @@ test('a11y: first-run navigation guide has no serious or critical violations', a
   await expect(page.getByText('Home Dashboard')).toBeVisible();
   await expectNoBlockingViolations(page, testInfo, 'navigation-guide', '[role="dialog"]');
 });
+
+// Regression guard for the web accessibility fixes (aria state mirroring, tablists, labelled
+// switches, image alt text, nested interactives, colour contrast): one representative screen per
+// feature area for every role. react-native-web does not map `accessibilityState` to aria-*, so a
+// regression here would reach screen-reader users silently. The tests are independent, so Playwright
+// runs them in parallel, and the stubbed network keeps each one to a few seconds.
+const EVENT_ID = '00000000-0000-4000-8000-000000000001';
+const ROLE_SCREENS: ReadonlyArray<{ role: TestUserRole; paths: readonly string[] }> = [
+  {
+    role: 'student',
+    paths: [
+      '/(student)/feed',
+      '/(student)/mentorship',
+      '/(student)/search',
+      '/(student)/forum/explore',
+      `/(student)/events/${EVENT_ID}`,
+      '/(student)/calendar',
+    ],
+  },
+  { role: 'alumni', paths: ['/(alumni)/jobs', '/(alumni)/notifications', '/(alumni)/forum'] },
+  { role: 'staff', paths: ['/(staff)/forum'] },
+  {
+    role: 'admin',
+    paths: [
+      '/(admin)/feature-controls',
+      '/(admin)/super-admin-config',
+      '/(admin)/moderation-queue',
+      '/(admin)/audit-logs',
+      '/(admin)/platform-config',
+      '/(admin)/user-directory',
+      '/(admin)/content-desk',
+    ],
+  },
+];
+
+for (const { role, paths } of ROLE_SCREENS) {
+  for (const path of paths) {
+    test(`a11y: ${role} ${path.replace(EVENT_ID, ':id')} has no serious or critical axe violations`, async ({ page }, testInfo) => {
+      await seedAuthenticatedSession(page, role);
+      await page.goto(path);
+      await waitForApp(page);
+      // Fade-in animations (modals, cards) would make axe sample half-transparent text.
+      await page
+        .waitForFunction(() =>
+          document
+            .getAnimations()
+            .every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().iterations === Infinity),
+        )
+        .catch(() => undefined);
+      await expectNoBlockingViolations(page, testInfo, `${role}-${path.replace(/[^a-z0-9]+/gi, '-')}`);
+    });
+  }
+}

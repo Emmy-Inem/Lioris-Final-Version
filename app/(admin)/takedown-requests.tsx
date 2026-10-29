@@ -167,7 +167,7 @@ export default function TakedownRequestsScreen() {
         </AppText>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
+      <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
         {(['pending', 'decided'] as const).map((t) => {
           const selected = tab === t;
           return (
@@ -175,6 +175,7 @@ export default function TakedownRequestsScreen() {
               key={t}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
+              aria-selected={selected}
               onPress={() => changeTab(t)}
               style={{
                 paddingHorizontal: 14,
@@ -269,6 +270,7 @@ export default function TakedownRequestsScreen() {
                     hitSlop={8}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: selectedIds.has(item.id) }}
+                    aria-checked={selectedIds.has(item.id)}
                     accessibilityLabel={`Select ${item.resourceTitle}`}
                     style={{ paddingTop: 2 }}
                   >

@@ -45,6 +45,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { PostVisibilityScope } from '@/api/types';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { usePermissions } from '@/context/RolePermissionsContext';
+import { accentTextOnTint, readableOn } from '@/theme/contrast';
 
 // Virtual, always-present tile meaning "no category filter" - not a real row
 // in forum_communities, so it's never subject to approval.
@@ -592,6 +593,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           <Badge label="All Campuses" tone="neutral" />
         ) : !isDesktop && globalWorkspaceEnabled ? (
           <View
+            accessibilityRole="tablist"
             style={{
               flexDirection: 'row',
               flexShrink: 0,
@@ -610,6 +612,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   onPress={() => setViewScope(s)}
                   accessibilityRole="tab"
                   accessibilityState={{ selected }}
+                  aria-selected={selected}
                   style={{
                     paddingHorizontal: 12,
                     paddingVertical: 5,
@@ -826,6 +829,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               }}
               accessibilityRole="button"
               accessibilityState={{ selected }}
+              aria-pressed={selected}
               style={[
                 {
                   flexDirection: 'row',
@@ -927,7 +931,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     {activeSubForum.label}
                   </AppText>
                   <View style={{ backgroundColor: `${activeSubForum.accentColor}20`, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
-                    <AppText weight="bold" style={{ color: activeSubForum.accentColor, fontSize: 11 }}>
+                    <AppText weight="bold" style={{ color: accentTextOnTint(activeSubForum.accentColor, [colors.surface, colors.background]), fontSize: 11 }}>
                       {activeSubForum.slug}
                     </AppText>
                   </View>
@@ -1115,8 +1119,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     Community Forum
                   </AppText>
                   {user?.role === 'admin' && (
-                    <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill }}>
-                      <AppText weight="bold" style={{ color: '#FFFFFF', fontSize: 11 }}>ADMIN HUB</AppText>
+                    <View style={{ backgroundColor: colors.critical, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill }}>
+                      <AppText weight="bold" style={{ color: readableOn(colors.critical), fontSize: 11 }}>ADMIN HUB</AppText>
                     </View>
                   )}
                 </View>
@@ -1319,7 +1323,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                           {activeSubForum.label}
                         </AppText>
                         <View style={{ backgroundColor: `${activeSubForum.accentColor}20`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill }}>
-                          <AppText weight="bold" style={{ color: activeSubForum.accentColor, fontSize: 11 }}>
+                          <AppText weight="bold" style={{ color: accentTextOnTint(activeSubForum.accentColor, [colors.surface, colors.background]), fontSize: 11 }}>
                             {activeSubForum.slug}
                           </AppText>
                         </View>
@@ -1772,7 +1776,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
  setSortBy(option);
  setSortModalOpen(false);
  }}
- accessibilityRole="radio"accessibilityState={{ checked: selected }}
+ accessibilityRole="radio"accessibilityState={{ checked: selected }} aria-checked={selected}
  accessibilityLabel={option === 'latest' ? 'Most Recent' : 'Most Upvoted'}
  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
  >
@@ -1860,7 +1864,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     marginTop: 1,
                   }}
                 >
-                  <AppText weight="bold" style={{ color: activeSubForum.accentColor, fontSize: 11 }}>
+                  <AppText weight="bold" style={{ color: accentTextOnTint(activeSubForum.accentColor, [colors.surface, colors.background]), fontSize: 11 }}>
                     {idx + 1}
                   </AppText>
                 </View>
@@ -1950,7 +1954,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         {sf.label}
                       </AppText>
                       <View style={{ backgroundColor: `${sf.accentColor}20`, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill }}>
-                        <AppText weight="bold" style={{ color: sf.accentColor, fontSize: 11 }}>
+                        <AppText weight="bold" style={{ color: accentTextOnTint(sf.accentColor, [colors.surface, colors.background]), fontSize: 11 }}>
                           {sf.slug}
                         </AppText>
                       </View>

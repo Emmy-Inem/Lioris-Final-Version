@@ -756,6 +756,7 @@ export function EventDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Save event'}
               accessibilityState={{ selected: bookmarked }}
+              aria-pressed={bookmarked}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -1011,7 +1012,7 @@ export function EventDetailScreen() {
             <View style={{ width: '100%', height: 320, borderRadius: 24, overflow: 'hidden', position: 'relative', marginBottom: spacing.lg, backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
               {heroImageSource ? (
                 <>
-                  <Image source={heroImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={300} />
+                  <Image source={heroImageSource} accessibilityLabel={`${event.title} cover image`} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={300} />
                   <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.35)' }} />
                   <View style={{ position: 'absolute', top: 16, right: 16, flexDirection: 'row', gap: 8 }}>
                     <Pressable accessibilityRole="button" accessibilityLabel="View full size" onPress={() => setLightboxOpen(true)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
@@ -1091,7 +1092,7 @@ export function EventDetailScreen() {
                 const active = activeTab === tab;
                 const label = tab === 'overview' ? 'Overview' : tab === 'agenda' ? 'Agenda & Schedule' : 'Campus Map & Directions';
                 return (
-                  <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }}
+                  <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }} aria-selected={active}
                     key={tab}
                     onPress={() => {
                       haptics.light();
@@ -1439,7 +1440,7 @@ export function EventDetailScreen() {
           <View style={{ width: '100%', height: 260, position: 'relative', backgroundColor: colors.pastelPrimaryBg, alignItems: 'center', justifyContent: 'center' }}>
             {heroImageSource ? (
               <Pressable accessibilityRole="button" accessibilityLabel="View event image full screen" onPress={() => setLightboxOpen(true)} style={{ width: '100%', height: '100%' }}>
-                <Image source={heroImageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={300} />
+                <Image source={heroImageSource} accessibilityLabel={`${event.title} cover image`} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={300} />
                 <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.38)' }} />
               </Pressable>
             ) : (
@@ -1463,6 +1464,7 @@ export function EventDetailScreen() {
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <Pressable accessibilityRole="button" accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark event'}
                   accessibilityState={{ selected: bookmarked }}
+                  aria-pressed={bookmarked}
                   disabled={savingBookmark}
                   onPress={handleToggleBookmark}
                   style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
@@ -1756,7 +1758,7 @@ export function EventDetailScreen() {
                 const active = activeTab === tab;
                 const label = tab === 'overview' ? 'Overview' : tab === 'agenda' ? 'Agenda' : 'Campus Map';
                 return (
-                  <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }}
+                  <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }} aria-selected={active}
                     key={tab}
                     onPress={() => {
                       haptics.light();
@@ -2085,7 +2087,7 @@ export function EventDetailScreen() {
                 {CATEGORIES.map((cat) => {
                   const active = editCategory.toLowerCase() === cat.toLowerCase();
                   return (
-                    <Pressable accessibilityRole="radio" accessibilityState={{ checked: active }} hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
+                    <Pressable accessibilityRole="radio" accessibilityState={{ checked: active }} aria-checked={active} hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
                       key={cat}
                       onPress={() => setEditCategory(cat)}
                       style={{
@@ -2114,7 +2116,7 @@ export function EventDetailScreen() {
                   const typeKey = vf === 'Physical Event' ? 'physical' : vf === 'Lioris Live Event (In-App)' ? 'virtual' : 'external';
                   const active = editVenueType === typeKey;
                   return (
-                    <Pressable accessibilityRole="radio" accessibilityState={{ checked: active }}
+                    <Pressable accessibilityRole="radio" accessibilityState={{ checked: active }} aria-checked={active}
                       key={vf}
                       onPress={() => setEditVenueType(typeKey)}
                       style={{
@@ -2270,7 +2272,7 @@ export function EventDetailScreen() {
                         const active = editApprovalStatus === st;
                         const label = st === 'approved' ? 'Approved & Live' : st === 'pending' ? 'Under Review' : 'Revoked';
                         return (
-                          <Pressable accessibilityRole="radio" accessibilityState={{ checked: active }}
+                          <Pressable accessibilityRole="radio" accessibilityState={{ checked: active }} aria-checked={active}
                             key={st}
                             onPress={() => setEditApprovalStatus(st)}
                             style={{
@@ -2302,7 +2304,7 @@ export function EventDetailScreen() {
                         Places this event in the top animated banner
                       </AppText>
                     </View>
-                    <Pressable accessibilityRole="switch" accessibilityLabel="Feature in hero spotlight carousel" accessibilityState={{ checked: editIsSpotlight }} hitSlop={8}
+                    <Pressable accessibilityRole="switch" accessibilityLabel="Feature in hero spotlight carousel" accessibilityState={{ checked: editIsSpotlight }} aria-checked={editIsSpotlight} hitSlop={8}
                       onPress={() => setEditIsSpotlight(!editIsSpotlight)}
                       style={{
                         paddingHorizontal: 12,
@@ -2329,7 +2331,7 @@ export function EventDetailScreen() {
                         Highlights with gold sponsored badge
                       </AppText>
                     </View>
-                    <Pressable accessibilityRole="switch" accessibilityLabel="Promoted or sponsored event" accessibilityState={{ checked: editSponsored }} hitSlop={8}
+                    <Pressable accessibilityRole="switch" accessibilityLabel="Promoted or sponsored event" accessibilityState={{ checked: editSponsored }} aria-checked={editSponsored} hitSlop={8}
                       onPress={() => setEditSponsored(!editSponsored)}
                       style={{
                         paddingHorizontal: 12,

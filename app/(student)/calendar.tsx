@@ -70,7 +70,7 @@ export default function CalendarScreen() {
   </View>
 
  {!isDesktop && (
- <View style={{ flexDirection: 'row', backgroundColor: colors.divider, borderRadius: radius.pill, padding: 4, marginBottom: spacing.lg }}>
+ <View accessibilityRole="tablist" style={{ flexDirection: 'row', backgroundColor: colors.divider, borderRadius: radius.pill, padding: 4, marginBottom: spacing.lg }}>
  {TABS.map((t) => {
  const selected = tab === t;
  return (
@@ -79,6 +79,7 @@ export default function CalendarScreen() {
  onPress={() => setTab(t)}
  accessibilityRole="tab"
  accessibilityState={{ selected }}
+ aria-selected={selected}
  accessibilityLabel={t}
  style={{
  flex: 1,

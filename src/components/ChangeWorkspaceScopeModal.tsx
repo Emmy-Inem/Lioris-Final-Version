@@ -304,7 +304,7 @@ function ScopeOption({
  return (
  <Pressable
  onPress={onPress}
- accessibilityRole="radio"accessibilityState={{ checked: selected }}
+ accessibilityRole="radio"accessibilityState={{ checked: selected }} aria-checked={selected}
  accessibilityLabel={`${title}, ${subtitle}`}
  >
  <View

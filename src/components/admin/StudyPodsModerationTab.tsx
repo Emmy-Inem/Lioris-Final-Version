@@ -238,6 +238,7 @@ export function StudyPodsModerationTab() {
               hitSlop={8}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: selectedIds.has(post.id) }}
+              aria-checked={selectedIds.has(post.id)}
               accessibilityLabel={`Select post by ${post.authorName}`}
               style={{ paddingTop: 2 }}
             >

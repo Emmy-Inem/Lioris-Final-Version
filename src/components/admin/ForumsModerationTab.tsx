@@ -338,6 +338,7 @@ export function ForumsModerationTab() {
                     hitSlop={8}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: selectedIds.has(community.id) }}
+                    aria-checked={selectedIds.has(community.id)}
                     accessibilityLabel={`Select ${community.label}`}
                   >
                     <Ionicons

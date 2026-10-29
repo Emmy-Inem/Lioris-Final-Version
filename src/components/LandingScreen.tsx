@@ -389,6 +389,7 @@ export function LandingScreen() {
                   <Pressable accessibilityRole="tab"
                     key={tab.id}
                     accessibilityState={{ selected: isSelected }}
+                    aria-selected={isSelected}
                     onPress={() => {
                       haptics.light();
                       setPreviewRole(tab.id as any);

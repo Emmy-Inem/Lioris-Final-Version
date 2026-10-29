@@ -1208,6 +1208,7 @@ export default function UserDirectoryScreen() {
                         hitSlop={8}
                         accessibilityRole="checkbox"
                         accessibilityState={{ checked: selectedUserIds.has(item.id) }}
+                        aria-checked={selectedUserIds.has(item.id)}
                         accessibilityLabel={`Select ${item.fullName}`}
                         style={{ flexShrink: 0, marginRight: spacing.xs }}
                       >
@@ -1235,7 +1236,7 @@ export default function UserDirectoryScreen() {
                               />
                             ) : null}
                             {item.isVerified && (
-                              <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
+                              <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} showModalOnPress={false} />
                             )}
                             {item.isCampusAmbassador && (
                               <Badge label="Ambassador" tone="brand" />
@@ -1304,6 +1305,7 @@ export default function UserDirectoryScreen() {
                     hitSlop={8}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: selectedUserIds.has(item.id) }}
+                    aria-checked={selectedUserIds.has(item.id)}
                     accessibilityLabel={`Select ${item.fullName}`}
                     style={{ flexShrink: 0, marginRight: spacing.xs }}
                   >
@@ -1331,7 +1333,7 @@ export default function UserDirectoryScreen() {
                           />
                         ) : null}
                         {item.isVerified && (
-                          <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
+                          <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} showModalOnPress={false} />
                         )}
                         {item.isCampusAmbassador && (
                           <Badge label="Ambassador" tone="brand" />
@@ -2157,6 +2159,7 @@ export default function UserDirectoryScreen() {
                     style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md }}
                     accessibilityRole="button"
                     accessibilityState={{ expanded: diagnosticsExpanded }}
+                    aria-expanded={diagnosticsExpanded}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Ionicons name="pulse-outline" size={16} color={colors.brandPrimary} />
