@@ -86,6 +86,85 @@ test.describe('legal pages', () => {
   }
 });
 
+test.describe('page titles', () => {
+  test('/privacy and /login have distinct, descriptive tab titles', async ({ page }) => {
+    await page.goto('/privacy');
+    await waitForApp(page);
+    await expect(page).toHaveTitle('Privacy Policy | Lioris');
+
+    await page.goto('/login');
+    await waitForApp(page);
+    await expect(page).toHaveTitle('Sign in | Lioris');
+  });
+
+  test('the title follows in-app navigation, including back to a legal page', async ({ page }) => {
+    await page.goto('/login');
+    await waitForApp(page);
+    await page.getByText("Don't have an account? Sign Up").click();
+    await expect(page).toHaveTitle('Create your account | Lioris');
+    await page.goBack();
+    await expect(page).toHaveTitle('Sign in | Lioris');
+  });
+
+  test('a signed-in screen is titled by its section, never by its content', async ({ page }) => {
+    await seedAuthenticatedSession(page, 'student');
+    await page.goto('/(student)/dashboard');
+    await waitForApp(page);
+    await expect(page.getByText(/Quick Services/i).first()).toBeVisible();
+    await expect(page).toHaveTitle('Dashboard | Lioris');
+  });
+});
+
+test.describe('unknown URLs (404)', () => {
+  for (const route of ['/this/page/does-not-exist', '/_sitemap', '/(admin)/not-a-real-screen']) {
+    test(`${route} shows the branded not-found page, not the router's default`, async ({ page, problems }) => {
+      await page.goto(route);
+      await waitForApp(page);
+
+      await expect(page.getByRole('heading', { level: 1, name: "We can't find that page" })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Go to home' })).toBeVisible();
+      // expo-router's default screen says "Unmatched Route" and links to a sitemap of every internal route.
+      await expect(page.getByText('Sitemap')).toHaveCount(0);
+      await expect(page.getByText('Unmatched Route')).toHaveCount(0);
+      await expect(page.getByText(CRASH_TEXT)).toHaveCount(0);
+      // The requested URL is not echoed back, and no internal route names leak.
+      const text = await page.evaluate(() => document.getElementById('root')?.innerText ?? '');
+      expect(text).not.toContain('does-not-exist');
+      expect(text).not.toMatch(/platform-config|moderation-queue|\(admin\)/);
+
+      await expect(page).toHaveTitle('Page not found | Lioris');
+      await expect(page.locator('meta[name="robots"][content="noindex"]')).toHaveCount(1);
+      expect(problems.consoleErrors, 'console errors').toEqual([]);
+    });
+  }
+
+  test('a signed-out visitor can go home or sign in', async ({ page }) => {
+    await page.goto('/nope');
+    await waitForApp(page);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL(/\/login/);
+    await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible();
+
+    await page.goto('/nope');
+    await waitForApp(page);
+    await page.getByRole('button', { name: 'Go to home' }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByText("We can't find that page")).toHaveCount(0);
+  });
+
+  test('a signed-in student is sent to their own dashboard', async ({ page }) => {
+    await seedAuthenticatedSession(page, 'student');
+    await page.goto('/nope');
+    await waitForApp(page);
+    await expect(page.getByRole('button', { name: 'Sign in' })).toHaveCount(0);
+    // The seeded member has no date of birth on file, so the (dismissible) prompt sits over the page; dismiss it.
+    await page.getByRole('button', { name: 'Not now' }).click();
+    await page.getByRole('button', { name: 'Go to home' }).click();
+    await expect(page.getByText(/Quick Services/i).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page).toHaveURL(/dashboard/);
+  });
+});
+
 test.describe('registration guard rails', () => {
   test('submit is blocked until a valid date of birth, its confirmation and the terms are given', async ({ page }) => {
     const signupRequests: string[] = [];

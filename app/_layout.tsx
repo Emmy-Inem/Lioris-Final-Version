@@ -24,6 +24,7 @@ import { PullToRefresh } from '@/components/PullToRefresh';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import { useCampusRegistry } from '@/hooks/useCampusRegistry';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
+import { useRouteTitle } from '@/hooks/useRouteTitle';
 import { addNotificationResponseListener } from '@/notifications/push';
 import { resolveNotificationRoute } from '@/utils/notificationRouter';
 import { addBreadcrumb } from '@/monitoring/breadcrumbs';
@@ -83,8 +84,6 @@ export default function RootLayout() {
     if (Platform.OS !== 'web') return;
 
     if (typeof document !== 'undefined') {
-      document.title = 'Lioris';
-
       const styleId = 'lioris-desktop-scrollbars';
       if (!document.getElementById(styleId)) {
         const style = document.createElement('style');
@@ -458,6 +457,8 @@ function AppShell() {
   // Keeps the shared campus list (incl. campuses an admin added) fresh for email matching and pickers.
   useCampusRegistry();
   useActivityTracker();
+  // Web: per-route browser tab titles (no-op on native).
+  useRouteTitle();
   const { isLoading } = useFeatureFlags();
   const { user } = useAuth();
   const pathname = usePathname();

@@ -12,7 +12,7 @@
 const VERSION = 'lioris-v3';
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
-const MAX_STATIC_ENTRIES = 160;
+const MAX_STATIC_ENTRIES = 400; // one entry per route chunk (~125) plus fonts and images
 const NAVIGATION_TIMEOUT_MS = 4000;
 
 const SHELL_URLS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png'];

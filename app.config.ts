@@ -144,6 +144,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: EAS_PROJECT_ID,
     },
+    // expo-router options, read at runtime from `extra.router` (the `expo-router` plugin above merges, not replaces,
+    // this object). Not native config, so changing it does not need a new runtimeVersion.
+    router: {
+      // Drop the auto-generated /_sitemap screen: it lists every internal route (admin screens included) and is
+      // reachable by URL. Unknown URLs render app/+not-found.tsx instead.
+      sitemap: false,
+      // One chunk per route on web (the single entry bundle was ~6 MB). Native keeps its single Hermes bundle.
+      asyncRoutes: { web: true, android: false, ios: false },
+    },
   },
   experiments: {
     typedRoutes: true,

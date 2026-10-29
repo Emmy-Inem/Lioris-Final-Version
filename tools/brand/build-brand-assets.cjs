@@ -347,8 +347,10 @@ async function main() {
   }
 
   console.log('2) In-app logos (assets/images)...');
-  await save(fit(emblem, 768, 768), path.join(OUT, 'lioris_emblem.png'));
-  await save(fit(emblemBlue, 768, 768), path.join(OUT, 'lioris_emblem_blue.png'));
+  // 384 px: the largest in-app emblem is ~68 px (the loading screen), so this is still >5x for any screen,
+  // and it keeps each PNG under 100 KB (they were ~420 KB at 768 px and ship in the first page load).
+  await save(fit(emblem, 384, 384), path.join(OUT, 'lioris_emblem.png'));
+  await save(fit(emblemBlue, 384, 384), path.join(OUT, 'lioris_emblem_blue.png'));
   await save(wordWhite, path.join(OUT, 'lioris_wordmark_white.png'));
 
   // Theme-matching wordmarks: one flat-colour wordmark per colour that really occurs in the emblem
