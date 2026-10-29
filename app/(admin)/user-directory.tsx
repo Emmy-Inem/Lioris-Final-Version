@@ -1218,6 +1218,7 @@ export default function UserDirectoryScreen() {
                           color={selectedUserIds.has(item.id) ? colors.brandPrimary : colors.textSecondary}
                         />
                       </Pressable>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0 }}>
                       <Pressable
                         onPress={() => setDetailModalUser(item)}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
@@ -1235,9 +1236,6 @@ export default function UserDirectoryScreen() {
                                 tone={item.adminRole === 'super_admin' ? 'critical' : 'brand'}
                               />
                             ) : null}
-                            {item.isVerified && (
-                              <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} showModalOnPress={false} />
-                            )}
                             {item.isCampusAmbassador && (
                               <Badge label="Ambassador" tone="brand" />
                             )}
@@ -1255,6 +1253,10 @@ export default function UserDirectoryScreen() {
                           )}
                         </View>
                       </Pressable>
+                        {item.isVerified && (
+                          <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
+                        )}
+                      </View>
 
                       <Pressable
                         onPress={() => setSelectedUser(item)}
@@ -1315,6 +1317,7 @@ export default function UserDirectoryScreen() {
                       color={selectedUserIds.has(item.id) ? colors.brandPrimary : colors.textSecondary}
                     />
                   </Pressable>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0 }}>
                   <Pressable
                     onPress={() => setDetailModalUser(item)}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
@@ -1332,9 +1335,6 @@ export default function UserDirectoryScreen() {
                             tone={item.adminRole === 'super_admin' ? 'critical' : 'brand'}
                           />
                         ) : null}
-                        {item.isVerified && (
-                          <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} showModalOnPress={false} />
-                        )}
                         {item.isCampusAmbassador && (
                           <Badge label="Ambassador" tone="brand" />
                         )}
@@ -1352,6 +1352,10 @@ export default function UserDirectoryScreen() {
                       )}
                     </View>
                   </Pressable>
+                    {item.isVerified && (
+                      <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
+                    )}
+                  </View>
 
                   <Pressable
                     onPress={() => setSelectedUser(item)}

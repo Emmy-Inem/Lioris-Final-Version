@@ -143,3 +143,12 @@ for (const { role, paths } of ROLE_SCREENS) {
     });
   }
 }
+
+// The messages list is hidden behind the verification gate for fixture users, so it needs a verified member.
+test('a11y: verified student messages list has no serious or critical axe violations', async ({ page }, testInfo) => {
+  await seedAuthenticatedSession(page, 'student', { verified: true });
+  await page.goto('/(student)/messages');
+  await waitForApp(page);
+  await expect(page.getByText(/No Conversations/i).first()).toBeVisible();
+  await expectNoBlockingViolations(page, testInfo, 'student-messages-verified');
+});

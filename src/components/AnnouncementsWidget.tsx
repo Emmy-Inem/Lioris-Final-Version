@@ -8,6 +8,7 @@ import { GlassCard } from './GlassCard';
 import { AppText } from './AppText';
 import { Badge } from './Badge';
 import { AppButton } from './AppButton';
+import { ErrorStateView } from './ErrorStateView';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { listAnnouncements } from '@/api/announcements';
@@ -49,13 +50,37 @@ export function AnnouncementsWidget({
 
  const announcementsEnabled = isFeatureEnabled('campus_announcements');
  const { campusCode: viewerCampus } = useCampusScope();
- const { data: announcements, isLoading } = useQuery({
+ const { data: announcements, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['announcements', viewerCampus],
     queryFn: () => listAnnouncements({ campusCode: viewerCampus }),
     enabled: announcementsEnabled,
   });
 
  if (!announcementsEnabled) return null;
+
+ // A failed request is not "no bulletins": with nothing cached, say so and offer Retry (the empty state below is
+ // only for a request that succeeded with zero rows).
+ if (isError && announcements === undefined) {
+ return (
+ <View style={{ marginBottom: spacing.lg }}>
+ {showWhenEmpty && !compact ? (
+ <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: spacing.sm }}>
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+ <Ionicons name="megaphone" size={16} color={colors.textSecondary} style={{ flexShrink: 0 }} />
+ <AppText
+ weight="bold"
+ style={{ flex: 1, fontSize: isDesktop ? 18 : 15, lineHeight: isDesktop ? 24 : 20, letterSpacing: -0.2 }}
+ >
+ {title}
+ </AppText>
+ </View>
+ {action}
+ </View>
+ ) : null}
+ <ErrorStateView compact subject="announcements" error={error} onRetry={() => refetch()} />
+ </View>
+ );
+ }
 
  // Filter announcements for current audience scope and active expiration
  const activeAnnouncements = (announcements ?? [])
