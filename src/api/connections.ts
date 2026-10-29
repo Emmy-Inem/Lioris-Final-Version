@@ -69,7 +69,9 @@ export async function searchAlumniDirectory(
     }
 
     const { data, error } = await q.limit(20);
-    if (error || !data) return [];
+    // A failed search throws (the directory shows an error with Retry); only a successful, empty answer is "no alumni".
+    if (error) throw error;
+    if (!data) return [];
 
     const statusByUser = new Map<string, 'none' | 'pending' | 'accepted'>();
     if (currentUserId && data.length > 0) {
@@ -113,8 +115,9 @@ export async function searchAlumniDirectory(
       avatarUrl: p.avatar_url || null,
       connectionStatus: statusByUser.get(p.id) ?? ('none' as const),
     }));
-  } catch {
-    return [];
+  } catch (err) {
+    console.warn('[Connections] searchAlumniDirectory failed:', err);
+    throw err;
   }
 }
 
@@ -305,8 +308,8 @@ export async function listIncomingConnectionRequests(): Promise<IncomingConnecti
  .eq('recipient_id', currentUserId)
  .eq('status', 'pending');
 
- if (!error && data && data.length > 0) {
- return data.map((row: any) => ({
+ if (error) throw error;
+ return (data ?? []).map((row: any) => ({
  id: row.id,
  requesterId: row.requester_id,
  requesterName: row.requester?.full_name || 'Campus Student',
@@ -315,9 +318,10 @@ export async function listIncomingConnectionRequests(): Promise<IncomingConnecti
  createdAt: row.created_at,
  }));
  }
- }
- } catch {
- // fallback
+ } catch (err) {
+ // A failed load must read as an error with Retry, not as "no pending requests".
+ console.warn('[Connections] listIncomingConnectionRequests failed:', err);
+ throw err;
  }
 
  return [];
@@ -341,8 +345,8 @@ export async function listSuggestedConnections(): Promise<SuggestedConnection[]>
  // cannot do the "blocked by them" half of that: user_blocks' RLS only
  // lets a user see their own outgoing blocks, never an incoming one.
  const { data, error } = await supabase.rpc('get_suggested_connections', { p_limit: 10 });
- if (!error && data && data.length > 0) {
- return data.map((p: any) => ({
+ if (error) throw error;
+ return (data ?? []).map((p: any) => ({
  id: p.id,
  name: p.full_name || 'Campus Peer',
  avatarUrl: p.avatar_url || null,
@@ -350,15 +354,11 @@ export async function listSuggestedConnections(): Promise<SuggestedConnection[]>
  department: p.department || 'Academic Department',
  level: p.level || 300,
  }));
- }
- if (error) {
- console.warn('[Connections] Supabase suggestions error:', error.message);
- }
  } catch (err) {
+ // Rethrown: "could not load suggestions" must not read as "nobody to suggest".
  console.warn('[Connections] Supabase suggestions error:', err);
+ throw err;
  }
-
- return [];
 }
 
 // User Safety & Content Filtering - Persists user blocking to Supabase & active session

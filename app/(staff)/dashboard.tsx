@@ -102,6 +102,9 @@ export default function StaffDashboard() {
   const mainQueries = [openReportsQuery, pendingResourcesQuery, eventsQuery, studentPostsQuery];
   const loadErrors = summarizeQueryErrors(mainQueries);
   const loadBlocked = loadErrors.mode === 'blocking';
+  // A section whose own load failed with nothing cached shows a notice with Retry and no "(0)" / "Queue clear", never an empty state.
+  const eventsDown = eventsQuery.isError && eventsQuery.data === undefined;
+  const reportsDown = openReportsQuery.isError && openReportsQuery.data === undefined;
 
   const fullName = profile?.fullName ?? user?.fullName ?? 'Faculty Member';
   const institutionName = profile?.institutionName || LAUNCH_INSTITUTIONS.find((i) => i.code === effectiveCampus)?.name || 'Campus Network';
@@ -382,7 +385,7 @@ export default function StaffDashboard() {
                     Moderation
                   </AppText>
                   <AppText tone="secondary" style={{ fontSize: 10.5, marginTop: 1 }}>
-                    {!openReports ? 'Open the queue' : openReportsCount > 0 ? `${openReportsCount} flags` : 'Queue clear'}
+                    {reportsDown ? 'Open the queue' : openReportsCount > 0 ? `${openReportsCount} flags` : 'Queue clear'}
                   </AppText>
                 </View>
               </GlassCard>
@@ -446,7 +449,7 @@ export default function StaffDashboard() {
             </View>
             <Pressable onPress={() => router.push('/(staff)/events-list' as any)} style={{ flexShrink: 0 }} hitSlop={8}>
               <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                {events ? `All (${events.length}) →` : 'All →'}
+                All{eventsDown ? '' : ` (${events?.length ?? 0})`} →
               </AppText>
             </Pressable>
           </View>
@@ -485,8 +488,8 @@ export default function StaffDashboard() {
                 <EventCard key={evt.id} event={evt} />
               ))}
             </View>
-          ) : eventsQuery.isError && !events ? (
-            <ErrorStateView compact subject="events" title="Couldn't load events" error={eventsQuery.error} onRetry={eventsQuery.refetch} />
+          ) : eventsDown ? (
+            <ErrorStateView compact subject="faculty events" error={eventsQuery.error} onRetry={() => eventsQuery.refetch()} />
           ) : (
             <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
               <Ionicons name="calendar-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8 }} />

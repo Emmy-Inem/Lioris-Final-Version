@@ -7,6 +7,8 @@ import { ScreenContainer } from './ScreenContainer';
 import { AppText } from './AppText';
 import { Badge } from './Badge';
 import { EmptyState } from './EmptyState';
+import { ErrorStateView } from './ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { MarketplaceItemCard } from './MarketplaceItemCard';
 import { MarketplaceCardSkeletonGrid } from './Skeleton';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -42,11 +44,14 @@ export function MyListingsScreen() {
   // queryClient.invalidateQueries({ queryKey: ['marketplace'] }) calls in
   // MarketplaceItemCard (mark sold / delete) and the main Marketplace screen
   // (publish) already invalidate this list too - no extra wiring needed.
-  const { data: listings, isLoading, isError, refetch } = useQuery({
+  const { data: listings, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['marketplace', 'mine'],
     queryFn: () => listMyMarketplaceListings(),
     enabled: isEnabled,
   });
+
+  // A failed load is an error state (or a notice above the cached list), never "You haven't listed anything yet" or "0".
+  const errorMode = queryErrorMode({ isError, data: listings });
 
   const visible = (listings ?? []).filter((item) => {
     if (filter === 'removed') return !!(item as any).isRemoved;
@@ -126,9 +131,11 @@ export function MyListingsScreen() {
               <AppText variant="bodySmall" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
                 {f.label}
               </AppText>
-              <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
-                {count}
-              </AppText>
+              {errorMode === 'blocking' ? null : (
+                <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                  {count}
+                </AppText>
+              )}
             </Pressable>
           );
         })}
@@ -136,14 +143,8 @@ export function MyListingsScreen() {
 
       {isLoading ? (
         <MarketplaceCardSkeletonGrid count={4} />
-      ) : isError ? (
-        <EmptyState
-          icon="cloud-offline-outline"
-          title="Could not load your listings"
-          description="Check your connection and try again."
-          actionLabel="Retry"
-          onAction={() => refetch()}
-        />
+      ) : errorMode === 'blocking' ? (
+        <ErrorStateView subject="your listings" error={error} onRetry={refetch} />
       ) : visible.length === 0 ? (
         <EmptyState
           icon="pricetag-outline"
@@ -185,6 +186,11 @@ export function MyListingsScreen() {
           showsVerticalScrollIndicator={false}
           refreshing={isLoading}
           onRefresh={refetch}
+          ListHeaderComponent={
+            errorMode === 'inline' ? (
+              <ErrorStateView compact subject="your latest listings" error={error} onRetry={refetch} style={{ marginBottom: spacing.md }} />
+            ) : null
+          }
         />
       )}
     </ScreenContainer>

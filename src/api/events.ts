@@ -272,8 +272,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
       });
 
     // Merge unique - local pool only ever contributes this session's own
-    // just-created events (always) plus seed fixtures (only when the admin
-    // mock-data toggle is on).
+    // just-created events.
     const pool = [...locallyCreatedEvents];
     const merged = [...dbEvents];
     const activeCampus = (userCampus || 'GLOBAL').toUpperCase();
@@ -291,7 +290,7 @@ export async function listEvents(query: EventsQuery = {}): Promise<CampusEvent[]
     }
     return filterEvents(merged, { ...query, campusCode: userCampus }, currentUserId, isStaffOrAdmin);
   } catch (err) {
-    // A real failure must reach React Query (error state + retry) instead of being cached as a (seeded / empty) success.
+    // A real failure must reach React Query (error state + retry) instead of being cached as an empty success.
     // The local pool is only for signed-out previews or an explicit allowOffline.
     if (hadSession && !query.allowOffline) throw err;
     console.warn('[Events] Supabase listEvents error, showing local pool only:', err);

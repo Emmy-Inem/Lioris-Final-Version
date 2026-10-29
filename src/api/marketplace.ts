@@ -17,10 +17,9 @@ import { getOwnProfileRow } from './profile';
 import { isPermissionRefusal, refusalMessageFor } from '../utils/permissionErrors';
 
 // Listings this session has *successfully* written to Supabase, kept here
-// only so they render instantly before the next refetch. This is never
-// mixed with mockData.ts fixtures - those are only ever added back in by
-// getLocalPool() below, and only while the admin's "Mock Data Visibility"
-// toggle is on.
+// only so they render instantly before the next refetch. There are no
+// bundled fixtures: getLocalPool() below holds nothing but those own
+// creations.
 let locallyCreatedListings: MarketplaceListing[] = [];
 
 /** Sign-out / account switch: nothing created in the previous session may appear for the next account. */
@@ -67,8 +66,10 @@ function filterListings(pool: MarketplaceListing[], query: MarketplaceQuery): Ma
 }
 
 export async function listMarketplaceListings(query: MarketplaceQuery = {}): Promise<MarketplaceListing[]> {
+ let hadSession = false;
  try {
  const { data: authData } = await supabase.auth.getUser();
+ hadSession = !!authData?.user?.id;
  let userCampus = query.campusCode;
  let userRole = 'student';
  if (authData?.user?.id) {
@@ -132,8 +133,7 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
  const refined = filterListings(dbListings, { q: query.q, condition: query.condition });
 
  // Merge unique - the local pool only ever contributes this session's own
- // just-created listings (always) plus seed fixtures (only when the admin
- // mock-data toggle is on).
+ // just-created listings.
  const local = filterListings(getLocalPool(), { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus });
  const merged = [...refined];
  for (const item of local) {
@@ -150,10 +150,11 @@ export async function listMarketplaceListings(query: MarketplaceQuery = {}): Pro
  }
  return merged;
  } catch (err) {
- console.warn('[Marketplace] listMarketplaceListings failed, showing local pool only:', err);
- // Real failure: never fabricate a full mock catalog here. All that's
- // shown is this session's own successful creations, plus fixtures if
- // the admin has mock data turned on.
+ // A real failure must reach React Query (error state + retry): returning only this session's own creations as if
+ // that were the whole catalogue made "the request failed" look identical to "there are no listings". The local
+ // pool is only shown to a signed-out preview.
+ if (hadSession || (await getSessionUser().catch(() => null))?.id) throw err;
+ console.warn('[Marketplace] listMarketplaceListings failed for a signed-out viewer, showing local pool only:', err);
  return filterListings(getLocalPool(), query);
  }
 }
@@ -191,8 +192,9 @@ export async function listMyMarketplaceListings(): Promise<MarketplaceListing[]>
  }
  return merged;
  } catch (err) {
- console.warn('[Marketplace] listMyMarketplaceListings failed, showing local pool only:', err);
- return getLocalPool().filter((item) => item.sellerId === viewerId);
+ // Rethrown: "your listings could not be loaded" must not read as "you have no listings".
+ console.warn('[Marketplace] listMyMarketplaceListings failed:', err);
+ throw err;
  }
 }
 

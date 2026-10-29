@@ -68,19 +68,4 @@ test('analytics and bot visibility logic', async (t) => {
     assert.ok(groupForAdminAnalytics);
     assert.equal(groupForAdminAnalytics.key, 'platform');
   });
-
-  await t.test('all bot personas use authentic Nigerian student avatars', async () => {
-    // @ts-ignore TS5097
-    const { SEED_BOT_USERS } = await import('../data/seedBotProfiles.ts');
-    for (const bot of SEED_BOT_USERS) {
-      assert.ok(
-        bot.avatarUrl.includes('Law_Students_Nigeria') ||
-        bot.avatarUrl.includes('Discovery_For_Youth') ||
-        bot.avatarUrl.startsWith('bot_ui_') ||
-        bot.avatarUrl.startsWith('bot_unilag_') ||
-        bot.avatarUrl.startsWith('bot_funaab_'),
-        `Bot ${bot.username} avatar must be authentic Nigerian student photo`);
-      assert.ok(!bot.avatarUrl.includes('images.unsplash.com/photo-1534528741775'), 'Must not use stock white photo');
-    }
-  });
 });

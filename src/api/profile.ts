@@ -1,5 +1,4 @@
 import { UserProfile, UserRole } from './types';
-import { getSeedBotProfileById } from '../data/seedBotProfiles';
 
 import { assertWithinStorageQuota } from './platformSettings';
 import { supabase } from './supabase';
@@ -692,59 +691,52 @@ export async function getPublicProfile(userId: string): Promise<UserProfile | nu
     return cached;
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, is_campus_ambassador, role, admin_role, graduation_year, industry, company, job_title, location, directory_hide_company, directory_hide_location, directory_hide_job_title, linkedin_url')
-      .eq('id', userId)
-      .single();
+  // maybeSingle: a profile that does not exist (or that this viewer may not read) is "not found" (null); a failed
+  // request throws so the caller can tell "nobody there" from "could not look".
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, username, bio, department, interests, campus_code, avatar_url, banner_url, verification_status, is_campus_ambassador, role, admin_role, graduation_year, industry, company, job_title, location, directory_hide_company, directory_hide_location, directory_hide_job_title, linkedin_url')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) throw error;
 
-    if (!error && data) {
-      const inst = data.campus_code ? getInstitutionByCode(data.campus_code) : null;
-      const dbRole = (data.role || 'student') as UserRole;
-      const isAdmin = dbRole === 'admin';
-      // Admins are always verified; others rely on DB verification_status
-      const isVerified = isAdmin || data.verification_status === 'verified';
-      const userProfile: UserProfile = {
-        id: data.id,
-        fullName: data.full_name || 'Campus Member',
-        username: data.username || data.full_name?.toLowerCase().replace(/[^a-z0-9]+/g, '.') || 'user',
-        email: '',
-        userType: data.is_campus_ambassador ? 'student' : dbRole,
-        adminRole: (data.admin_role as any) || (isAdmin ? (data.campus_code === 'GLOBAL' ? 'super_admin' : 'campus_admin') : null),
-        graduationYear: data.graduation_year ?? null,
-        bio: data.bio || '',
-        department: data.department || 'Academic',
-        industry: data.industry || null,
-        company: data.directory_hide_company ? null : (data.company || null),
-        jobTitle: data.directory_hide_job_title ? null : (data.job_title || null),
-        location: data.directory_hide_location ? null : (data.location || null),
-        linkedinUrl: data.linkedin_url || null,
-        institutionName: inst?.name || (data.campus_code && data.campus_code !== 'GLOBAL' ? data.campus_code : 'Campus'),
-        institutionCode: inst?.code || data.campus_code || undefined,
-        avatarUrl: data.avatar_url || undefined,
-        coverUrl: data.banner_url || undefined,
-        isVerified,
-        isCampusAmbassador: !!data.is_campus_ambassador,
-        verificationStatus: isVerified ? 'verified' : (data.verification_status === 'pending' ? 'pending' : 'none'),
-        postsCount: 0,
-        resourcesCount: 0,
-        eventsCount: 0,
-        badgesCount: 0,
-        followersCount: 0,
-        followingCount: 0,
-      };
-      profileState.set(userId, userProfile);
-      return userProfile;
-    }
-  } catch (err) {
-    console.warn('[Profile] getPublicProfile lookup failed:', err);
-  }
-
-  const seedBot = getSeedBotProfileById(userId);
-  if (seedBot) {
-    profileState.set(userId, seedBot);
-    return seedBot;
+  if (data) {
+    const inst = data.campus_code ? getInstitutionByCode(data.campus_code) : null;
+    const dbRole = (data.role || 'student') as UserRole;
+    const isAdmin = dbRole === 'admin';
+    // Admins are always verified; others rely on DB verification_status
+    const isVerified = isAdmin || data.verification_status === 'verified';
+    const userProfile: UserProfile = {
+      id: data.id,
+      fullName: data.full_name || 'Campus Member',
+      username: data.username || data.full_name?.toLowerCase().replace(/[^a-z0-9]+/g, '.') || 'user',
+      email: '',
+      userType: data.is_campus_ambassador ? 'student' : dbRole,
+      adminRole: (data.admin_role as any) || (isAdmin ? (data.campus_code === 'GLOBAL' ? 'super_admin' : 'campus_admin') : null),
+      graduationYear: data.graduation_year ?? null,
+      bio: data.bio || '',
+      department: data.department || 'Academic',
+      industry: data.industry || null,
+      company: data.directory_hide_company ? null : (data.company || null),
+      jobTitle: data.directory_hide_job_title ? null : (data.job_title || null),
+      location: data.directory_hide_location ? null : (data.location || null),
+      linkedinUrl: data.linkedin_url || null,
+      institutionName: inst?.name || (data.campus_code && data.campus_code !== 'GLOBAL' ? data.campus_code : 'Campus'),
+      institutionCode: inst?.code || data.campus_code || undefined,
+      avatarUrl: data.avatar_url || undefined,
+      coverUrl: data.banner_url || undefined,
+      isVerified,
+      isCampusAmbassador: !!data.is_campus_ambassador,
+      verificationStatus: isVerified ? 'verified' : (data.verification_status === 'pending' ? 'pending' : 'none'),
+      postsCount: 0,
+      resourcesCount: 0,
+      eventsCount: 0,
+      badgesCount: 0,
+      followersCount: 0,
+      followingCount: 0,
+    };
+    profileState.set(userId, userProfile);
+    return userProfile;
   }
 
   return null;

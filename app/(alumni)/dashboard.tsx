@@ -113,6 +113,10 @@ export default function AlumniDashboard() {
   const mainQueries = [postsQuery, jobsQuery, mentorshipsQuery, eventsQuery];
   const loadErrors = summarizeQueryErrors(mainQueries);
   const loadBlocked = loadErrors.mode === 'blocking';
+  // A section whose own load failed with nothing cached shows a notice with Retry and no "(0)" count, never an empty state.
+  const jobsDown = jobsQuery.isError && jobsQuery.data === undefined;
+  const mentorshipsDown = mentorshipsQuery.isError && mentorshipsQuery.data === undefined;
+  const eventsDown = eventsQuery.isError && eventsQuery.data === undefined;
 
   const fullName = profile?.fullName ?? user?.fullName ?? 'Alumni Fellow';
 
@@ -540,13 +544,15 @@ export default function AlumniDashboard() {
               </View>
               <Pressable onPress={() => router.push('/(alumni)/jobs')} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                  All ({jobs?.length ?? 0}) →
+                  All{jobsDown ? '' : ` (${jobs?.length ?? 0})`} →
                 </AppText>
               </Pressable>
             </View>
 
             {jobsLoading ? (
               <JobCardSkeletonList count={2} />
+            ) : jobsDown ? (
+              <ErrorStateView compact subject="the career board" error={jobsQuery.error} onRetry={() => jobsQuery.refetch()} />
             ) : activeJobs.length === 0 ? (
               <SolidCard radius={18} style={{ padding: spacing.md, alignItems: 'center' }}>
                 <Ionicons name="briefcase-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />
@@ -586,7 +592,9 @@ export default function AlumniDashboard() {
               </Pressable>
             </View>
 
-            {openMentorships.length === 0 ? (
+            {mentorshipsDown ? (
+              <ErrorStateView compact subject="your mentorships" error={mentorshipsQuery.error} onRetry={() => mentorshipsQuery.refetch()} />
+            ) : openMentorships.length === 0 ? (
               <SolidCard radius={18} style={{ padding: spacing.md, alignItems: 'center' }}>
                 <Ionicons name="school-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />
                 <AppText weight="bold" variant="bodySmall">Mentor undergraduate students</AppText>
@@ -642,7 +650,7 @@ export default function AlumniDashboard() {
               </View>
               <Pressable onPress={() => router.push('/(alumni)/events-list' as any)} style={{ flexShrink: 0 }} hitSlop={8}>
                 <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: isDesktop ? 12 : 11 }}>
-                  All ({events?.length ?? 0}) →
+                  All{eventsDown ? '' : ` (${events?.length ?? 0})`} →
                 </AppText>
               </Pressable>
             </View>
@@ -681,6 +689,8 @@ export default function AlumniDashboard() {
                   <EventCard key={evt.id} event={evt} />
                 ))}
               </View>
+            ) : eventsDown ? (
+              <ErrorStateView compact subject="alumni events" error={eventsQuery.error} onRetry={() => eventsQuery.refetch()} />
             ) : (
               <SolidCard radius={18} style={{ padding: spacing.md, alignItems: 'center' }}>
                 <Ionicons name="calendar-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />

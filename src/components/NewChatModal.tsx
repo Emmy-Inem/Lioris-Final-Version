@@ -6,6 +6,8 @@ import { useQuery } from '@tanstack/react-query';
 import { AppText } from './AppText';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
+import { ErrorStateView } from './ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
 import { searchUsersToMessage, UserToMessage } from '@/api/messaging';
@@ -25,11 +27,14 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
   const { campusCode } = useCampusScope();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['users-to-message', searchQuery, campusCode],
     queryFn: () => searchUsersToMessage(searchQuery, campusCode),
     enabled: visible,
   });
+
+  // A failed search is an error state (or a notice above the cached results), never "No campus members found".
+  const errorMode = queryErrorMode({ isError, data: users });
 
   const handleSelect = (user: UserToMessage) => {
     haptics.light();
@@ -158,6 +163,11 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 24 }}
             showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              errorMode === 'inline' ? (
+                <ErrorStateView compact subject="the latest results" error={error} onRetry={refetch} style={{ marginBottom: spacing.sm }} />
+              ) : null
+            }
             renderItem={({ item }) => (
               <Pressable
                 onPress={() => handleSelect(item)}
@@ -202,7 +212,9 @@ export function NewChatModal({ visible, onClose, onSelectUser }: NewChatModalPro
               </Pressable>
             )}
             ListEmptyComponent={
-              !isLoading ? (
+              errorMode === 'blocking' ? (
+                <ErrorStateView subject="campus members" error={error} onRetry={refetch} />
+              ) : !isLoading ? (
                 <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
                   <Ionicons name="person-outline" size={36} color={colors.textSecondary} />
                   <AppText variant="bodySmall" weight="bold" style={{ marginTop: spacing.sm }}>

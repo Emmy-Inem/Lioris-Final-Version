@@ -196,7 +196,8 @@ export async function listMentorshipsForAdmin(status?: MentorshipStatus): Promis
     .order('created_at', { ascending: false });
   if (status) req = req.eq('status', status);
   const { data, error } = await req;
-  if (error) return [];
+  // Thrown, not []: a failed load must not read as "No active mentorships".
+  throwIfRpcError(error, 'Could not load mentorships.');
   return (data ?? []).map((row: any) => ({
     id: row.id,
     studentId: row.student?.id,

@@ -473,8 +473,9 @@ export async function listMyResources(): Promise<Resource[]> {
     }
     return merged;
   } catch (err) {
-    console.warn('[Resources] listMyResources failed, showing local pool only:', err);
-    return locallyCreatedResources.filter((r) => r.authorId === uploaderId);
+    // Rethrown: "your uploads could not be loaded" must not read as "you have not uploaded anything".
+    console.warn('[Resources] listMyResources failed:', err);
+    throw err;
   }
 }
 

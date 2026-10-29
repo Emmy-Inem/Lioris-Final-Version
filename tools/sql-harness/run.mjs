@@ -1561,6 +1561,9 @@ console.log('\n== paid events ==');
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // community bot personas (20260926150000_seed_campus_community_bots.sql)
+// This suite stops at the 20261011 migrations, so it still sees the seed exactly as that migration creates it
+// (20 bots, 20 posts, 7 UI). 20261114000000_remove_seed_bot_content.sql retires them later in the chain; its
+// behaviour is covered by seed-cleanup.mjs, and no expectation here changes.
 // ---------------------------------------------------------------------------
 console.log('\n== community bot personas ==');
 {

@@ -8,10 +8,19 @@ import {
   isBotVisibilityEnabled,
   setMemoryBotVisibility,
 } from './botVisibility.ts';
-// @ts-ignore TS5097
-import { SEED_BOT_USERS } from '../data/seedBotProfiles.ts';
-// @ts-ignore TS5097
-import { SEED_FORUM_POSTS } from '../data/seedForumPosts.ts';
+
+// Rows created by the retired community-bot seed migration can still exist in a database until
+// 20261114000000_remove_seed_bot_content.sql has run, so the client keeps recognising them. The
+// client no longer ships any seed posts or personas: these are hand-written samples of that shape.
+const SAMPLE_BOT_USERS = [
+  { id: '00000000-0000-4000-a000-000000000101', fullName: 'Sample Bot One', is_bot: true },
+  { id: '00000000-0000-4000-a000-000000000205', fullName: 'Sample Bot Two' },
+];
+const SAMPLE_BOT_POSTS = [
+  { id: '00000000-0000-4000-b000-000000000101', authorId: '00000000-0000-4000-a000-000000000101', title: 'Sample bot post' },
+  { id: 'e6988888-1234-4000-8000-0000000000aa', authorId: '00000000-0000-4000-a000-000000000205', title: 'Bot-authored, real-looking id' },
+  { id: 'e6988888-1234-4000-8000-0000000000ab', authorId: 'real-author', isBot: true, title: 'Flagged bot post' },
+];
 
 test('botVisibility utility suite', async (t) => {
   await t.test('isBotId identifies seed bot IDs correctly', () => {
@@ -31,12 +40,12 @@ test('botVisibility utility suite', async (t) => {
     assert.equal(isBotProfile(null), false);
   });
 
-  await t.test('isBotPost identifies bot posts across all seed posts and structures', () => {
-    for (const post of SEED_FORUM_POSTS) {
+  await t.test('isBotPost identifies bot posts by post id, author id and flags', () => {
+    for (const post of SAMPLE_BOT_POSTS) {
       assert.equal(
         isBotPost(post),
         true,
-        `Seed forum post ${post.id} by author ${post.authorId} must be identified as a bot post`,
+        `Sample bot post ${post.id} by author ${post.authorId} must be identified as a bot post`,
       );
     }
 
@@ -58,9 +67,9 @@ test('botVisibility utility suite', async (t) => {
     assert.equal(isBotVisibilityEnabled(), true);
   });
 
-  await t.test('100% of seed bot posts are filtered out when bot visibility is disabled', () => {
+  await t.test('every bot post is filtered out when bot visibility is disabled', () => {
     const mixedFeed = [
-      ...SEED_FORUM_POSTS,
+      ...SAMPLE_BOT_POSTS,
       {
         id: 'real-post-001',
         authorId: 'real-author-001',
@@ -81,8 +90,8 @@ test('botVisibility utility suite', async (t) => {
     assert.equal(filtered[1].id, 'real-post-002');
   });
 
-  await t.test('every seed bot user is detected as a bot profile', () => {
-    for (const bot of SEED_BOT_USERS) {
+  await t.test('every sample bot user is detected as a bot profile', () => {
+    for (const bot of SAMPLE_BOT_USERS) {
       assert.equal(
         isBotProfile(bot),
         true,

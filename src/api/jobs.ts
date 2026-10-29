@@ -22,9 +22,8 @@ export interface JobsQuery {
 }
 
 // Jobs this session has *successfully* written to Supabase, kept here only
-// so they render instantly before the next refetch. Never mixed with
-// mockData.ts fixtures - those only come from getLocalPool() below, and
-// only while the admin's "Mock Data Visibility" toggle is on.
+// so they render instantly before the next refetch. There are no bundled
+// fixtures: getLocalPool() below holds nothing but those own creations.
 let locallyCreatedJobs: JobListing[] = [];
 
 function getLocalPool(): JobListing[] {
@@ -163,8 +162,7 @@ export async function listJobs(query: JobsQuery = {}): Promise<JobListing[]> {
  .map(mapJobRow);
 
  // Merge unique - local pool only ever contributes this session's own
- // just-created jobs (always) plus seed fixtures (only when the admin
- // mock-data toggle is on).
+ // just-created jobs.
  const merged = [...dbJobs];
  const scopedQuery = { ...query, campusCode: isStaffOrAdmin && !query.campusCode ? undefined : userCampus };
  for (const item of getLocalPool()) {

@@ -274,6 +274,8 @@ export async function getCommunityStatsMap(): Promise<Map<string, { members: num
       supabase.from('forum_community_members').select('community_id'),
       supabase.from('posts').select('category'),
     ]);
+    // Counts built from a failed read would be zeros that look real: fail instead, and let the screen show a dash.
+    if (membersRes.error || postsRes.error) throw membersRes.error ?? postsRes.error;
 
     if (membersRes.data && Array.isArray(membersRes.data)) {
       for (const row of membersRes.data) {
@@ -303,6 +305,7 @@ export async function getCommunityStatsMap(): Promise<Map<string, { members: num
     }
   } catch (err) {
     console.warn('[forumMemberships] getCommunityStatsMap fallback error:', err);
+    throw err;
   }
 
   return stats;

@@ -143,6 +143,10 @@ export default function StudentDashboard() {
   const mainQueries = [announcementsQuery, recentPostsQuery, eventsQuery, savedResourcesQuery, studyGroupsQuery];
   const loadErrors = summarizeQueryErrors(mainQueries);
   const loadBlocked = loadErrors.mode === 'blocking';
+  // A section whose own load failed with nothing cached shows a notice with Retry and no "(0)" count, never an empty state.
+  const eventsDown = eventsQuery.isError && eventsQuery.data === undefined;
+  const savedDown = savedResourcesQuery.isError && savedResourcesQuery.data === undefined;
+  const podsDown = studyGroupsQuery.isError && studyGroupsQuery.data === undefined;
 
   const [portalVisits, setPortalVisits] = useState<Record<string, number>>({});
 
@@ -727,7 +731,7 @@ export default function StudentDashboard() {
               </View>
               <Pressable accessibilityRole="link" accessibilityLabel="View all campus events" onPress={() => router.push('/(student)/events-list')} style={{ flexShrink: 0 }} hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}>
                 <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 12 }}>
-                  View All ({events?.length ?? 0}) →
+                  View All{eventsDown ? '' : ` (${events?.length ?? 0})`} →
                 </AppText>
               </Pressable>
             </View>
@@ -767,6 +771,8 @@ export default function StudentDashboard() {
                   <EventCard key={evt.id} event={evt} />
                 ))}
               </View>
+            ) : eventsDown ? (
+              <ErrorStateView compact subject="campus events" error={eventsQuery.error} onRetry={() => eventsQuery.refetch()} />
             ) : (
               <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
                 <Ionicons name="calendar-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />
@@ -792,7 +798,7 @@ export default function StudentDashboard() {
               </View>
               <Pressable accessibilityRole="link" accessibilityLabel="View saved course materials" onPress={() => router.push('/(student)/saved')} style={{ flexShrink: 0 }} hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}>
                 <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 12 }}>
-                  Saved ({savedResources.length}) →
+                  Saved{savedDown ? '' : ` (${savedResources.length})`} →
                 </AppText>
               </Pressable>
             </View>
@@ -851,6 +857,8 @@ export default function StudentDashboard() {
                   );
                 })}
               </View>
+            ) : savedDown ? (
+              <ErrorStateView compact subject="your saved course materials" error={savedResourcesQuery.error} onRetry={() => savedResourcesQuery.refetch()} />
             ) : (
               <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
                 <Ionicons name="folder-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />
@@ -880,7 +888,7 @@ export default function StudentDashboard() {
               </View>
               <Pressable accessibilityRole="link" accessibilityLabel="View all study pods" onPress={() => router.push('/(student)/study-groups')} style={{ flexShrink: 0 }} hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}>
                 <AppText tone="brand" weight="bold" style={{ fontSize: isDesktop ? 13 : 12 }}>
-                  View All ({studyGroups.length}) →
+                  View All{podsDown ? '' : ` (${studyGroups.length})`} →
                 </AppText>
               </Pressable>
             </View>
@@ -911,6 +919,8 @@ export default function StudentDashboard() {
                   </Pressable>
                 ))}
               </View>
+            ) : podsDown ? (
+              <ErrorStateView compact subject="your study pods" error={studyGroupsQuery.error} onRetry={() => studyGroupsQuery.refetch()} />
             ) : (
               <SolidCard radius={18} style={{ padding: spacing.lg, alignItems: 'center' }}>
                 <Ionicons name="people-outline" size={28} color={colors.textSecondary} style={{ marginBottom: 6 }} />

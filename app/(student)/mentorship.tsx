@@ -11,6 +11,7 @@ import { AppButton } from '@/components/AppButton';
 import { SolidCard } from '@/components/SolidCard';
 import { MentorCard } from '@/components/MentorCard';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { SegmentedTabs } from '@/components/common/SegmentedTabs';
 import { MentorshipListCard } from '@/components/mentorship/MentorshipListCard';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -20,6 +21,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { listMentorships, searchMentors } from '@/api/mentorship';
 import { EXPERTISE_FILTERS, isOpenMentorship, mentorshipSortRank } from '@/utils/mentorship';
 import { parseRpcError } from '@/utils/rpcErrors';
+import { queryErrorMode } from '@/utils/queryError';
 import { haptics } from '@/utils/haptics';
 
 type Tab = 'find' | 'mine';
@@ -55,6 +57,9 @@ export default function StudentMentorshipScreen() {
   const recommended = (mentors.data ?? []).filter((m) => m.matchScore >= 3 && m.isAccepting && m.openSlots > 0);
   const others = (mentors.data ?? []).filter((m) => !recommended.includes(m));
   const showRecommended = !debouncedQuery && expertise === 'All Fields' && recommended.length > 0;
+  // A failed load is an error state (or a notice above the cached list), never "Verified alumni mentors (0)" or "No mentors".
+  const mentorsMode = queryErrorMode(mentors);
+  const mentorshipsMode = queryErrorMode(mentorships);
 
   function refresh() {
     queryClient.invalidateQueries({ queryKey: ['mentorships'] });
@@ -197,11 +202,13 @@ export default function StudentMentorshipScreen() {
               })}
             </ScrollView>
 
-            {mentors.isError ? (
-              <EmptyState icon="cloud-offline-outline" title="Could not load mentors" description={parseRpcError(mentors.error).message} actionLabel="Try again" onAction={() => mentors.refetch()} />
+            {mentorsMode === 'blocking' ? (
+              <ErrorStateView subject="mentors" message={parseRpcError(mentors.error).message} error={mentors.error} onRetry={() => mentors.refetch()} />
+            ) : mentorsMode === 'inline' ? (
+              <ErrorStateView compact subject="the latest mentors" error={mentors.error} onRetry={() => mentors.refetch()} />
             ) : null}
 
-            {showRecommended ? (
+            {mentorsMode === 'blocking' ? null : showRecommended ? (
               <>
                 <AppText variant="h3" weight="bold">
                   Recommended for you
@@ -238,8 +245,10 @@ export default function StudentMentorshipScreen() {
           </>
         ) : (
           <>
-            {mentorships.isError ? (
-              <EmptyState icon="cloud-offline-outline" title="Could not load your mentorships" description={parseRpcError(mentorships.error).message} actionLabel="Try again" onAction={() => mentorships.refetch()} />
+            {mentorshipsMode === 'blocking' ? (
+              <ErrorStateView subject="your mentorships" message={parseRpcError(mentorships.error).message} error={mentorships.error} onRetry={() => mentorships.refetch()} />
+            ) : mentorshipsMode === 'inline' ? (
+              <ErrorStateView compact subject="your latest mentorships" error={mentorships.error} onRetry={() => mentorships.refetch()} />
             ) : null}
 
             {!mentorships.isLoading && mine.length === 0 && !mentorships.isError ? (
