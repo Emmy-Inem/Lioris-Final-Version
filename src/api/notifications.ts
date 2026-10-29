@@ -7,9 +7,8 @@ import { queryClient } from './queryClient';
 import { generateUUID } from '../utils/uuid';
 import { isViewedNotificationExpired, VIEWED_NOTIFICATION_RETENTION_MS } from '../utils/notificationExpiry';
 
-// Real notifications only (db-fetched or locally created) - never seeded
-// with mockData.ts fixtures. Fixtures only ever come from getMockPool()
-// below, and only while the admin's "Mock Data Visibility" toggle is on.
+// Real notifications only (db-fetched or locally created) - there are no
+// bundled fixtures to seed this cache with.
 let localNotificationsCache: AppNotification[] = [];
 
 /**
@@ -303,8 +302,7 @@ export async function listNotifications(
  }
 
  // Merge unique - local cache only ever contributes this session's own
- // just-created notifications (always) plus seed fixtures (only when the
- // admin mock-data toggle is on).
+ // just-created notifications.
  const merged = [...dbNotifs];
  for (const n of [...localNotificationsCache]) {
  if (!merged.some((m) => m.id === n.id)) {

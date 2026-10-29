@@ -1223,7 +1223,7 @@ export default function ResourcesScreen() {
           {/* Academic Files Count */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <AppText variant="h3" weight="bold">
-              {isMineView ? 'My Uploads' : filters.resourceType === 'Bookmarked' ? 'Bookmarked Notes' : 'Academic Files'} ({displayedResources.length})
+              {isMineView ? 'My Uploads' : filters.resourceType === 'Bookmarked' ? 'Bookmarked Notes' : 'Academic Files'}{resourcesLoadError && displayedResources.length === 0 ? '' : ` (${displayedResources.length})`}
             </AppText>
           </View>
 

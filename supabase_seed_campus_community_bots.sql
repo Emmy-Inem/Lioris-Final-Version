@@ -1,4 +1,11 @@
 -- ============================================================================
+-- RETIRED (2026-11): the owner decided fabricated bot accounts and posts must not exist.
+-- Do NOT run this file. supabase/migrations/20261114000000_remove_seed_bot_content.sql deletes
+-- everything below and retires the bot accounts; running this file again would just recreate it
+-- (run that migration again afterwards if it ever happens).
+-- ============================================================================
+
+-- ============================================================================
 -- SEED 20 VERIFIED COMMUNITY BOTS & FORUM POSTS (UI, UNILAG, FUNAAB)
 -- Creates 20 verified student/alumni accounts across auth.users and profiles,
 -- and seeds 20 high-value, insightful forum discussion posts covering Tech Hub,

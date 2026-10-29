@@ -117,7 +117,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   const isOwnProfile = !!user && !!profile && user.id === profile.id;
   // The connections number was never filled in (always 0). Count the accepted connections of the person whose
   // profile this is - the table only lets you read your own, so it is shown on your own profile only.
-  const { data: connectionsTotal } = useQuery({
+  const { data: connectionsTotal, isError: connectionsFailed } = useQuery({
     queryKey: ['connections', 'count', profile?.id],
     enabled: isOwnProfile && !!profile?.id,
     staleTime: 60_000,
@@ -158,13 +158,13 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
     enabled: !!user,
   });
 
-  const { data: myDrafts, isLoading: draftsLoading } = useQuery({
+  const { data: myDrafts, isLoading: draftsLoading, isError: draftsFailed, error: draftsError, refetch: refetchDrafts } = useQuery({
     queryKey: ['my-drafts', user?.id],
     queryFn: () => listMyDrafts(),
     enabled: !!user,
   });
 
-  const { data: myScheduled, isLoading: scheduledLoading } = useQuery({
+  const { data: myScheduled, isLoading: scheduledLoading, isError: scheduledFailed, error: scheduledError, refetch: refetchScheduled } = useQuery({
     queryKey: ['my-scheduled', user?.id],
     queryFn: () => listMyScheduled(),
     enabled: !!user,
@@ -192,6 +192,9 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
   const resolvedCoverUrl = activeCover?.uri ?? null;
 
   const [unpublishedSubFilter, setUnpublishedSubFilter] = useState<'all' | 'drafts' | 'scheduled'>('all');
+  // A failed drafts/scheduled load must never read as "No Drafts or Scheduled Threads".
+  const unpublishedFailed = draftsFailed || scheduledFailed;
+  const refetchUnpublished = () => Promise.all([draftsFailed ? refetchDrafts() : null, scheduledFailed ? refetchScheduled() : null]);
 
   const allUnpublished = useMemo(() => {
     const scheduled = (myScheduled || []).map((s) => ({
@@ -636,8 +639,9 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
 
         {/* Quick Metrics Bar - stays on one line at 375px */}
         <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, marginBottom: spacing.sm }}>
-          <StatChip label="Posts" value={myPosts?.length ?? profile.postsCount ?? 0} />
-          {isOwnProfile ? <StatChip label="Connections" value={connectionsTotal ?? profile.connectionsCount ?? 0} /> : null}
+          {/* null = the figure could not be loaded: a dash, never a made-up zero. */}
+          <StatChip label="Posts" value={postsFailed && !myPosts ? null : myPosts?.length ?? profile.postsCount ?? 0} />
+          {isOwnProfile ? <StatChip label="Connections" value={connectionsFailed && connectionsTotal === undefined ? null : connectionsTotal ?? profile.connectionsCount ?? 0} /> : null}
         </View>
 
         {/* Saved / bookmarks entry point - the phone-friendly way into the hub */}
@@ -824,7 +828,9 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  {postsLoading ? (
  <AppText tone="secondary" style={{ textAlign: 'center', padding: spacing.md }}>Loading your posts...</AppText>
  ) : myPosts && myPosts.length > 0 ? (
- myPosts.map((p) => (
+ <>
+ {postsFailed ? <ErrorStateView compact subject="your latest posts" error={postsError} onRetry={refetchPosts} /> : null}
+ {myPosts.map((p) => (
  <View key={p.repostOf ? `repost-${p.id}` : p.id}>
  {p.repostOf ? (
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, paddingLeft: 4 }}>
@@ -836,7 +842,8 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  ) : null}
  <PostCard post={p} />
  </View>
- ))
+ ))}
+ </>
  ) : postsFailed ? (
  <ErrorStateView subject="your posts" error={postsError} onRetry={refetchPosts} />
  ) : (
@@ -859,8 +866,22 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
               <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
                 <ActivityIndicator color={colors.brandPrimary} />
               </View>
+            ) : unpublishedFailed && allUnpublished.length === 0 ? (
+              <ErrorStateView
+                subject="your drafts and scheduled threads"
+                error={draftsFailed ? draftsError : scheduledError}
+                onRetry={refetchUnpublished}
+              />
             ) : allUnpublished.length > 0 ? (
               <>
+                {unpublishedFailed ? (
+                  <ErrorStateView
+                    compact
+                    subject="your drafts and scheduled threads"
+                    error={draftsFailed ? draftsError : scheduledError}
+                    onRetry={refetchUnpublished}
+                  />
+                ) : null}
                 {/* Sub-filter row */}
                 <View style={{ flexDirection: 'row', gap: 6, marginBottom: 2 }}>
                   {[
@@ -1286,7 +1307,7 @@ function AuthoringRow({
   );
 }
 
-function StatChip({ label, value }: { label: string; value: number }) {
+function StatChip({ label, value }: { label: string; value: number | null }) {
  const { colors, spacing, radius } = useTheme();
  return (
  <View
@@ -1301,7 +1322,7 @@ function StatChip({ label, value }: { label: string; value: number }) {
  }}
  >
  <AppText weight="bold"variant="h3">
- {value}
+ {value === null ? '\u2014' : value}
  </AppText>
  <AppText tone="secondary"variant="caption">
  {label}

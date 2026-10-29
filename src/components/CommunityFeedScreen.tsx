@@ -491,31 +491,35 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   // stats for the directory/sidebar (thread counts, active contributors) -
   // replaces the fabricated membersCount/onlineCount numbers that used to
   // be hardcoded on every community.
-  const { data: allCommunityPosts } = useQuery({
+  const { data: allCommunityPosts, isError: allPostsFailed } = useQuery({
     queryKey: ['feed', scope, 'community-stats', viewScope, viewerInstitutionCode, showAllCampuses],
     queryFn: () => listFeedPosts({ scope, viewScope, viewerInstitutionCode, includeAllCampuses: showAllCampuses, pageSize: 200 }),
   });
 
-  const { data: liveCommunityStats } = useQuery({
+  const { data: liveCommunityStats, isError: liveStatsFailed } = useQuery({
     queryKey: ['forum-communities-stats'],
     queryFn: getCommunityStatsMap,
     staleTime: 60_000,
   });
 
   const communityStats = React.useMemo(() => {
-    const stats = new Map<string, { threads: number; contributors: number; members: number }>();
+    // null = the figure could not be loaded (shown as a dash). A failed request must never read as a real zero.
+    const stats = new Map<string, { threads: number | null; contributors: number | null; members: number | null }>();
     const pool = allCommunityPosts ?? [];
+    const poolUnavailable = allPostsFailed && allCommunityPosts === undefined;
+    const liveUnavailable = liveStatsFailed && liveCommunityStats === undefined;
     for (const community of CHANNELS) {
       const matches = community.id === 'all' ? pool : pool.filter((p) => p.category === community.category);
       const liveStat = liveCommunityStats?.get(community.id);
       stats.set(community.id, {
-        threads: liveStat?.threads ?? matches.length,
-        contributors: new Set(matches.map((p) => p.authorId)).size,
-        members: liveStat?.members ?? (community.id === 'all' ? (liveCommunityStats?.get('all')?.members ?? 0) : 0),
+        threads: liveStat?.threads ?? (poolUnavailable ? null : matches.length),
+        contributors: poolUnavailable ? null : new Set(matches.map((p) => p.authorId)).size,
+        members: liveStat?.members ?? (liveUnavailable ? null : community.id === 'all' ? (liveCommunityStats?.get('all')?.members ?? 0) : 0),
       });
     }
     return stats;
-  }, [allCommunityPosts, CHANNELS, liveCommunityStats]);
+  }, [allCommunityPosts, allPostsFailed, CHANNELS, liveCommunityStats, liveStatsFailed]);
+  const fmtStat = (value: number | null | undefined): string => (value === null ? '—' : (value ?? 0).toLocaleString());
 
   // Top Trending Discussions - real engagement only. Previously fell back to
   // 4 fabricated "#TechHackathon"-style tags with made-up engagement counts
@@ -933,7 +937,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   </View>
                 </View>
                 <AppText tone="secondary" variant="caption" numberOfLines={1} style={{ fontSize: 10.5, marginTop: 1 }}>
-                  👥 {(communityStats.get(activeSubForum.id)?.members ?? 0).toLocaleString()} members • 💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads
+                  👥 {fmtStat(communityStats.get(activeSubForum.id)?.members)} members • 💬 {fmtStat(communityStats.get(activeSubForum.id)?.threads)} threads
                 </AppText>
               </View>
             </View>
@@ -1325,7 +1329,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         </View>
                       </View>
                       <AppText tone="secondary" variant="caption" style={{ fontSize: 11.5, marginTop: 2 }}>
-                        👥 {(communityStats.get(activeSubForum.id)?.members ?? 0).toLocaleString()} members • 💬 {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()} threads
+                        👥 {fmtStat(communityStats.get(activeSubForum.id)?.members)} members • 💬 {fmtStat(communityStats.get(activeSubForum.id)?.threads)} threads
                       </AppText>
                     </View>
                   </View>
@@ -1580,19 +1584,19 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
                   <View>
                     <AppText weight="bold" variant="bodySmall" style={{ color: colors.brandPrimary }}>
-                      {(communityStats.get(activeSubForum.id)?.members ?? 0).toLocaleString()}
+                      {fmtStat(communityStats.get(activeSubForum.id)?.members)}
                     </AppText>
                     <AppText variant="caption" tone="secondary">Members</AppText>
                   </View>
                   <View>
                     <AppText weight="bold" variant="bodySmall">
-                      {(communityStats.get(activeSubForum.id)?.threads ?? 0).toLocaleString()}
+                      {fmtStat(communityStats.get(activeSubForum.id)?.threads)}
                     </AppText>
                     <AppText variant="caption" tone="secondary">Threads</AppText>
                   </View>
                   <View>
                     <AppText weight="bold" variant="bodySmall" style={{ color: '#10B981' }}>
-                      {(communityStats.get(activeSubForum.id)?.contributors ?? 0).toLocaleString()}
+                      {fmtStat(communityStats.get(activeSubForum.id)?.contributors)}
                     </AppText>
                     <AppText variant="caption" tone="secondary">Contributors</AppText>
                   </View>
@@ -1676,7 +1680,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         </View>
                       </View>
                       <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                        {(communityStats.get(sf.id)?.threads ?? 0).toLocaleString()}
+                        {fmtStat(communityStats.get(sf.id)?.threads)}
                       </AppText>
                     </Pressable>
                   ))}
@@ -1958,7 +1962,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <AppText variant="caption" tone="secondary" style={{ fontSize: 11 }}>
-                        👥 {(communityStats.get(sf.id)?.members ?? 0).toLocaleString()}
+                        👥 {fmtStat(communityStats.get(sf.id)?.members)}
                       </AppText>
                       {sf.id !== 'all' && (
                         <Pressable

@@ -88,7 +88,7 @@ export default function ExploreForumsScreen() {
   // A failed load must not read as "No matching discussion spaces": show the error, or a notice above the cached list.
   const communitiesErrorMode = queryErrorMode(communitiesQuery);
 
-  const { data: communityStatsMap } = useQuery({
+  const { data: communityStatsMap, isError: statsFailed } = useQuery({
     queryKey: ['forum-communities-stats'],
     queryFn: getCommunityStatsMap,
   });
@@ -219,10 +219,10 @@ export default function ExploreForumsScreen() {
               </AppText>
               <AppText tone="secondary" variant="caption" numberOfLines={1}>
                 {showAllCampuses
-                  ? `Review discussion spaces from every campus (${communities.length > 1 ? communities.length - 1 : communities.length} available)`
+                  ? `Review discussion spaces from every campus${communitiesErrorMode === 'blocking' ? '' : ` (${communities.length > 1 ? communities.length - 1 : communities.length} available)`}`
                   : isGlobalActive
-                  ? `Discover and join student communities across all campuses (${communities.length > 1 ? communities.length - 1 : communities.length} available)`
-                  : `Curated campus communities for ${effectiveCampus} (${communities.length > 1 ? communities.length - 1 : communities.length} available)`}
+                  ? `Discover and join student communities across all campuses${communitiesErrorMode === 'blocking' ? '' : ` (${communities.length > 1 ? communities.length - 1 : communities.length} available)`}`
+                  : `Curated campus communities for ${effectiveCampus}${communitiesErrorMode === 'blocking' ? '' : ` (${communities.length > 1 ? communities.length - 1 : communities.length} available)`}`}
               </AppText>
             </View>
           </View>
@@ -388,8 +388,10 @@ export default function ExploreForumsScreen() {
           {filtered.map((ch) => {
             const joined = isJoined(ch);
             const liveStat = communityStatsMap?.get(ch.id);
-            const realMembers = liveStat?.members ?? 0;
-            const realThreads = liveStat?.threads ?? 0;
+            // A failed stats request shows a dash, never a made-up zero.
+            const statsUnavailable = statsFailed && !communityStatsMap;
+            const realMembers = statsUnavailable ? '—' : liveStat?.members ?? 0;
+            const realThreads = statsUnavailable ? '—' : liveStat?.threads ?? 0;
 
             return (
               <SolidCard

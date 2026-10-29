@@ -450,14 +450,18 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           {/* Events Count */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <AppText variant="h3" weight="bold">
-              {isAlumniScope ? 'Alumni Calendar' : 'Upcoming Events'} ({filtered.length})
+              {isAlumniScope ? 'Alumni Calendar' : 'Upcoming Events'}{isError && !events ? '' : ` (${filtered.length})`}
             </AppText>
           </View>
+          {/* A failed refresh behind cached events: keep the list, add a notice. A failure with nothing cached is the full error below. */}
+          {isError && events ? (
+            <ErrorStateView compact subject="the latest events" error={error} onRetry={refetch} style={{ marginBottom: spacing.md }} />
+          ) : null}
 
           {/* Multi-Column Responsive Grid with Non-Stretching Cards & Skeleton / Error States */}
           {isLoading ? (
             <EventCardSkeletonGrid count={6} />
-          ) : isError ? (
+          ) : isError && !events ? (
             <ErrorStateView
               title="Could not load campus events"
               error={error}
@@ -515,7 +519,7 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
           ListEmptyComponent={
             isLoading ? (
               <EventCardSkeletonGrid count={4} />
-            ) : isError ? (
+            ) : isError && !events ? (
               <ErrorStateView
                 title="Could not load campus events"
                 error={error}

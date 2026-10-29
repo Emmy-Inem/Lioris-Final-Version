@@ -10,6 +10,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { AppText } from './AppText';
 import { Avatar } from './Avatar';
 import { EmptyState } from './EmptyState';
+import { ErrorStateView } from './ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { ActionSheetModal } from './ActionSheetModal';
 import { CallModal } from './CallModal';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -152,7 +154,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const lastContentHeight = useRef(0);
   const scrollOffsetY = useRef(0);
 
-  const { data, isPlaceholderData } = useQuery({
+  const { data, isPlaceholderData, isError: messagesFailed, error: messagesError, refetch: refetchMessages } = useQuery({
     queryKey: ['messages', conversationId, messageLimit],
     queryFn: () => listMessages(conversationId, messageLimit),
     // Keep showing the current page while a bigger one loads, otherwise the list blanks and the viewport is lost.
@@ -189,6 +191,8 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const [deletingMessage, setDeletingMessage] = useState(false);
 
   const allMessages: OutgoingMessage[] = [...(data?.items ?? []), ...pending];
+  // A failed load is an error state (or a notice above the messages already on screen), never "Start your conversation".
+  const messagesErrorMode = queryErrorMode({ isError: messagesFailed, data });
 
   // Auto mark conversation as read when active
   useEffect(() => {
@@ -555,19 +559,24 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           flatListRef.current?.scrollToEnd({ animated: false });
         }}
         ListHeaderComponent={
-          data?.nextCursor ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Load earlier messages"
-              onPress={() => {
-                skipAutoScrollFromCount.current = allMessages.length;
-                setMessageLimit((n) => n + MESSAGE_PAGE_SIZE);
-              }}
-              style={{ alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}
-            >
-              <AppText tone="brand" variant="caption" weight="semiBold">Load earlier messages</AppText>
-            </Pressable>
-          ) : null
+          <>
+            {messagesErrorMode === 'inline' ? (
+              <ErrorStateView compact subject="the latest messages" error={messagesError} onRetry={refetchMessages} />
+            ) : null}
+            {data?.nextCursor ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Load earlier messages"
+                onPress={() => {
+                  skipAutoScrollFromCount.current = allMessages.length;
+                  setMessageLimit((n) => n + MESSAGE_PAGE_SIZE);
+                }}
+                style={{ alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}
+              >
+                <AppText tone="brand" variant="caption" weight="semiBold">Load earlier messages</AppText>
+              </Pressable>
+            ) : null}
+          </>
         }
         renderItem={({ item }) => {
           const isMe = item.senderId === 'me' || (!!user?.id && item.senderId === user.id);
@@ -708,10 +717,14 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
           );
         }}
         ListEmptyComponent={
-          <EmptyState
-            title="Start your conversation"
-            description="Direct messages and calls are protected with end-to-end campus security."
-          />
+          messagesErrorMode === 'blocking' && allMessages.length === 0 ? (
+            <ErrorStateView subject="this conversation" error={messagesError} onRetry={refetchMessages} />
+          ) : (
+            <EmptyState
+              title="Start your conversation"
+              description="Direct messages and calls are protected with end-to-end campus security."
+            />
+          )
         }
       />
 

@@ -11,6 +11,7 @@ import { SolidCard } from '@/components/SolidCard';
 import { MarketplaceItemCard } from '@/components/MarketplaceItemCard';
 import { MarketplaceCardSkeletonGrid } from '@/components/Skeleton';
 import { ErrorStateView } from '@/components/ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { EmptyState } from '@/components/EmptyState';
 import { SellItemModal } from '@/components/SellItemModal';
 import { ApplyForVerificationModal } from '@/components/ApplyForVerificationModal';
@@ -87,6 +88,8 @@ export default function MarketplaceScreen() {
  queryFn: () => listMarketplaceListings({ q: debouncedQuery || undefined, category: category as any, condition: condition as any, campusCode }),
  enabled: isEnabled,
  });
+ // A failed load is an error state (or a notice above the cached listings) - never "No listings found" or "(0)".
+ const errorMode = queryErrorMode({ isError, data: listings });
 
   async function handlePublish(payload: Parameters<typeof createListing>[0]) {
     if (isUnverifiedPersonalUser(profile)) {
@@ -291,28 +294,33 @@ export default function MarketplaceScreen() {
           {/* Listings Count */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <AppText variant="h3" weight="bold">
-              Available Listings ({(listings ?? []).length})
+              Available Listings{errorMode === 'blocking' ? '' : ` (${(listings ?? []).length})`}
             </AppText>
           </View>
 
           {/* Multi-Column Responsive Grid with Non-Stretching Items & Skeleton / Error States */}
           {isLoading ? (
             <MarketplaceCardSkeletonGrid count={6} />
-          ) : isError ? (
+          ) : errorMode === 'blocking' ? (
             <ErrorStateView
-              title="Could not load marketplace"
+              subject="the marketplace"
               error={error}
               onRetry={refetch}
             />
           ) : (listings ?? []).length === 0 ? (
             <EmptyState title="No listings found" description="Try a different search keyword or category filter." />
           ) : (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
-              {(listings ?? []).map((item) => (
-                <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 280, maxWidth: 380 }}>
-                  <MarketplaceItemCard item={item} />
-                </View>
-              ))}
+            <View style={{ gap: spacing.md }}>
+              {errorMode === 'inline' ? (
+                <ErrorStateView compact subject="the latest listings" error={error} onRetry={refetch} />
+              ) : null}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+                {(listings ?? []).map((item) => (
+                  <View key={item.id} style={{ flexGrow: 1, flexBasis: 0, minWidth: 280, maxWidth: 380 }}>
+                    <MarketplaceItemCard item={item} />
+                  </View>
+                ))}
+              </View>
             </View>
           )}
         </ScrollView>
@@ -418,12 +426,17 @@ export default function MarketplaceScreen() {
  initialNumToRender={10}
  maxToRenderPerBatch={10}
  windowSize={7}
+ ListHeaderComponent={
+              errorMode === 'inline' ? (
+                <ErrorStateView compact subject="the latest listings" error={error} onRetry={refetch} style={{ marginBottom: spacing.md }} />
+              ) : null
+            }
  ListEmptyComponent={
               isLoading ? (
                 <MarketplaceCardSkeletonGrid count={4} />
-              ) : isError ? (
+              ) : errorMode === 'blocking' ? (
                 <ErrorStateView
-                  title="Could not load marketplace"
+                  subject="the marketplace"
                   error={error}
                   onRetry={refetch}
                 />

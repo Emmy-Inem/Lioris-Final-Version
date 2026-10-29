@@ -7,9 +7,8 @@ import { broadcastNotification } from './notifications';
 import { recordAuditLogEntry } from './auditLog';
 
 // Announcements this session has *successfully* written to Supabase, kept
-// here only so they render instantly before the next refetch. Never mixed
-// with mockData.ts fixtures - those only come from getMockPool() below,
-// and only while the admin's "Mock Data Visibility" toggle is on.
+// here only so they render instantly before the next refetch. There are no
+// bundled fixtures: the local pool holds nothing but those own creations.
 let locallyCreatedAnnouncements: Announcement[] = [];
 
 

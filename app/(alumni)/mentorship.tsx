@@ -10,6 +10,7 @@ import { AppButton } from '@/components/AppButton';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorStateView } from '@/components/ErrorStateView';
 import { Skeleton, MentorshipCardSkeletonList } from '@/components/Skeleton';
 import { SegmentedTabs } from '@/components/common/SegmentedTabs';
 import { StarRating } from '@/components/common/StarRating';
@@ -33,6 +34,7 @@ import { MentorProfile, MyMentorProfile } from '@/api/types';
 import { describeAvailability, mentorshipSortRank } from '@/utils/mentorship';
 import { formatWhen } from '@/utils/dateTime';
 import { parseRpcError } from '@/utils/rpcErrors';
+import { queryErrorMode } from '@/utils/queryError';
 import { haptics } from '@/utils/haptics';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 
@@ -76,6 +78,10 @@ export default function AlumniMentorshipScreen() {
   const isUnverified = isUnverifiedPersonalUser(me);
 
   const profile = profileQuery.data;
+  // A failed load is an error state (or a notice above what is cached), never "Become a mentor", "0" or "No ... yet".
+  const mentorshipsMode = queryErrorMode(mentorships);
+  const profileMode = queryErrorMode(profileQuery);
+  const reviewsMode = queryErrorMode(reviews);
   const mine = useMemo(
     () =>
       (mentorships.data ?? [])
@@ -194,6 +200,8 @@ export default function AlumniMentorshipScreen() {
             <Skeleton width="70%" height={14} radius={4} />
             <Skeleton width="50%" height={14} radius={4} />
           </SolidCard>
+        ) : profileMode === 'blocking' ? (
+          <ErrorStateView subject="your mentor profile" error={profileQuery.error} onRetry={() => profileQuery.refetch()} />
         ) : !profile ? (
           <SolidCard radius={20} style={{ gap: spacing.sm, borderWidth: 1, borderColor: colors.brandPrimary }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -300,16 +308,16 @@ export default function AlumniMentorshipScreen() {
 
         {/* Numbers */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          <Stat icon="people-outline" value={String(activeOnes.length)} label="Active mentees" sub={profile ? `of ${capacity}` : undefined} />
-          <Stat icon="mail-unread-outline" value={String(pending.length)} label="Waiting for you" />
-          <Stat icon="checkmark-done-outline" value={String(completed)} label="Completed" />
-          <Stat icon="star-outline" value={avgRating != null ? avgRating.toFixed(1) : '-'} label="Avg rating" sub={reviews.data && reviews.data.length > 0 ? `${reviews.data.length} review${reviews.data.length === 1 ? '' : 's'}` : 'no reviews yet'} />
+          <Stat icon="people-outline" value={mentorshipsMode === 'blocking' ? '\u2014' : String(activeOnes.length)} label="Active mentees" sub={profile ? `of ${capacity}` : undefined} />
+          <Stat icon="mail-unread-outline" value={mentorshipsMode === 'blocking' ? '\u2014' : String(pending.length)} label="Waiting for you" />
+          <Stat icon="checkmark-done-outline" value={mentorshipsMode === 'blocking' ? '\u2014' : String(completed)} label="Completed" />
+          <Stat icon="star-outline" value={reviewsMode === 'blocking' ? '\u2014' : avgRating != null ? avgRating.toFixed(1) : '-'} label="Avg rating" sub={reviewsMode === 'blocking' ? undefined : reviews.data && reviews.data.length > 0 ? `${reviews.data.length} review${reviews.data.length === 1 ? '' : 's'}` : 'no reviews yet'} />
         </View>
 
         <SegmentedTabs
           tabs={[
-            { key: 'requests', label: 'Requests', badge: pending.length },
-            { key: 'active', label: 'Active mentees', badge: activeOnes.length },
+            { key: 'requests', label: 'Requests', badge: mentorshipsMode === 'blocking' ? undefined : pending.length },
+            { key: 'active', label: 'Active mentees', badge: mentorshipsMode === 'blocking' ? undefined : activeOnes.length },
             { key: 'history', label: 'History' },
             { key: 'reviews', label: 'Reviews' },
           ]}
@@ -317,14 +325,16 @@ export default function AlumniMentorshipScreen() {
           onChange={(k) => setTab(k as Tab)}
         />
 
-        {mentorships.isError ? (
-          <EmptyState icon="cloud-offline-outline" title="Could not load your mentorships" description={parseRpcError(mentorships.error).message} actionLabel="Try again" onAction={() => mentorships.refetch()} />
+        {mentorshipsMode === 'blocking' ? (
+          <ErrorStateView subject="your mentorships" message={parseRpcError(mentorships.error).message} error={mentorships.error} onRetry={() => mentorships.refetch()} />
+        ) : mentorshipsMode === 'inline' ? (
+          <ErrorStateView compact subject="your latest mentorships" error={mentorships.error} onRetry={() => mentorships.refetch()} />
         ) : null}
 
         {tab === 'requests' ? (
           mentorships.isLoading ? (
             <MentorshipCardSkeletonList count={3} />
-          ) : pending.length === 0 ? (
+          ) : mentorshipsMode === 'blocking' ? null : pending.length === 0 ? (
             <EmptyState
               icon="mail-open-outline"
               title="No requests waiting"
@@ -361,7 +371,7 @@ export default function AlumniMentorshipScreen() {
         {tab === 'active' ? (
           mentorships.isLoading ? (
             <MentorshipCardSkeletonList count={3} />
-          ) : activeOnes.length === 0 ? (
+          ) : mentorshipsMode === 'blocking' ? null : activeOnes.length === 0 ? (
             <EmptyState icon="people-outline" title="No active mentees" description="Accept a request and the mentee's space opens here." />
           ) : (
             <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.md }}>
@@ -377,7 +387,7 @@ export default function AlumniMentorshipScreen() {
         {tab === 'history' ? (
           mentorships.isLoading ? (
             <MentorshipCardSkeletonList count={3} />
-          ) : history.length === 0 ? (
+          ) : mentorshipsMode === 'blocking' ? null : history.length === 0 ? (
             <EmptyState icon="time-outline" title="No history yet" description="Completed, ended and declined mentorships are kept here." />
           ) : (
             <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.md }}>
@@ -393,6 +403,8 @@ export default function AlumniMentorshipScreen() {
         {tab === 'reviews' ? (
           reviews.isLoading ? (
             <MentorshipCardSkeletonList count={2} />
+          ) : reviewsMode === 'blocking' ? (
+            <ErrorStateView subject="your reviews" error={reviews.error} onRetry={() => reviews.refetch()} />
           ) : (reviews.data?.length ?? 0) === 0 ? (
             <EmptyState icon="star-outline" title="No reviews yet" description="When a mentee finishes and rates the mentorship, their review shows here and on your mentor profile." />
           ) : (

@@ -8,6 +8,8 @@ import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
 import { SolidCard } from './SolidCard';
 import { EmptyState } from './EmptyState';
+import { ErrorStateView } from './ErrorStateView';
+import { queryErrorMode } from '@/utils/queryError';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { getFeedRoute } from '@/utils/notificationRouter';
@@ -66,7 +68,7 @@ export function SavedItemsScreen() {
 
   const [filter, setFilter] = useState<FilterKey>('all');
 
-  const { data: items, isLoading, isError, refetch } = useQuery({
+  const { data: items, isLoading, isError, error, refetch } = useQuery({
     queryKey: SAVED_ITEMS_KEY(),
     queryFn: () => listSavedItems(),
   });
@@ -81,6 +83,8 @@ export function SavedItemsScreen() {
   });
 
   const visible = (items ?? []).filter((i) => filter === 'all' || i.kind === filter);
+  // A failed load is an error state (or a notice above the cached list), never "Nothing saved yet".
+  const errorMode = queryErrorMode({ isError, data: items });
 
   function openItem(item: SavedItem) {
     switch (item.kind) {
@@ -201,14 +205,8 @@ export function SavedItemsScreen() {
               Loading your saved items...
             </AppText>
           </View>
-        ) : isError ? (
-          <EmptyState
-            icon="cloud-offline-outline"
-            title="Could not load your saved items"
-            description="Check your connection and try again."
-            actionLabel="Retry"
-            onAction={() => refetch()}
-          />
+        ) : errorMode === 'blocking' ? (
+          <ErrorStateView subject="your saved items" error={error} onRetry={refetch} />
         ) : visible.length === 0 ? (
           <EmptyState
             icon="bookmark-outline"
@@ -219,6 +217,9 @@ export function SavedItemsScreen() {
           />
         ) : (
           <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : { gap: spacing.sm }}>
+          {errorMode === 'inline' ? (
+            <ErrorStateView compact subject="your latest saved items" error={error} onRetry={refetch} style={isDesktop ? { flexBasis: '100%' } : undefined} />
+          ) : null}
           {visible.map((item) => (
             <SolidCard key={item.id} radius={18} style={{ padding: spacing.md, ...(isDesktop ? { flexGrow: 1, flexBasis: '48%', minWidth: 340 } : {}) }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>

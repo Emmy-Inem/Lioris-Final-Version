@@ -267,8 +267,10 @@ export async function listConversations(): Promise<Conversation[]> {
     localConversations = merged;
     return [...merged];
   } catch (err) {
-    console.warn('[Messaging] listConversations failed, showing local pool only:', err);
-    return [...localConversations];
+    // A failed load must reach React Query (error state + retry): the local pool is only what this session started,
+    // so serving it made "could not load" look like "no conversations".
+    console.warn('[Messaging] listConversations failed:', err);
+    throw err;
   }
 }
 
@@ -513,7 +515,10 @@ export async function listMessages(
       return { items: [...combined], nextCursor: hasMore ? 'older' : undefined };
     }
   } catch (err) {
-    console.warn('[Messaging] listMessages failed, showing local pool only:', err);
+    // A failed load must reach the thread as an error with Retry: showing only the optimistic local pool made it
+    // look like an empty conversation.
+    console.warn('[Messaging] listMessages failed:', err);
+    throw err;
   }
 
   return { items: [...(localMessages[conversationId] ?? [])] };
@@ -752,7 +757,8 @@ export async function searchUsersToMessage(
       }))
       .filter((u: any) => !isUserBlocked(u.id));
   } catch (err) {
+    // Rethrown so a failed search is an error with Retry, not "No campus members found".
     console.warn('[Messaging] searchUsersToMessage error:', err);
-    return [];
+    throw err;
   }
 }

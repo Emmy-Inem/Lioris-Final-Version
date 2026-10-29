@@ -4,9 +4,12 @@
  * localStorage list in src/utils/resourceBookmarks.ts, which was lost on every
  * new device and cache clear.
  *
- * Signed out or offline the calls degrade to the local mirror below instead of
- * throwing, so a Save button never crashes a screen. The mirror is also what
- * makes `isItemSavedSync()` possible for list rows that cannot await.
+ * Signed out, the calls degrade to the local mirror below instead of throwing, so a
+ * Save button never crashes a screen. The mirror is also what makes `isItemSavedSync()`
+ * possible for list rows that cannot await. The per-item checks (`isItemSaved`,
+ * `listSavedItemIds`) also fall back to it when a request fails, because they only
+ * decorate a row; the LIST (`listSavedItems`) rethrows, so a failed load is never shown
+ * as "nothing saved yet".
  */
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
@@ -258,7 +261,7 @@ function rowToItem(row: any): SavedItem {
   };
 }
 
-/** Newest first. Falls back to the local mirror when signed out or offline. */
+/** Newest first. Signed out it returns the local mirror; a failed request for a signed-in member throws. */
 export async function listSavedItems(kind?: SavedKind): Promise<SavedItem[]> {
   const [_, uid] = await Promise.all([hydrateSavedItems(), currentUserId()]);
   if (!uid) return getSavedItemsSync(kind);
@@ -309,8 +312,10 @@ export async function listSavedItems(kind?: SavedKind): Promise<SavedItem[]> {
     await setLocal([...items, ...others]);
     return items;
   } catch (err) {
-    console.warn('[Bookmarks] listSavedItems failed, using the local mirror:', err);
-    return getSavedItemsSync(kind);
+    // The local mirror may simply be empty on this device, so serving it would turn "could not load" into
+    // "nothing saved". Let React Query show the error (and keep whatever it already has cached).
+    console.warn('[Bookmarks] listSavedItems failed:', err);
+    throw err;
   }
 }
 

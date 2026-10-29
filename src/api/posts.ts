@@ -10,8 +10,6 @@ import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
 import { escapePostgrestLike } from '../utils/postgrest';
 import { assertSafeHttpUrl } from '../utils/safeUrl';
-import { SEED_FORUM_POSTS } from '../data/seedForumPosts';
-import { getSeedCommentsForPost } from '../data/seedForumComments';
 import { isBotPost, isBotVisibilityEnabled } from '../utils/botVisibility';
 import { isSuperAdminIdentity, resolveCampusReadScope } from '../utils/campusAccess';
 import { getOwnProfileRow } from './profile';
@@ -21,8 +19,8 @@ import { primeSignedUrls } from './signedUrls';
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
 // update/delete on this session's own posts can find them locally). Never
-// seeded with fixtures - those only come from getSeedPosts() below, and
-// only while the admin's "Mock Data Visibility" toggle is on.
+// seeded with fixtures: the member's own just-created posts are the only
+// thing that is ever merged into a feed on top of what the database returned.
 let locallyCreatedPosts: Post[] = [];
 
 /** Sign-out / account switch: nothing created in the previous session may appear for the next account. */
@@ -272,7 +270,7 @@ export interface FeedQuery {
  viewScope?: 'campus' | 'global';
   /** Verified super-admin-only: include campus-scoped threads from every institution. */
   includeAllCampuses?: boolean;
-  /** Show the local pool (own just-created posts + seed content) instead of throwing when the request fails. Signed-out previews always do. */
+  /** Show the local pool (this session's own just-created posts) instead of throwing when the request fails. Signed-out previews always do. */
   allowOffline?: boolean;
   showBots?: boolean;
   /** Internal: the viewer's id, so their own posts are never filtered out of their feed. */
@@ -437,14 +435,13 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     const dbPosts: Post[] = rows.map((row: any) => mapPostRow(row, viewerId));
 
     // Merge unique - local pool only ever contributes this session's own
-    // just-created posts (always) plus seed fixtures (only when the admin
-    // mock-data toggle is on). Only on the first page: they're always the
+    // just-created posts. Only on the first page: they're always the
     // newest posts, so they would otherwise be re-shown at the top of every
     // later page too.
     const isFirstPage = (query.page ?? 0) === 0;
     const merged = [...dbPosts];
     if (isFirstPage) {
-      for (const p of [...locallyCreatedPosts, ...SEED_FORUM_POSTS]) {
+      for (const p of locallyCreatedPosts) {
         if (!merged.some((m) => m.id === p.id)) {
           merged.push(p);
         }
@@ -464,12 +461,12 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     }
     return decorated;
   } catch (err) {
-    // A real failure must reach React Query (error state + retry): it used to come back as a successful feed of
-    // seeded bot posts that was then cached. The local pool is only for signed-out previews or an explicit allowOffline.
+    // A real failure must reach React Query (error state + retry) instead of coming back as a successful, cached
+    // feed. The local pool is only for signed-out previews or an explicit allowOffline.
     if (hadSession && !query.allowOffline) throw err;
     console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
     const isFirstPage = (query.page ?? 0) === 0;
-    return filterPosts(isFirstPage ? [...locallyCreatedPosts, ...SEED_FORUM_POSTS] : [], {
+    return filterPosts(isFirstPage ? [...locallyCreatedPosts] : [], {
       ...query,
       viewerInstitutionCode,
       includeAllCampuses,
@@ -565,10 +562,12 @@ export async function listMyPosts(userId?: string): Promise<Post[]> {
       return decorated;
     }
   } catch (err) {
+    // A failed load must reach the screen as an error with Retry, not as "no posts yet".
     console.warn('[Posts] listMyPosts error:', err);
+    throw err;
   }
 
-  return [...locallyCreatedPosts, ...SEED_FORUM_POSTS].filter(
+  return [...locallyCreatedPosts].filter(
     (p) =>
       p.authorId === 'me' ||
       p.authorId === 'student-me' ||
@@ -594,8 +593,9 @@ async function listOwnPostsWithStatus(status: PostStatus, orderColumn: string): 
     if (error) throw error;
     return (data ?? []).map((row: any) => mapPostRow(row, uid));
   } catch (err) {
+    // Rethrown so the list shows an error with Retry instead of an empty "nothing here" state.
     console.warn(`[Posts] list ${status} posts failed:`, err);
-    return [];
+    throw err;
   }
 }
 
@@ -666,7 +666,7 @@ export async function reschedulePost(postId: string, scheduledAt: string): Promi
 }
 
 export async function getPost(id: string): Promise<Post | null> {
-  const local = locallyCreatedPosts.find((p) => p.id === id) || SEED_FORUM_POSTS.find((p) => p.id === id);
+  const local = locallyCreatedPosts.find((p) => p.id === id);
 
   try {
     const viewerId = await currentUserId();
@@ -692,7 +692,10 @@ export async function getPost(id: string): Promise<Post | null> {
     return result;
   } catch (err) {
     console.warn('[Posts] getPost error:', err);
-    return local || null;
+    // A load that failed is an error the screen can show with a retry, not "this post does not exist" - unless this
+    // session created the post and still has it.
+    if (local) return local;
+    throw err;
   }
 }
 
@@ -1136,7 +1139,7 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
  }));
 
   // Merge unique - local pool only ever contributes this session's own
-  // just-created comments (always) plus seed fixtures.
+  // just-created comments.
   const merged = [...dbComments];
   for (const c of [...(locallyCreatedComments[postId] ?? [])]) {
     if (!merged.some((m) => m.id === c.id)) {
@@ -1144,27 +1147,11 @@ export async function listPostComments(postId: string): Promise<PostComment[]> {
     }
   }
 
-  // If no DB comments exist for this post or it is a seed post, include seed comments
-  if (merged.length === 0 || postId.startsWith('00000000-0000-4000-b000-')) {
-    const seedComments = getSeedCommentsForPost(postId);
-    for (const sc of seedComments) {
-      if (!merged.some((m) => m.id === sc.id)) {
-        merged.push(sc);
-      }
-    }
-  }
-
   return merged;
   } catch (err) {
-    console.warn('[Posts] listPostComments failed, showing local and seed pool only:', err);
-    const local = [...(locallyCreatedComments[postId] ?? [])];
-    const seed = getSeedCommentsForPost(postId);
-    for (const sc of seed) {
-      if (!local.some((l) => l.id === sc.id)) {
-        local.push(sc);
-      }
-    }
-    return local;
+    // A failed load is an error the thread can show with a retry, not "no replies yet".
+    console.warn('[Posts] listPostComments failed:', err);
+    throw err;
   }
 }
 

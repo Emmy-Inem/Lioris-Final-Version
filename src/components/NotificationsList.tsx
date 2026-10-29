@@ -429,7 +429,7 @@ export function NotificationsScreen() {
           Suggested Classmates & Peers
         </AppText>
         <AppText variant="caption" tone="secondary">
-          {suggestions?.length ?? 0} recommendations
+          {suggestionsQuery.isError && !suggestions ? '\u2014' : suggestions?.length ?? 0} recommendations
         </AppText>
       </View>
 
@@ -502,7 +502,7 @@ export function NotificationsScreen() {
           </View>
         </View>
         <AppText tone="secondary" variant="bodySmall" style={{ fontSize: isDesktop ? 13 : 11.5, lineHeight: 16, marginTop: 2 }}>
-          {unreadCount > 0 ? `${unreadCount} unread campus updates` : 'All caught up'}
+          {unreadCount > 0 ? `${unreadCount} unread campus updates` : alertsErrorMode === 'blocking' ? 'Updates unavailable' : 'All caught up'}
         </AppText>
       </View>
 
