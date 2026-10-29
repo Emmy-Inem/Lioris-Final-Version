@@ -71,6 +71,8 @@ jobs:
         run: npx expo export --platform web
         env:
           APP_ENV: production
+          EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH: '1'
+          EXPO_UNSTABLE_TREE_SHAKING: '1'
           EXPO_PUBLIC_SUPABASE_URL: https://fdtnbluslkabwsmspbem.supabase.co
           EXPO_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_TB0Pw8k2oJQTmoO951YaIQ_xzOyGpZF
 
