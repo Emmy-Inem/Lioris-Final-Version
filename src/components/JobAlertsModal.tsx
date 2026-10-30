@@ -160,7 +160,7 @@ export function JobAlertsModal({ visible, onClose, initialKeywords }: { visible:
                         borderColor: selected ? colors.brandPrimary : colors.border,
                       }}
                     >
-                      <AppText variant="caption" weight="bold" style={{ color: selected ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}>
+                      <AppText variant="caption" weight="bold" style={{ color: selected ? colors.onBrand : colors.textPrimary, fontSize: 11 }}>
                         {t}
                       </AppText>
                     </Pressable>

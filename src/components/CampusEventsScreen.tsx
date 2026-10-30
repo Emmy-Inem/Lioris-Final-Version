@@ -191,8 +191,8 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
               flexShrink: 0,
             }}
           >
-            <Ionicons name="add" size={15} color="#FFFFFF" />
-            <AppText weight="bold" tone="inverse" variant="caption" style={{ fontSize: 11 }}>
+            <Ionicons name="add" size={15} color={colors.onBrand} />
+            <AppText weight="bold" tone="onBrand" variant="caption" style={{ fontSize: 11 }}>
               {isAlumniScope ? 'Host Alumni Event' : 'Host Event'}
             </AppText>
           </Pressable>
@@ -294,12 +294,12 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                 <Ionicons
                   name={f.icon}
                   size={13}
-                  color={active ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B'}
+                  color={active ? colors.onBrand : isDark ? '#94A3B8' : '#64748B'}
                 />
                 <AppText
                   variant="caption"
                   weight={active ? 'bold' : 'medium'}
-                  tone={active ? 'inverse' : 'secondary'}
+                  tone={active ? 'onBrand' : 'secondary'}
                   style={{ fontSize: 11.5 }}
                 >
                   {f.label}
@@ -351,8 +351,8 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                 gap: 8,
               }}
             >
-              <Ionicons name="add" size={18} color="#FFFFFF" />
-              <AppText variant="bodySmall" weight="bold" tone="inverse">
+              <Ionicons name="add" size={18} color={colors.onBrand} />
+              <AppText variant="bodySmall" weight="bold" tone="onBrand">
                 {isAlumniScope ? 'Host Alumni Event' : 'Host New Event'}
               </AppText>
             </Pressable>
@@ -431,12 +431,12 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
                       <Ionicons
                         name={f.icon}
                         size={14}
-                        color={active ? '#FFFFFF' : colors.textSecondary}
+                        color={active ? colors.onBrand : colors.textSecondary}
                       />
                       <AppText
                         variant="bodySmall"
                         weight={active ? 'bold' : 'medium'}
-                        style={{ color: active ? '#FFFFFF' : colors.textPrimary, fontSize: 12 }}
+                        style={{ color: active ? colors.onBrand : colors.textPrimary, fontSize: 12 }}
                       >
                         {f.label}
                       </AppText>

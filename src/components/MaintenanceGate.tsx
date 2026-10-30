@@ -49,8 +49,8 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
             paddingHorizontal: spacing.md,
           }}
         >
-          <Ionicons name="construct" size={14} color="#FFFFFF" />
-          <AppText variant="caption" weight="bold" tone="inverse" numberOfLines={2} style={{ flexShrink: 1, textAlign: 'center' }}>
+          <Ionicons name="construct" size={14} color={colors.onCritical} />
+          <AppText variant="caption" weight="bold" tone="onCritical" numberOfLines={2} style={{ flexShrink: 1, textAlign: 'center' }}>
             Maintenance mode is ON - members cannot use the app. Turn it off in Platform &gt; Campuses & Security.
           </AppText>
         </View>

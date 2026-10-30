@@ -30,7 +30,17 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // The app follows prefers-color-scheme, and its colour tokens differ per theme, so the axe
+    // (colour-contrast) checks run a second time in the dark theme. Only the accessibility spec is
+    // repeated; the rest of the suite is theme-agnostic.
+    {
+      name: 'chromium-dark',
+      testMatch: /a11y\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'], colorScheme: 'dark' },
+    },
+  ],
   webServer: {
     command: 'node e2e/serve-dist.mjs',
     url: BASE_URL,

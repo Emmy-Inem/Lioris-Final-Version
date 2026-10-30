@@ -153,7 +153,7 @@ export function AppHeader() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name={user.workspaceMode === 'ambassador' ? 'swap-horizontal' : 'star'} size={16} color={user.workspaceMode === 'ambassador' ? '#FFFFFF' : colors.brandPrimary} />
+            <Ionicons name={user.workspaceMode === 'ambassador' ? 'swap-horizontal' : 'star'} size={16} color={user.workspaceMode === 'ambassador' ? colors.onBrand : colors.brandPrimary} />
           </Pressable>
         )}
         {canSwitchCampus && (roleGroup === '(student)' || roleGroup === '(alumni)') && (
@@ -177,7 +177,7 @@ export function AppHeader() {
             }}
           >
             <IOSHeaderGlass isDark={isDark} />
-            <Ionicons name="school-outline" size={17} color={isExploringOtherCampus ? '#FFFFFF' : colors.textPrimary} />
+            <Ionicons name="school-outline" size={17} color={isExploringOtherCampus ? colors.onBrand : colors.textPrimary} />
           </Pressable>
         )}
         {/* Direct Messages Button */}
@@ -236,7 +236,7 @@ export function AppHeader() {
                 <AppText
                   variant="caption"
                   weight="bold"
-                  tone="inverse"
+                  tone="onBrand"
                   style={{ fontSize: 8, lineHeight: 10 }}
                 >
                   {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}

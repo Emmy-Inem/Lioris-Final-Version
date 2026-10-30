@@ -277,7 +277,7 @@ export function DesktopTopBar() {
             />
             {unreadCount > 0 && (
               <View style={[styles.notifBadge, { backgroundColor: colors.brandPrimary }]}>
-                <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF', fontSize: 9 }}>
+                <AppText variant="caption" weight="bold" style={{ color: colors.onBrand, fontSize: 9 }}>
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </AppText>
               </View>

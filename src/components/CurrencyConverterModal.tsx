@@ -127,7 +127,7 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
                     <AppText
                       variant="caption"
                       weight="bold"
-                      style={{ color: numAmount === amt ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}
+                      style={{ color: numAmount === amt ? colors.onBrand : colors.textPrimary, fontSize: 11 }}
                     >
                       ₦{amt.toLocaleString()}
                     </AppText>
@@ -159,7 +159,7 @@ export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000
                         },
                       ]}
                     >
-                      <AppText variant="caption" weight="bold" style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary }}>
+                      <AppText variant="caption" weight="bold" style={{ color: isSelected ? colors.onBrand : colors.textPrimary }}>
                         {cur.flag} {cur.code} ({cur.symbol})
                       </AppText>
                     </Pressable>

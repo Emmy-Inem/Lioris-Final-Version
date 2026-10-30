@@ -259,8 +259,8 @@ export default function ExploreForumsScreen() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="add-outline" size={16} color="#FFFFFF" />
-            <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF' }}>
+            <Ionicons name="add-outline" size={16} color={colors.onBrand} />
+            <AppText variant="caption" weight="bold" style={{ color: colors.onBrand }}>
               Propose Space
             </AppText>
           </Pressable>
@@ -363,7 +363,7 @@ export default function ExploreForumsScreen() {
                   borderColor: selected ? colors.brandPrimary : colors.border,
                 }}
               >
-                <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'}>
+                <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'secondary'}>
                   {cat}
                 </AppText>
               </Pressable>
@@ -457,11 +457,11 @@ export default function ExploreForumsScreen() {
                       alignSelf: isSmallMobile ? 'flex-end' : 'auto',
                     }}
                   >
-                    <Ionicons name={joined ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={joined ? '#10B981' : '#FFFFFF'} />
+                    <Ionicons name={joined ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={joined ? '#10B981' : colors.onBrand} />
                     <AppText
                       variant="caption"
                       weight="bold"
-                      style={{ color: joined ? (isDark ? '#34D399' : '#15803D') : '#FFFFFF', fontSize: 11 }}
+                      style={{ color: joined ? (isDark ? '#34D399' : '#15803D') : colors.onBrand, fontSize: 11 }}
                     >
                       {joined ? 'Joined' : 'Join Space'}
                     </AppText>
@@ -647,7 +647,7 @@ export default function ExploreForumsScreen() {
                     alignItems: 'center',
                   }}
                 >
-                  <AppText weight="bold" tone={newName.trim() ? 'inverse' : 'secondary'}>
+                  <AppText weight="bold" tone={newName.trim() ? 'onBrand' : 'secondary'}>
                     {submitting ? 'Submitting...' : 'Submit'}
                   </AppText>
                 </Pressable>
@@ -743,7 +743,7 @@ export default function ExploreForumsScreen() {
                     alignItems: 'center',
                   }}
                 >
-                  <AppText weight="bold" tone="inverse">
+                  <AppText weight="bold" tone="onBrand">
                     Propose a Space
                   </AppText>
                 </Pressable>

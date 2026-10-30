@@ -182,7 +182,7 @@ export default function MinorsConsentScreen() {
                 borderColor: selected ? colors.brandPrimary : colors.border,
               }}
             >
-              <AppText variant="bodySmall" weight={selected ? 'bold' : 'medium'} tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="bodySmall" weight={selected ? 'bold' : 'medium'} tone={selected ? 'onBrand' : 'secondary'}>
                 {f.label}
               </AppText>
             </Pressable>
@@ -479,7 +479,7 @@ function MinorRecordModal({ minorId, onClose, onChanged }: { minorId: string | n
                                   borderColor: selected ? colors.brandPrimary : colors.border,
                                 }}
                               >
-                                <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'primary'}>{r.label}</AppText>
+                                <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'primary'}>{r.label}</AppText>
                               </Pressable>
                             );
                           })}

@@ -238,7 +238,7 @@ export function VerifiedCampusLocationPicker({
                           backgroundColor: selected ? colors.brandPrimary : colors.pastelPrimaryBg,
                         }}
                       >
-                        <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'brand'} style={{ fontSize: 10.5 }}>
+                        <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'brand'} style={{ fontSize: 10.5 }}>
                           {cat}
                         </AppText>
                       </Pressable>

@@ -4,6 +4,7 @@ import * as SecureStore from'expo-secure-store';
 import { useQuery } from'@tanstack/react-query';
 import { darkColors, lightColors, ThemeColors, institutionThemeOverrides, ACCENT_PRESETS, AccentPreset } from'./colors';
 import { spacing, radius, minTouchTarget, glassBlur } from'./tokens';
+import { onBrandColor } from'./contrast';
 import { useAuth } from'@/auth/AuthContext';
 import { getMyProfile } from'@/api/profile';
 import { useViewScope } from'@/hooks/useViewScope';
@@ -171,7 +172,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  }
 
  const override = activeKey ? institutionThemeOverrides[activeKey] : undefined;
- const colors = override ? { ...base, ...(isDark ? override.dark : override.light) } : base;
+ const merged = override ? { ...base, ...(isDark ? override.dark : override.light) } : base;
+ // Whichever of navy / white reads better on this campus's brand fill (white on every light-theme brand, navy on the light dark-theme brands).
+ const colors = { ...merged, onBrand: onBrandColor(merged.brandPrimary) };
 
  const isDefaultTheme = !customAccent || customAccent === 'GLOBAL';
 

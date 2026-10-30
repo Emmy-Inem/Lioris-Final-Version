@@ -338,7 +338,7 @@ export default function SupportDeskScreen() {
             <AppText
               variant="caption"
               weight="bold"
-              style={{ color: statusFilter === st ? '#FFFFFF' : colors.textSecondary }}
+              style={{ color: statusFilter === st ? colors.onBrand : colors.textSecondary }}
             >
               {st === 'all' ? 'All Tickets' : st.replace('_', ' ').toUpperCase()}
             </AppText>

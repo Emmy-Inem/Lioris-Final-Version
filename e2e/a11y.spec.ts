@@ -13,6 +13,18 @@ const PAGES = [
   { name: 'terms', path: '/terms' },
 ];
 
+// The "chromium-dark" project (playwright.config.ts) reruns this file with prefers-color-scheme: dark.
+// Guard against it silently testing the light theme: the page background must really be dark.
+async function expectSchemeApplied(page: Page, testInfo: TestInfo) {
+  if (testInfo.project.use.colorScheme !== 'dark') return;
+  const luminance = await page.evaluate(() => {
+    const m = getComputedStyle(document.body).backgroundColor.match(/\d+(\.\d+)?/g) ?? ['255', '255', '255'];
+    const [r, g, b] = m.slice(0, 3).map(Number);
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  });
+  expect(luminance, 'dark colour scheme must actually render the dark theme').toBeLessThan(0.2);
+}
+
 async function expectNoBlockingViolations(
   page: Page,
   testInfo: TestInfo,
@@ -20,6 +32,7 @@ async function expectNoBlockingViolations(
   scope?: string,
 ) {
     await page.waitForLoadState('networkidle');
+    await expectSchemeApplied(page, testInfo);
 
     let builder = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
     if (scope) builder = builder.include(scope);
@@ -130,3 +143,12 @@ for (const { role, paths } of ROLE_SCREENS) {
     });
   }
 }
+
+// The messages list is hidden behind the verification gate for fixture users, so it needs a verified member.
+test('a11y: verified student messages list has no serious or critical axe violations', async ({ page }, testInfo) => {
+  await seedAuthenticatedSession(page, 'student', { verified: true });
+  await page.goto('/(student)/messages');
+  await waitForApp(page);
+  await expect(page.getByText(/No Conversations/i).first()).toBeVisible();
+  await expectNoBlockingViolations(page, testInfo, 'student-messages-verified');
+});

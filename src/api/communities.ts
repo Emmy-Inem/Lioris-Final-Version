@@ -356,7 +356,7 @@ export async function listCommunityModerators(communityId: string): Promise<Comm
     }));
   } catch (err) {
     console.warn('[Communities] listCommunityModerators failed:', err);
-    return [];
+    throw err;
   }
 }
 

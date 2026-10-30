@@ -565,12 +565,12 @@ export function AICopilotModal({
                     <Ionicons
                       name={qp.icon}
                       size={13}
-                      color={isSelected ? '#ffffff' : colors.brandPrimary}
+                      color={isSelected ? colors.onBrand : colors.brandPrimary}
                     />
                     <AppText
                       variant="caption"
                       weight={isSelected ? 'bold' : 'regular'}
-                      style={{ color: isSelected ? '#ffffff' : colors.textPrimary }}
+                      style={{ color: isSelected ? colors.onBrand : colors.textPrimary }}
                     >
                       {qp.label}
                     </AppText>
@@ -806,9 +806,9 @@ export function AICopilotModal({
               ]}
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={colors.onBrand} />
               ) : (
-                <Ionicons name="arrow-up" size={18} color="#ffffff" />
+                <Ionicons name="arrow-up" size={18} color={colors.onBrand} />
               )}
             </Pressable>
           </View>

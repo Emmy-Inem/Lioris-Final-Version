@@ -253,7 +253,7 @@ export function AcademicLibraryModal({
                     <AppText
                       variant="caption"
                       weight={isSelected ? 'bold' : 'regular'}
-                      style={{ color: isSelected ? '#ffffff' : colors.textSecondary }}
+                      style={{ color: isSelected ? colors.onBrand : colors.textSecondary }}
                     >
                       {filter}
                     </AppText>
@@ -296,7 +296,7 @@ export function AcademicLibraryModal({
                 }}
                 style={[styles.resetSearchBtn, { backgroundColor: colors.brandPrimary }]}
               >
-                <AppText variant="caption" weight="bold" style={{ color: '#ffffff' }}>
+                <AppText variant="caption" weight="bold" style={{ color: colors.onBrand }}>
                   Browse All Curated Textbooks
                 </AppText>
               </Pressable>

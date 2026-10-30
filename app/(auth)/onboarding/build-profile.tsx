@@ -269,7 +269,7 @@ export default function BuildProfileScreen() {
           {photoUri ? (
             <Image source={{ uri: photoUri }} accessibilityLabel="Your profile photo preview" style={{ width: 90, height: 90 }} contentFit="cover" transition={200} />
           ) : (
-            <AppText tone="inverse" variant="h2" weight="bold">
+            <AppText tone="onBrand" variant="h2" weight="bold">
               {initials}
             </AppText>
           )}
@@ -387,7 +387,7 @@ export default function BuildProfileScreen() {
               <AppText
                 variant="caption"
                 weight={programmeType === 'undergraduate' ? 'bold' : 'medium'}
-                style={{ color: programmeType === 'undergraduate' ? '#FFFFFF' : colors.textPrimary }}
+                style={{ color: programmeType === 'undergraduate' ? colors.onBrand : colors.textPrimary }}
               >
                 Undergraduate
               </AppText>
@@ -415,7 +415,7 @@ export default function BuildProfileScreen() {
               <AppText
                 variant="caption"
                 weight={programmeType === 'postgraduate' ? 'bold' : 'medium'}
-                style={{ color: programmeType === 'postgraduate' ? '#FFFFFF' : colors.textPrimary }}
+                style={{ color: programmeType === 'postgraduate' ? colors.onBrand : colors.textPrimary }}
               >
                 Postgraduate (PGD / MSc / PhD)
               </AppText>

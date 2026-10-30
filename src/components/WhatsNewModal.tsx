@@ -100,7 +100,7 @@ export function WhatsNewModal({ visible, onClose }: { visible: boolean; onClose:
                   </AppText>
                   {idx === 0 ? (
                     <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: colors.brandPrimary }}>
-                      <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF', fontSize: 10 }}>
+                      <AppText variant="caption" weight="bold" style={{ color: colors.onBrand, fontSize: 10 }}>
                         LATEST
                       </AppText>
                     </View>

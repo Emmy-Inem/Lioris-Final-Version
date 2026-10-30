@@ -1,7 +1,7 @@
 import React from'react';
 import { Text as RNText, TextProps, TextStyle } from'react-native';
 import { useTheme } from'@/theme/ThemeProvider';
-import { ensureContrast, readableOn } from'@/theme/contrast';
+import { ensureContrast } from'@/theme/contrast';
 import {
  fontFamily,
  fontFamilyMedium,
@@ -19,7 +19,7 @@ type Weight = 'regular' | 'medium' | 'semiBold' | 'bold';
  * navy / white reads better on the active brand colour (white on the light-mode brands,
  * navy on the lighter dark-mode brands where white is only 1.7-3.2:1).
  */
-type Tone = 'primary' | 'secondary' | 'inverse' | 'onBrand' | 'brand' | 'accent' | 'critical';
+type Tone = 'primary' | 'secondary' | 'inverse' | 'onBrand' | 'onCritical' | 'brand' | 'accent' | 'critical';
 
 interface AppTextProps extends TextProps {
  variant?: Variant;
@@ -48,7 +48,8 @@ export function AppText({
  primary: colors.textPrimary,
  secondary: colors.textSecondary,
  inverse: colors.textInverse,
- onBrand: readableOn(colors.brandPrimary, '#0B1120', '#FFFFFF'),
+ onBrand: colors.onBrand,
+ onCritical: colors.onCritical,
  brand: ensureContrast(colors.brandPrimary, colors.surface),
  // Accent is a fill colour first (orange/amber); as text it is nudged to AA (4.5:1).
  accent: ensureContrast(colors.brandAccent, colors.surface),

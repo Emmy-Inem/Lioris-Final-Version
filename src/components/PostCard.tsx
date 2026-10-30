@@ -404,6 +404,11 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  );
  }
 
+ function openAuthorProfile() {
+ haptics.light();
+ setInspectUser({ id: post.authorId, name: post.authorName, role: post.authorRole, avatarUrl: post.authorAvatarUrl, isVerified: post.authorVerified });
+ }
+
  function handleOpenDedicatedPost() {
  haptics.light();
  router.push(`/${roleGroup}/post/${post.id}` as any);
@@ -426,28 +431,43 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  <SolidCard frosted radius={20} style={{ marginBottom: spacing.md }}>
  {/* Header Row: Author Avatar (Tap to View Profile) & Menu */}
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+ {/* The verified badge is a SIBLING of the author buttons (never nested inside one: a button inside a button is
+ invalid HTML and fails axe nested-interactive). The avatar and the meta line are tappable duplicates of the
+ name button, hidden from keyboard/screen readers, so the whole header still opens the profile. */}
+ <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center', flex: 1, minWidth: 0 }}>
  <Pressable
- accessibilityRole="button"
- accessibilityLabel={`View ${post.authorName}'s profile`}
- onPress={() => {
- haptics.light();
- setInspectUser({ id: post.authorId, name: post.authorName, role: post.authorRole, avatarUrl: post.authorAvatarUrl, isVerified: post.authorVerified });
- }}
- style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center', flex: 1, minWidth: 0 }}
+ accessible={false}
+ focusable={false}
+ importantForAccessibility="no"
+ onPress={openAuthorProfile}
  >
  <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={44} role={post.authorRole} />
+ </Pressable>
  <View style={{ flex: 1, minWidth: 0 }}>
     {/* Row 1: Name · Verified badge · Role */}
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-      <AppText weight="bold" variant="bodySmall" style={{ flexShrink: 1 }}>
-        {post.authorName}
-      </AppText>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`View ${post.authorName}'s profile`}
+        onPress={openAuthorProfile}
+        style={{ flexShrink: 1 }}
+      >
+        <AppText weight="bold" variant="bodySmall">
+          {post.authorName}
+        </AppText>
+      </Pressable>
       {post.authorVerified || post.authorRole === 'admin' ? (
-        <VerifiedBadge size={14} role={post.authorRole} name={post.authorName} showModalOnPress={false} />
+        <VerifiedBadge size={14} role={post.authorRole} name={post.authorName} />
       ) : null}
       
     </View>
     {/* Row 2: Channel · Pinned · Time — all inline on one line */}
+    <Pressable
+    accessible={false}
+    focusable={false}
+    importantForAccessibility="no"
+    onPress={openAuthorProfile}
+    >
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1, flexWrap: 'wrap' }}>
       <AppText tone="brand" variant="caption" weight="bold" style={{ fontSize: 10.5, flexShrink: 0 }}>
         c/{post.category ? post.category.toLowerCase().replace(/\s+/g, '') : 'campus'}
@@ -464,8 +484,9 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
         • {timeAgo(post.createdAt)}
       </AppText>
     </View>
+    </Pressable>
   </View>
- </Pressable>
+ </View>
 
  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 }}>
  {showScopeBadge ? (

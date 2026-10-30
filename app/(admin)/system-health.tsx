@@ -17,7 +17,7 @@ import { AppButton } from '@/components/AppButton';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { ErrorStateView } from '@/components/ErrorStateView';
-import { queryErrorMode } from '@/utils/queryError';
+import { isMissingRelationError, queryErrorMode } from '@/utils/queryError';
 import { SuperAdminGate } from '@/auth/SuperAdminGate';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -55,7 +55,10 @@ interface ClientErrorGroup {
   context: Record<string, unknown> | null;
 }
 
-/** Last 50 client error rows (admin RLS), grouped by fingerprint. Never throws. */
+/**
+ * Last 50 client error rows (admin RLS), grouped by fingerprint. `unavailable` only means the client_errors table
+ * does not exist (migration not applied); any other failure throws so the card shows an error with a retry.
+ */
 async function fetchClientErrors(): Promise<{ groups: ClientErrorGroup[]; unavailable: boolean }> {
   try {
     const { data, error } = await supabase
@@ -64,8 +67,9 @@ async function fetchClientErrors(): Promise<{ groups: ClientErrorGroup[]; unavai
       .order('last_seen_at', { ascending: false })
       .limit(50);
     if (error) {
-      // Table missing (migration not applied yet) or not readable by this account.
-      return { groups: [], unavailable: true };
+      // Table missing (migration not applied yet): a legitimate "not available". Anything else is a failed request.
+      if (isMissingRelationError(error)) return { groups: [], unavailable: true };
+      throw error;
     }
     const groups = new Map<string, ClientErrorGroup>();
     for (const row of (data ?? []) as ClientErrorRow[]) {
@@ -89,8 +93,9 @@ async function fetchClientErrors(): Promise<{ groups: ClientErrorGroup[]; unavai
       });
     }
     return { groups: Array.from(groups.values()), unavailable: false };
-  } catch {
-    return { groups: [], unavailable: true };
+  } catch (err) {
+    if (isMissingRelationError(err)) return { groups: [], unavailable: true };
+    throw err;
   }
 }
 
@@ -125,6 +130,8 @@ export default function SystemHealthScreen() {
   const {
     data: clientErrors,
     isLoading: clientErrorsLoading,
+    isError: clientErrorsFailed,
+    error: clientErrorsError,
     refetch: refetchClientErrors,
   } = useQuery({
     queryKey: ['client_errors'],
@@ -416,7 +423,7 @@ export default function SystemHealthScreen() {
               }}
             >
               <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-              <AppText style={{ color: '#047857', fontSize: 13.5, fontWeight: '500' }}>
+              <AppText style={{ color: isDark ? '#6EE7B7' : '#047857', fontSize: 13.5, fontWeight: '500' }}>
                 All database foreign keys, cascaded relations, and indexes are in verified sync. No orphaned records found.
               </AppText>
             </View>
@@ -445,9 +452,11 @@ export default function SystemHealthScreen() {
 
           {clientErrorsLoading ? (
             <ActivityIndicator color={colors.brandPrimary} />
+          ) : clientErrorsFailed && !clientErrors ? (
+            <ErrorStateView compact error={clientErrorsError} subject="client errors" onRetry={() => refetchClientErrors()} />
           ) : clientErrors?.unavailable ? (
             <AppText tone="secondary" variant="bodySmall">
-              Client error reporting is not available yet (the client_errors table is missing or not readable by this account).
+              Client error reporting is not available yet (the client_errors table has not been created).
             </AppText>
           ) : !clientErrors || clientErrors.groups.length === 0 ? (
             <View
@@ -461,7 +470,7 @@ export default function SystemHealthScreen() {
               }}
             >
               <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-              <AppText style={{ color: '#047857', fontSize: 13.5, fontWeight: '500' }}>
+              <AppText style={{ color: isDark ? '#6EE7B7' : '#047857', fontSize: 13.5, fontWeight: '500' }}>
                 No client errors reported.
               </AppText>
             </View>

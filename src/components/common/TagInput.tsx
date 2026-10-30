@@ -106,7 +106,7 @@ export function TagInput({ label, value, onChange, placeholder, suggestions = []
             backgroundColor: draft.trim() ? colors.brandPrimary : colors.divider,
           }}
         >
-          <AppText weight="bold" variant="caption" style={{ color: draft.trim() ? '#FFFFFF' : colors.textSecondary }}>
+          <AppText weight="bold" variant="caption" style={{ color: draft.trim() ? colors.onBrand : colors.textSecondary }}>
             Add
           </AppText>
         </Pressable>

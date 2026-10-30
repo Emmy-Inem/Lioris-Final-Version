@@ -624,7 +624,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     backgroundColor: selected ? colors.brandPrimary : 'transparent',
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'} style={{ fontSize: 11 }}>
+                  <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'secondary'} style={{ fontSize: 11 }}>
                     {s === 'campus' ? 'My Campus' : 'Global'}
                   </AppText>
                 </Pressable>
@@ -867,12 +867,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
               <Ionicons
                 name={ch.icon}
                 size={13}
-                color={selected ? '#FFFFFF' : colors.textSecondary}
+                color={selected ? colors.onBrand : colors.textSecondary}
               />
               <AppText
                 variant="caption"
                 weight={selected ? 'bold' : 'medium'}
-                tone={selected ? 'inverse' : 'secondary'}
+                tone={selected ? 'onBrand' : 'secondary'}
                 style={{ fontSize: 11.5 }}
               >
                 {ch.label}
@@ -970,13 +970,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   <Ionicons
                     name={isJoined(activeSubForum) ? 'checkmark-circle' : 'add-circle-outline'}
                     size={12}
-                    color={isJoined(activeSubForum) ? '#10B981' : '#FFFFFF'}
+                    color={isJoined(activeSubForum) ? '#10B981' : colors.onBrand}
                   />
                   <AppText
                     variant="caption"
                     weight="bold"
                     style={{
-                      color: isJoined(activeSubForum) ? (isDark ? '#34D399' : '#15803D') : '#FFFFFF',
+                      color: isJoined(activeSubForum) ? (isDark ? '#34D399' : '#15803D') : colors.onBrand,
                       fontSize: 10.5,
                     }}
                   >
@@ -1091,7 +1091,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                 justifyContent: 'center',
               }}
             >
-              <Ionicons name="add" size={18} color="#FFFFFF" />
+              <Ionicons name="add" size={18} color={colors.onBrand} />
             </View>
           </View>
         </GlassCard>
@@ -1162,7 +1162,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                           backgroundColor: selected ? colors.brandPrimary : 'transparent',
                         }}
                       >
-                        <AppText variant="caption" weight="bold" tone={selected ? 'inverse' : 'secondary'} style={{ fontSize: 11 }}>
+                        <AppText variant="caption" weight="bold" tone={selected ? 'onBrand' : 'secondary'} style={{ fontSize: 11 }}>
                           {s === 'campus' ? 'My Campus' : 'Global Network'}
                         </AppText>
                       </Pressable>
@@ -1236,12 +1236,12 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         <Ionicons
                           name={ch.icon}
                           size={14}
-                          color={isSelected ? '#FFFFFF' : colors.textSecondary}
+                          color={isSelected ? colors.onBrand : colors.textSecondary}
                         />
                         <AppText
                           variant="bodySmall"
                           weight={isSelected ? 'bold' : 'medium'}
-                          style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 12, whiteSpace: 'nowrap' } as any}
+                          style={{ color: isSelected ? colors.onBrand : colors.textPrimary, fontSize: 12, whiteSpace: 'nowrap' } as any}
                         >
                           {ch.label}
                         </AppText>
@@ -1362,13 +1362,13 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                         <Ionicons
                           name={isJoined(activeSubForum) ? 'checkmark-circle' : 'add-circle-outline'}
                           size={14}
-                          color={isJoined(activeSubForum) ? '#10B981' : '#FFFFFF'}
+                          color={isJoined(activeSubForum) ? '#10B981' : colors.onBrand}
                         />
                         <AppText
                           variant="caption"
                           weight="bold"
                           style={{
-                            color: isJoined(activeSubForum) ? (isDark ? '#34D399' : '#15803D') : '#FFFFFF',
+                            color: isJoined(activeSubForum) ? (isDark ? '#34D399' : '#15803D') : colors.onBrand,
                             fontSize: 11,
                           }}
                         >
@@ -1456,7 +1456,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   }}
                 >
                   <Ionicons name="shield-checkmark" size={14} color="#3B82F6" />
-                  <AppText variant="caption" weight="bold" style={{ color: '#2563EB', fontSize: 11.5 }}>
+                  <AppText variant="caption" weight="bold" style={{ color: isDark ? '#93C5FD' : '#2563EB', fontSize: 11.5 }}>
                     Posting as Campus Administrator (Verified Official Broadcast Mode)
                   </AppText>
                 </View>
@@ -1505,7 +1505,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                     borderRadius: radius.pill,
                   }}
                 >
-                  <AppText variant="caption" weight="bold" tone="inverse">
+                  <AppText variant="caption" weight="bold" tone="onBrand">
                     {isAdmin ? '+ Post Announcement' : '+ Post Thread'}
                   </AppText>
                 </Pressable>
@@ -1988,7 +1988,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                             weight="bold"
                             style={{
                               fontSize: 10,
-                              color: isJoined(sf) ? (isDark ? '#34D399' : '#15803D') : '#FFFFFF',
+                              color: isJoined(sf) ? (isDark ? '#34D399' : '#15803D') : colors.onBrand,
                             }}
                           >
                             {isJoined(sf) ? 'Joined ✓' : '+ Join'}
@@ -2147,7 +2147,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
           } as any),
         ]}
       >
-        <Ionicons name="add" size={26} color="#FFFFFF" />
+        <Ionicons name="add" size={26} color={colors.onBrand} />
       </Pressable>
     )}
   </ScreenContainer>

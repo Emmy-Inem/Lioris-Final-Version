@@ -507,6 +507,12 @@ export function PostDetailScreen() {
     Alert.alert('Link Copied', 'Thread URL copied to clipboard.');
   }
 
+  function openAuthorProfile() {
+    if (!post) return;
+    haptics.light();
+    setInspectUser({ id: post.authorId, name: post.authorName, role: post.authorRole, avatarUrl: post.authorAvatarUrl, isVerified: post.authorVerified });
+  }
+
   const mediaList = (post?.imageUrls && post.imageUrls.length > 0)
     ? post.imageUrls.filter(Boolean)
     : (post?.imageUrl ? [post.imageUrl] : []);
@@ -548,7 +554,7 @@ export function PostDetailScreen() {
             onPress={handleGoBack}
             style={{ marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.brandPrimary }}
           >
-            <AppText tone="inverse" weight="bold">Go Back</AppText>
+            <AppText tone="onBrand" weight="bold">Go Back</AppText>
           </Pressable>
         </View>
       </ScreenContainer>
@@ -588,32 +594,40 @@ export function PostDetailScreen() {
  {/* Full-Screen Master Thread Card */}
  <SolidCard frosted radius={24} style={{ marginBottom: spacing.md }}>
  {/* Author Header Row (Tap to View User Profile) */}
- <Pressable
-  onPress={() => {
-    haptics.light();
-    setInspectUser({ id: post.authorId, name: post.authorName, role: post.authorRole, avatarUrl: post.authorAvatarUrl, isVerified: post.authorVerified });
-  }}
- accessibilityRole="button"
- accessibilityLabel={`View ${post.authorName}'s profile`}
- style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}
- >
+ {/* The verified badge is a SIBLING of the author buttons, never nested inside one (a button inside a button fails
+ axe nested-interactive). The avatar, meta line and chevron are tappable duplicates of the name button, hidden from
+ keyboard/screen readers, so the whole header still opens the profile. */}
+ <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}>
+  <Pressable accessible={false} focusable={false} importantForAccessibility="no" onPress={openAuthorProfile}>
   <Avatar name={post.authorName} uri={post.authorAvatarUrl} size={50} role={post.authorRole} />
+  </Pressable>
   <View style={{ flex: 1, minWidth: 0 }}>
   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap' }}>
-  <AppText weight="bold" variant="body" style={{ flexShrink: 1 }}>
+  <Pressable
+  accessibilityRole="button"
+  accessibilityLabel={`View ${post.authorName}'s profile`}
+  onPress={openAuthorProfile}
+  style={{ flexShrink: 1 }}
+  >
+  <AppText weight="bold" variant="body">
   {post.authorName}
   </AppText>
+  </Pressable>
   {post.authorVerified || post.authorRole === 'admin' ? (
-  <VerifiedBadge size={16} role={post.authorRole} name={post.authorName} showModalOnPress={false} />
+  <VerifiedBadge size={16} role={post.authorRole} name={post.authorName} />
   ) : null}
   
   </View>
+  <Pressable accessible={false} focusable={false} importantForAccessibility="no" onPress={openAuthorProfile}>
   <AppText tone="secondary" variant="caption">
   {timeAgo(post.createdAt)}{post.institutionCode ? ` • ${post.institutionCode}` : ''}
   </AppText>
+  </Pressable>
   </View>
- <Ionicons name="chevron-forward"size={16} color={colors.textSecondary} />
- </Pressable>
+  <Pressable accessible={false} focusable={false} importantForAccessibility="no" onPress={openAuthorProfile}>
+  <Ionicons name="chevron-forward"size={16} color={colors.textSecondary} />
+  </Pressable>
+ </View>
 
  {/* Topic & Full Body Text */}
  <AppText variant="h2"weight="bold"style={{ marginBottom: spacing.xs, lineHeight: 28 }}>
@@ -1078,7 +1092,7 @@ export function PostDetailScreen() {
                   flexShrink: 0,
                 }}
               >
-                <AppText variant="caption" weight="bold" tone={(!newReply.trim() && !attachedReplyMedia) ? 'secondary' : 'inverse'}>
+                <AppText variant="caption" weight="bold" tone={(!newReply.trim() && !attachedReplyMedia) ? 'secondary' : 'onBrand'}>
                   {submittingReply ? '...' : 'Reply'}
                 </AppText>
               </Pressable>

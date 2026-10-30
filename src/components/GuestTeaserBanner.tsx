@@ -85,7 +85,7 @@ export function GuestTeaserBanner() {
             <Ionicons
               name={isPending ? 'hourglass-outline' : 'shield-outline'}
               size={16}
-              color="#FFFFFF"
+              color={colors.onBrand}
             />
           </View>
 
@@ -99,10 +99,10 @@ export function GuestTeaserBanner() {
                   paddingHorizontal: 6,
                   paddingVertical: 1,
                   borderRadius: 6,
-                  backgroundColor: isPending ? '#D97706' : colors.brandPrimary,
+                  backgroundColor: isPending ? '#B45309' : colors.brandPrimary,
                 }}
               >
-                <AppText style={{ fontSize: 9, color: '#FFFFFF', fontWeight: 'bold' }}>
+                <AppText style={{ fontSize: 9, color: isPending ? '#FFFFFF' : colors.onBrand, fontWeight: 'bold' }}>
                   {info.campusCode}
                 </AppText>
               </View>
@@ -126,7 +126,7 @@ export function GuestTeaserBanner() {
                 { backgroundColor: colors.brandPrimary, borderRadius: radius.sm },
               ]}
             >
-              <AppText variant="caption" weight="bold" tone="inverse">
+              <AppText variant="caption" weight="bold" tone="onBrand">
                 Verify ID
               </AppText>
             </Pressable>

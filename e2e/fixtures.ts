@@ -111,6 +111,14 @@ export async function seedAuthenticatedSession(
     onboardingComplete?: boolean;
     onboardingStep?: string;
     superAdmin?: boolean;
+    /**
+     * Make the seeded member VERIFIED. The app decides that from the member's own `profiles` row
+     * (`verification_status = 'verified'`, see isUnverifiedPersonalUser), never from the session or the e-mail
+     * domain, so this answers the profile lookup for the seeded user id with a verified row. Without it fixture
+     * users are unverified and the verification gate ("Verified UI Students Only") hides gated screens such as
+     * the messages list.
+     */
+    verified?: boolean;
   } = {},
 ) {
   const {
@@ -119,7 +127,9 @@ export async function seedAuthenticatedSession(
     onboardingComplete = true,
     onboardingStep,
     superAdmin = role === 'admin',
+    verified = false,
   } = options;
+  if (verified) await stubVerifiedProfile(page, role);
   // A dashboard test should inspect the dashboard, not the separate legal
   // re-consent flow. A dedicated accessibility test covers that dialog.
   await page.route('**/rest/v1/rpc/latest_consent', (route) =>
@@ -195,5 +205,73 @@ export async function seedAuthenticatedSession(
     hasCompletedOnboarding: onboardingComplete,
     savedOnboardingStep: onboardingStep,
     isSuperAdmin: superAdmin,
+  });
+}
+
+/** A settled adult member: no "add your date of birth" prompt over the screen under test. */
+export async function stubAdultMemberStatus(page: Page) {
+  await page.route('**/rest/v1/rpc/get_my_minor_status', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify({ date_of_birth_set: true, age_years: 21, is_minor: false, is_under_13: false, consent_status: 'not_required', is_limited: false, restrictions: [], guardian: null }),
+    }),
+  );
+}
+
+/**
+ * Answers the signed-in member's own `profiles` lookup (`id=eq.<seeded id>`) with a verified row; every other
+ * request falls through to the generic stub (or to a test's own later route). Serves both the array shape
+ * (maybeSingle) and the object shape (single).
+ */
+export async function stubVerifiedProfile(page: Page, role: TestUserRole) {
+  const userId = `e2e-${role}-user`;
+  await stubAdultMemberStatus(page);
+  await page.route(/\/rest\/v1\/profiles\?/, (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() !== 'GET' || url.searchParams.get('id') !== `eq.${userId}`) return route.fallback();
+    const row = {
+      id: userId,
+      full_name: `E2E ${role[0].toUpperCase()}${role.slice(1)}`,
+      username: `e2e_${role}`,
+      role,
+      campus_code: 'UI',
+      verification_status: 'verified',
+      onboarding_complete: true,
+      department: 'Computer Science',
+      is_suspended: false,
+      is_campus_ambassador: false,
+    };
+    const wantsObject = (request.headers()['accept'] ?? '').includes('vnd.pgrst.object');
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify(wantsObject ? row : [row]),
+    });
+  });
+}
+
+/**
+ * Makes every Supabase data call (REST, functions, storage) fail with HTTP 500, except the signed-in member's own
+ * verified profile lookup (so a verified member stays verified while the screen's own data requests fail).
+ * Register it AFTER seedAuthenticatedSession: Playwright tries the most recently registered route first.
+ */
+export async function failDataCalls(page: Page) {
+  await page.route(/https:\/\/[a-z0-9]+\.supabase\.co\/(rest|functions|storage)\/.*/, (route) => {
+    const request = route.request();
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
+    const url = request.url();
+    if (url.includes('latest_consent') || url.includes('report-client-error') || /\/rest\/v1\/profiles\?.*id=eq\.e2e-/.test(url)) {
+      return route.fallback();
+    }
+    return route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify({ message: 'e2e injected failure' }),
+    });
   });
 }

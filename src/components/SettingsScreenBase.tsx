@@ -2024,7 +2024,7 @@ export function SettingsScreen() {
                           alignItems: 'center',
                         }}
                       >
-                        <AppText variant="bodySmall" weight="bold" tone={active ? 'inverse' : 'primary'}>
+                        <AppText variant="bodySmall" weight="bold" tone={active ? 'onBrand' : 'primary'}>
                           {r.label}
                         </AppText>
                       </Pressable>

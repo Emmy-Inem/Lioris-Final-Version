@@ -266,7 +266,7 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
               variant="caption"
               weight="bold"
               style={{
-                color: showStations ? '#FFFFFF' : colors.brandPrimary,
+                color: showStations ? colors.onBrand : colors.brandPrimary,
                 fontSize: 11,
               }}
             >
@@ -361,7 +361,7 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
                   <AppText
                     variant="caption"
                     weight={isSelected ? 'bold' : 'regular'}
-                    style={{ color: isSelected ? '#FFFFFF' : colors.textSecondary, fontSize: 11 }}
+                    style={{ color: isSelected ? colors.onBrand : colors.textSecondary, fontSize: 11 }}
                   >
                     {cat}
                   </AppText>
@@ -433,12 +433,12 @@ function EqualizerVisualizer({ isPlaying, color }: { isPlaying: boolean; color: 
             ]}
           >
             {radioState.isLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={colors.onBrand} />
             ) : (
               <Ionicons
                 name={radioState.isPlaying ? 'pause' : 'play'}
                 size={20}
-                color="#FFFFFF"
+                color={colors.onBrand}
                 style={{ marginLeft: radioState.isPlaying ? 0 : 2 }}
               />
             )}

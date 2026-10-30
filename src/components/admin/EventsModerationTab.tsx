@@ -534,7 +534,7 @@ export function EventsModerationTab() {
  backgroundColor: section === 'approved' ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={section === 'approved' ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={section === 'approved' ? 'onBrand' : 'secondary'}>
  Live Events Catalog{countLabel(approvedEvents.length)}
  </AppText>
  </Pressable>
@@ -552,7 +552,7 @@ export function EventsModerationTab() {
  backgroundColor: section === 'pending' ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={section === 'pending' ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={section === 'pending' ? 'onBrand' : 'secondary'}>
  Pending Review{countLabel(pendingEvents.length)}
  </AppText>
  </Pressable>
@@ -571,7 +571,7 @@ export function EventsModerationTab() {
  backgroundColor: section === 'paid' ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={section === 'paid' ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={section === 'paid' ? 'onBrand' : 'secondary'}>
  Paid events
  </AppText>
  </Pressable>
@@ -611,7 +611,7 @@ export function EventsModerationTab() {
  backgroundColor: selectedCategory === 'all' ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={selectedCategory === 'all' ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={selectedCategory === 'all' ? 'onBrand' : 'secondary'}>
  All{countLabel(section === 'approved' ? approvedEvents.length : pendingEvents.length)}
  </AppText>
  </Pressable>
@@ -632,7 +632,7 @@ export function EventsModerationTab() {
  backgroundColor: selected ? colors.brandPrimary : colors.divider,
  }}
  >
- <AppText variant="caption"weight="bold"tone={selected ? 'inverse' : 'secondary'}>
+ <AppText variant="caption"weight="bold"tone={selected ? 'onBrand' : 'secondary'}>
  {cat.charAt(0).toUpperCase() + cat.slice(1)}{countLabel(count)}
  </AppText>
  </Pressable>

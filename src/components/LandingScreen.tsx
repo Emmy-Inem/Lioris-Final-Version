@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '@/theme/ThemeProvider';
-import { readableOn } from '@/theme/contrast';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { LiorisLogo } from '@/components/LiorisLogo';
@@ -31,7 +30,7 @@ export function LandingScreen() {
   const { campuses: liveCampuses } = useCampusRegistry();
   const { colors, radius, isDark, toggleTheme } = useTheme();
   // Text/icons on a brand-coloured fill: white on the light brand, navy on the lighter dark-mode brand.
-  const onBrand = readableOn(colors.brandPrimary, '#0B1120', '#FFFFFF');
+  const onBrand = colors.onBrand;
   const { width } = useWindowDimensions();
   const { isDesktop, isTablet } = useResponsive();
   const { settings, getGlassBorderColor, getBackdropFilterString } = useLiquidGlass();

@@ -334,12 +334,12 @@ export default function AlumniJobsScreen() {
               <Ionicons
                 name={savedOnly ? 'bookmark' : 'bookmark-outline'}
                 size={14}
-                color={savedOnly ? '#FFFFFF' : colors.textPrimary}
+                color={savedOnly ? colors.onBrand : colors.textPrimary}
               />
               <AppText
                 variant="caption"
                 weight={savedOnly ? 'bold' : 'regular'}
-                style={{ color: savedOnly ? '#FFFFFF' : colors.textPrimary, fontSize: 11.5 }}
+                style={{ color: savedOnly ? colors.onBrand : colors.textPrimary, fontSize: 11.5 }}
               >
                 Saved Jobs
               </AppText>

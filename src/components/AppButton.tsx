@@ -45,7 +45,7 @@ export function AppButton({
  }));
 
  const palette = {
- primary: { bg: colors.brandPrimary, fg: readableOn(colors.brandPrimary, '#0B1120', '#FFFFFF'), border: 'transparent' },
+ primary: { bg: colors.brandPrimary, fg: colors.onBrand, border: 'transparent' },
  accent: { bg: colors.brandAccent, fg: readableOn(colors.brandAccent), border: 'transparent' },
  secondary: { bg: 'transparent', fg: ensureContrast(colors.brandPrimary, colors.background), border: colors.brandPrimary },
  ghost: { bg: 'transparent', fg: colors.textPrimary, border: 'transparent' },

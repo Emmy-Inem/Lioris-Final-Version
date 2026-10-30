@@ -1142,7 +1142,7 @@ export default function UserDirectoryScreen() {
                         borderColor: selected ? colors.brandPrimary : colors.border,
                       }}
                     >
-                      <AppText variant="bodySmall" weight={selected ? 'bold' : 'medium'} tone={selected ? 'inverse' : 'primary'}>
+                      <AppText variant="bodySmall" weight={selected ? 'bold' : 'medium'} tone={selected ? 'onBrand' : 'primary'}>
                         {r}
                       </AppText>
                     </Pressable>
@@ -1169,7 +1169,7 @@ export default function UserDirectoryScreen() {
                         borderColor: selected ? colors.brandPrimary : colors.border,
                       }}
                     >
-                      <AppText variant="caption" weight={selected ? 'bold' : 'medium'} tone={selected ? 'inverse' : 'secondary'}>
+                      <AppText variant="caption" weight={selected ? 'bold' : 'medium'} tone={selected ? 'onBrand' : 'secondary'}>
                         {c}
                       </AppText>
                     </Pressable>
@@ -1218,6 +1218,7 @@ export default function UserDirectoryScreen() {
                           color={selectedUserIds.has(item.id) ? colors.brandPrimary : colors.textSecondary}
                         />
                       </Pressable>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0 }}>
                       <Pressable
                         onPress={() => setDetailModalUser(item)}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
@@ -1235,9 +1236,6 @@ export default function UserDirectoryScreen() {
                                 tone={item.adminRole === 'super_admin' ? 'critical' : 'brand'}
                               />
                             ) : null}
-                            {item.isVerified && (
-                              <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} showModalOnPress={false} />
-                            )}
                             {item.isCampusAmbassador && (
                               <Badge label="Ambassador" tone="brand" />
                             )}
@@ -1255,6 +1253,10 @@ export default function UserDirectoryScreen() {
                           )}
                         </View>
                       </Pressable>
+                        {item.isVerified && (
+                          <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
+                        )}
+                      </View>
 
                       <Pressable
                         onPress={() => setSelectedUser(item)}
@@ -1315,6 +1317,7 @@ export default function UserDirectoryScreen() {
                       color={selectedUserIds.has(item.id) ? colors.brandPrimary : colors.textSecondary}
                     />
                   </Pressable>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1, minWidth: 0 }}>
                   <Pressable
                     onPress={() => setDetailModalUser(item)}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}
@@ -1332,9 +1335,6 @@ export default function UserDirectoryScreen() {
                             tone={item.adminRole === 'super_admin' ? 'critical' : 'brand'}
                           />
                         ) : null}
-                        {item.isVerified && (
-                          <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} showModalOnPress={false} />
-                        )}
                         {item.isCampusAmbassador && (
                           <Badge label="Ambassador" tone="brand" />
                         )}
@@ -1352,6 +1352,10 @@ export default function UserDirectoryScreen() {
                       )}
                     </View>
                   </Pressable>
+                    {item.isVerified && (
+                      <VerifiedBadge size={14} role={item.role.toLowerCase() as any} name={item.fullName} />
+                    )}
+                  </View>
 
                   <Pressable
                     onPress={() => setSelectedUser(item)}
@@ -1849,7 +1853,7 @@ export default function UserDirectoryScreen() {
  alignItems: 'center',
  }}
  >
- <AppText weight="bold" tone={newRole === r ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
+ <AppText weight="bold" tone={newRole === r ? 'onBrand' : 'brand'} style={{ fontSize: 12 }}>
  {r}
  </AppText>
  </Pressable>
@@ -1882,7 +1886,7 @@ export default function UserDirectoryScreen() {
              alignItems: 'center',
            }}
          >
-           <AppText weight="bold" tone={newAdminRole === tier ? 'inverse' : 'primary'} style={{ fontSize: 11 }}>
+           <AppText weight="bold" tone={newAdminRole === tier ? 'onBrand' : 'primary'} style={{ fontSize: 11 }}>
              {tier === 'super_admin' ? 'Super Admin (Global)' : 'Campus Admin'}
            </AppText>
          </Pressable>
@@ -1916,7 +1920,7 @@ export default function UserDirectoryScreen() {
                           alignItems: 'center',
                         }}
                       >
-                        <AppText weight="bold" tone={newCampus === c ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
+                        <AppText weight="bold" tone={newCampus === c ? 'onBrand' : 'brand'} style={{ fontSize: 12 }}>
                           {c}
                         </AppText>
                       </Pressable>
@@ -1996,7 +2000,7 @@ export default function UserDirectoryScreen() {
                           alignItems: 'center',
                         }}
                       >
-                        <AppText weight="bold" tone={editRole === r ? 'inverse' : 'brand'} style={{ fontSize: 12 }}>
+                        <AppText weight="bold" tone={editRole === r ? 'onBrand' : 'brand'} style={{ fontSize: 12 }}>
                           {r}
                         </AppText>
                       </Pressable>
@@ -2029,7 +2033,7 @@ export default function UserDirectoryScreen() {
                             alignItems: 'center',
                           }}
                         >
-                          <AppText weight="bold" tone={editAdminRole === tier ? 'inverse' : 'primary'} style={{ fontSize: 11 }}>
+                          <AppText weight="bold" tone={editAdminRole === tier ? 'onBrand' : 'primary'} style={{ fontSize: 11 }}>
                             {tier === 'super_admin' ? 'Super Admin (Global)' : 'Campus Admin'}
                           </AppText>
                         </Pressable>
@@ -2063,7 +2067,7 @@ export default function UserDirectoryScreen() {
                           alignItems: 'center',
                         }}
                       >
-                        <AppText weight="bold" tone={editCampus === c ? 'inverse' : 'brand'} style={{ fontSize: 11 }}>
+                        <AppText weight="bold" tone={editCampus === c ? 'onBrand' : 'brand'} style={{ fontSize: 11 }}>
                           {c}
                         </AppText>
                       </Pressable>
@@ -2089,7 +2093,7 @@ export default function UserDirectoryScreen() {
                         borderColor: editVerified ? colors.brandPrimary : colors.border,
                       }}
                     >
-                      <AppText weight="bold" style={{ color: editVerified ? '#FFF' : colors.textSecondary, fontSize: 12 }}>
+                      <AppText weight="bold" style={{ color: editVerified ? colors.onBrand : colors.textSecondary, fontSize: 12 }}>
                         {editVerified ? 'VERIFIED' : 'UNVERIFIED'}
                       </AppText>
                     </Pressable>
@@ -2112,7 +2116,7 @@ export default function UserDirectoryScreen() {
                           borderColor: editIsAmbassador ? colors.brandPrimary : colors.border,
                         }}
                       >
-                        <AppText weight="bold" style={{ color: editIsAmbassador ? '#FFF' : colors.textSecondary, fontSize: 12 }}>
+                        <AppText weight="bold" style={{ color: editIsAmbassador ? colors.onBrand : colors.textSecondary, fontSize: 12 }}>
                           {editIsAmbassador ? 'AMBASSADOR' : 'STANDARD'}
                         </AppText>
                       </Pressable>
@@ -2135,7 +2139,7 @@ export default function UserDirectoryScreen() {
                         borderColor: editSuspended ? colors.critical : colors.border,
                       }}
                     >
-                      <AppText weight="bold" style={{ color: editSuspended ? '#FFF' : colors.textSecondary, fontSize: 12 }}>
+                      <AppText weight="bold" style={{ color: editSuspended ? colors.onCritical : colors.textSecondary, fontSize: 12 }}>
                         {editSuspended ? 'SUSPENDED' : 'ACTIVE'}
                       </AppText>
                     </Pressable>

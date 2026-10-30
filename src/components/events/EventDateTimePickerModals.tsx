@@ -201,7 +201,7 @@ export function EventCalendarPickerModal({
                     weight={isSelected || isToday ? 'bold' : 'regular'}
                     style={{
                       color: isSelected
-                        ? '#FFFFFF'
+                        ? colors.onBrand
                         : isPast
                         ? colors.border
                         : isToday
@@ -359,7 +359,7 @@ export function EventClockPickerModal({
                   },
                 ]}
               >
-                <AppText weight="bold" style={{ color: !isPm ? '#FFFFFF' : colors.textPrimary }}>
+                <AppText weight="bold" style={{ color: !isPm ? colors.onBrand : colors.textPrimary }}>
                   AM (Morning)
                 </AppText>
               </Pressable>
@@ -376,7 +376,7 @@ export function EventClockPickerModal({
                   },
                 ]}
               >
-                <AppText weight="bold" style={{ color: isPm ? '#FFFFFF' : colors.textPrimary }}>
+                <AppText weight="bold" style={{ color: isPm ? colors.onBrand : colors.textPrimary }}>
                   PM (Afternoon / Evening)
                 </AppText>
               </Pressable>
@@ -406,7 +406,7 @@ export function EventClockPickerModal({
                   >
                     <AppText
                       weight={isSelected ? 'bold' : 'medium'}
-                      style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}
+                      style={{ color: isSelected ? colors.onBrand : colors.textPrimary, fontSize: 13 }}
                     >
                       {h}
                     </AppText>
@@ -439,7 +439,7 @@ export function EventClockPickerModal({
                   >
                     <AppText
                       weight={isSelected ? 'bold' : 'medium'}
-                      style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}
+                      style={{ color: isSelected ? colors.onBrand : colors.textPrimary, fontSize: 13 }}
                     >
                       :{pad2(m)}
                     </AppText>

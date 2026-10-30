@@ -58,7 +58,7 @@ export default function StaffModerationScreen() {
           <AppText
             weight="bold"
             variant="bodySmall"
-            tone={activeTab === 'reports' ? 'inverse' : 'secondary'}
+            tone={activeTab === 'reports' ? 'onBrand' : 'secondary'}
             style={{ fontSize: isDesktop ? 13 : 11.5 }}
           >
             Reports Queue
@@ -84,7 +84,7 @@ export default function StaffModerationScreen() {
           <AppText
             weight="bold"
             variant="bodySmall"
-            tone={activeTab === 'approvals' ? 'inverse' : 'secondary'}
+            tone={activeTab === 'approvals' ? 'onBrand' : 'secondary'}
             style={{ fontSize: isDesktop ? 13 : 11.5 }}
           >
             {isDesktop ? 'Verifications & Approvals' : 'Approvals Desk'}

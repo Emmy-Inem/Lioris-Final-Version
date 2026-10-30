@@ -183,7 +183,7 @@ export default function JoinDiscussionSpacesScreen() {
                     <Ionicons
                       name={selected ? 'checkmark' : 'add'}
                       size={20}
-                      color={selected ? '#FFFFFF' : colors.textSecondary}
+                      color={selected ? colors.onBrand : colors.textSecondary}
                     />
                   </View>
                 </SolidCard>

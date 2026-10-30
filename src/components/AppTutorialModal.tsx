@@ -349,13 +349,13 @@ export function AppTutorialModal({ userId, forceOpen = false, onClose }: AppTuto
                       <Ionicons
                         name={isActive ? s.iconActive : s.iconInactive}
                         size={17}
-                        color={isActive ? '#FFFFFF' : colors.textSecondary}
+                        color={isActive ? colors.onBrand : colors.textSecondary}
                       />
                       {isActive && (
                         <AppText
                           variant="caption"
                           weight="bold"
-                          tone="inverse"
+                          tone="onBrand"
                           style={{ fontSize: 11 }}
                         >
                           {s.tabName}

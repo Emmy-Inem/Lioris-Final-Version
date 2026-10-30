@@ -412,7 +412,7 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
                   <AppText
                     variant="caption"
                     weight={active ? 'bold' : 'regular'}
-                    style={{ color: active ? '#FFFFFF' : colors.textSecondary, fontSize: 11 }}
+                    style={{ color: active ? colors.onBrand : colors.textSecondary, fontSize: 11 }}
                   >
                     {cat.label}
                   </AppText>
@@ -478,9 +478,9 @@ export function AdminUniversalSearchModal({ visible, onClose }: AdminUniversalSe
                         paddingVertical: 5,
                         paddingHorizontal: 12,
                         borderRadius: 12,
-                        backgroundColor: control.active ? '#10B981' : (isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9'),
+                        backgroundColor: control.active ? '#047857' : (isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9'),
                         borderWidth: 1,
-                        borderColor: control.active ? '#10B981' : colors.border,
+                        borderColor: control.active ? '#047857' : colors.border,
                       }}
                     >
                       <AppText

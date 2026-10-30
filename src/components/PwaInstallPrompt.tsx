@@ -238,7 +238,7 @@ function PwaInstallPromptInner() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="school" size={24} color="#FFFFFF" />
+            <Ionicons name="school" size={24} color={colors.onBrand} />
           </View>
           <View style={{ flex: 1 }}>
             <AppText variant="body" weight="bold">

@@ -249,12 +249,12 @@ function FloatingTabBar({ tabs, active, onSelect }: { tabs: MockTab[]; active: s
                   overflow: 'hidden',
                 }}
               >
-                <Ionicons name={isActive ? tab.iconActive : tab.icon} size={17} color={isActive ? '#FFFFFF' : isDark ? '#CBD5E1' : '#475569'} />
+                <Ionicons name={isActive ? tab.iconActive : tab.icon} size={17} color={isActive ? colors.onBrand : isDark ? '#CBD5E1' : '#475569'} />
                 <Animated.View style={{ opacity: p, maxWidth: p.interpolate({ inputRange: [0, 1], outputRange: [0, 80] }), overflow: 'hidden' }}>
                   <AppText
                     numberOfLines={1}
                     weight="bold"
-                    style={{ color: '#FFFFFF', fontSize: 11, paddingLeft: 5, ...(Platform.OS === 'web' ? ({ whiteSpace: 'nowrap' } as any) : null) }}
+                    style={{ color: colors.onBrand, fontSize: 11, paddingLeft: 5, ...(Platform.OS === 'web' ? ({ whiteSpace: 'nowrap' } as any) : null) }}
                   >
                     {tab.label}
                   </AppText>
@@ -296,7 +296,7 @@ function Pill({ label, secondary }: { label: string; secondary?: boolean }) {
         borderColor: colors.brandPrimary,
       }}
     >
-      <AppText weight="bold" style={{ fontSize: 10.5, color: filled ? '#FFFFFF' : colors.brandPrimary }}>
+      <AppText weight="bold" style={{ fontSize: 10.5, color: filled ? colors.onBrand : colors.brandPrimary }}>
         {label}
       </AppText>
     </View>
@@ -469,7 +469,7 @@ function ForumScreen() {
         borderColor: selected ? colors.brandPrimary : colors.border,
       }}
     >
-      <AppText weight="bold" style={{ fontSize: 9.5, color: selected ? '#FFFFFF' : colors.textSecondary }}>
+      <AppText weight="bold" style={{ fontSize: 9.5, color: selected ? colors.onBrand : colors.textSecondary }}>
         {label}
       </AppText>
     </View>
@@ -507,7 +507,7 @@ function ForumScreen() {
         </AppText>
         <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 999, padding: 2, borderWidth: 1, borderColor: colors.border }}>
           <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.brandPrimary }}>
-            <AppText weight="bold" style={{ fontSize: 9, color: '#FFFFFF' }}>
+            <AppText weight="bold" style={{ fontSize: 9, color: colors.onBrand }}>
               My Campus
             </AppText>
           </View>
@@ -629,8 +629,8 @@ function ScreenTitle({ title, subtitle, action, actionIcon }: { title: string; s
         </AppText>
         {action ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: colors.brandPrimary, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
-            {actionIcon ? <Ionicons name={actionIcon} size={10} color="#FFFFFF" /> : null}
-            <AppText weight="bold" style={{ fontSize: 9, color: '#FFFFFF' }}>
+            {actionIcon ? <Ionicons name={actionIcon} size={10} color={colors.onBrand} /> : null}
+            <AppText weight="bold" style={{ fontSize: 9, color: colors.onBrand }}>
               {action}
             </AppText>
           </View>
@@ -688,8 +688,8 @@ function ChipRow({ chips }: { chips: { label: string; icon: IconName }[] }) {
               borderColor: selected ? colors.brandPrimary : colors.border,
             }}
           >
-            <Ionicons name={chip.icon} size={10} color={selected ? '#FFFFFF' : colors.textSecondary} />
-            <AppText weight={selected ? 'bold' : 'medium'} style={{ fontSize: 9, color: selected ? '#FFFFFF' : colors.textSecondary }}>
+            <Ionicons name={chip.icon} size={10} color={selected ? colors.onBrand : colors.textSecondary} />
+            <AppText weight={selected ? 'bold' : 'medium'} style={{ fontSize: 9, color: selected ? colors.onBrand : colors.textSecondary }}>
               {chip.label}
             </AppText>
           </View>
@@ -717,7 +717,7 @@ function Btn({ label, kind = 'primary', grow }: { label: string; kind?: 'primary
         borderColor: colors.brandPrimary,
       }}
     >
-      <AppText weight="bold" numberOfLines={1} style={{ fontSize: 9.5, color: kind === 'primary' ? '#FFFFFF' : colors.brandPrimary }}>
+      <AppText weight="bold" numberOfLines={1} style={{ fontSize: 9.5, color: kind === 'primary' ? colors.onBrand : colors.brandPrimary }}>
         {label}
       </AppText>
     </View>
@@ -886,14 +886,14 @@ function LibraryScreen() {
       <ScreenTitle title="Campus Resources" subtitle="Past questions, lecture notes & portal directories" />
       <View style={{ flexDirection: 'row', gap: 5 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.brandPrimary, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
-          <Ionicons name="school" size={10} color="#FFFFFF" />
-          <AppText weight="bold" style={{ fontSize: 9, color: '#FFFFFF' }}>
+          <Ionicons name="school" size={10} color={colors.onBrand} />
+          <AppText weight="bold" style={{ fontSize: 9, color: colors.onBrand }}>
             Research Hub
           </AppText>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.brandPrimary, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
-          <Ionicons name="cloud-upload-outline" size={10} color="#FFFFFF" />
-          <AppText weight="bold" style={{ fontSize: 9, color: '#FFFFFF' }}>
+          <Ionicons name="cloud-upload-outline" size={10} color={colors.onBrand} />
+          <AppText weight="bold" style={{ fontSize: 9, color: colors.onBrand }}>
             Upload
           </AppText>
         </View>
@@ -921,7 +921,7 @@ function LibraryScreen() {
               borderColor: index === 0 ? colors.brandPrimary : colors.border,
             }}
           >
-            <AppText weight={index === 0 ? 'bold' : 'regular'} style={{ fontSize: 8.5, color: index === 0 ? '#FFFFFF' : colors.textSecondary }}>
+            <AppText weight={index === 0 ? 'bold' : 'regular'} style={{ fontSize: 8.5, color: index === 0 ? colors.onBrand : colors.textSecondary }}>
               {text}
             </AppText>
           </View>

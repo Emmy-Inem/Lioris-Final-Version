@@ -101,7 +101,7 @@ export function MonthCalendarGrid({ events }: { events: CampusEvent[] }) {
  borderColor: colors.brandPrimary,
  }}
  >
- <AppText variant="bodySmall"weight="bold"tone={isSelected ? 'inverse' : 'primary'}>
+ <AppText variant="bodySmall"weight="bold"tone={isSelected ? 'onBrand' : 'primary'}>
  {cell.date.getDate()}
  </AppText>
  {dayEvents.length > 0 ? (
@@ -111,7 +111,7 @@ export function MonthCalendarGrid({ events }: { events: CampusEvent[] }) {
  height: 4,
  borderRadius: 2,
  marginTop: 2,
- backgroundColor: isSelected ? colors.textInverse : colors.brandPrimary,
+ backgroundColor: isSelected ? colors.onBrand : colors.brandPrimary,
  }}
  />
  ) : null}

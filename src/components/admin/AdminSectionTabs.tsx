@@ -138,7 +138,7 @@ export function AdminSectionTabs({
                 borderColor: selected ? colors.brandPrimary : colors.border,
               }}
             >
-              <AppText variant="bodySmall" weight={selected ? 'bold' : 'semiBold'} tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="bodySmall" weight={selected ? 'bold' : 'semiBold'} tone={selected ? 'onBrand' : 'secondary'}>
                 {section.label}
               </AppText>
               {count ? (
@@ -150,13 +150,13 @@ export function AdminSectionTabs({
                     borderRadius: 9,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: selected ? '#FFFFFF' : colors.critical,
+                    backgroundColor: selected ? colors.onBrand : colors.critical,
                   }}
                 >
                   <AppText
                     variant="caption"
                     weight="bold"
-                    style={{ fontSize: 10, lineHeight: 12, color: selected ? colors.brandPrimary : '#FFFFFF' }}
+                    style={{ fontSize: 10, lineHeight: 12, color: selected ? colors.brandPrimary : colors.onCritical }}
                   >
                     {count > 99 ? '99+' : count}
                   </AppText>

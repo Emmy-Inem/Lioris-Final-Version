@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 // @ts-ignore TS5097
-import { classifyQueryError, queryErrorCopy, queryErrorMode, refetchFailedQueries, summarizeQueryErrors } from './queryError.ts';
+import { classifyQueryError, isMissingRelationError, queryErrorCopy, queryErrorMode, refetchFailedQueries, summarizeQueryErrors } from './queryError.ts';
 
 describe('classifyQueryError', () => {
   it('detects offline and network failures', () => {
@@ -84,5 +84,18 @@ describe('refetchFailedQueries', () => {
       { isError: true },
     ]);
     assert.deepEqual(calls, ['a', 'c']);
+  });
+});
+
+describe('isMissingRelationError', () => {
+  it('recognises a table that does not exist', () => {
+    assert.equal(isMissingRelationError({ code: '42P01', message: 'relation "client_errors" does not exist' }), true);
+    assert.equal(isMissingRelationError({ code: 'PGRST205', message: "Could not find the table 'public.client_errors' in the schema cache" }), true);
+  });
+  it('does not treat failed requests or permission refusals as a missing table', () => {
+    assert.equal(isMissingRelationError({ code: '42501', message: 'permission denied for table client_errors' }), false);
+    assert.equal(isMissingRelationError({ status: 500, message: 'Internal Server Error' }), false);
+    assert.equal(isMissingRelationError(new Error('Failed to fetch')), false);
+    assert.equal(isMissingRelationError(null), false);
   });
 });

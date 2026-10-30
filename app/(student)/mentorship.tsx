@@ -133,7 +133,7 @@ export default function StudentMentorshipScreen() {
                       weight="bold"
                       style={{
                         fontSize: 11,
-                        color: campusFilter === 'campus' ? colors.textInverse : colors.textSecondary,
+                        color: campusFilter === 'campus' ? colors.onBrand : colors.textSecondary,
                       }}
                     >
                       {campusCode} mentors
@@ -160,7 +160,7 @@ export default function StudentMentorshipScreen() {
                       weight="bold"
                       style={{
                         fontSize: 11,
-                        color: campusFilter === 'all' ? colors.textInverse : colors.textSecondary,
+                        color: campusFilter === 'all' ? colors.onBrand : colors.textSecondary,
                       }}
                     >
                       All alumni

@@ -356,7 +356,7 @@ export function RequestMentorshipModal({
                         <AppText
                           variant="caption"
                           weight={selected ? 'bold' : 'regular'}
-                          style={{ color: selected ? '#FFFFFF' : colors.textPrimary }}
+                          style={{ color: selected ? colors.onBrand : colors.textPrimary }}
                         >
                           {lvl}
                         </AppText>

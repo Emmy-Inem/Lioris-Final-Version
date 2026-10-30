@@ -90,7 +90,7 @@ export function StudyGroupCard({ group, onJoined }: { group: StudyGroup; onJoine
           <View style={{ flex: 1 }} />
           {member && group.unreadCount > 0 ? (
             <View style={{ backgroundColor: colors.brandPrimary, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-              <AppText weight="bold" style={{ color: '#FFFFFF', fontSize: 10.5 }}>
+              <AppText weight="bold" style={{ color: colors.onBrand, fontSize: 10.5 }}>
                 {group.unreadCount > 99 ? '99+' : group.unreadCount} new
               </AppText>
             </View>

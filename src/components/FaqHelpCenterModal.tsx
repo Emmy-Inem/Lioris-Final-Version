@@ -245,7 +245,7 @@ export function FaqHelpCenterModal({ visible, onClose, onContactSupport }: { vis
                 borderColor: activeCategory === null ? colors.brandPrimary : colors.border,
               }}
             >
-              <AppText variant="caption" weight="bold" style={{ color: activeCategory === null ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}>
+              <AppText variant="caption" weight="bold" style={{ color: activeCategory === null ? colors.onBrand : colors.textPrimary, fontSize: 11 }}>
                 All
               </AppText>
             </Pressable>
@@ -265,7 +265,7 @@ export function FaqHelpCenterModal({ visible, onClose, onContactSupport }: { vis
                   borderColor: activeCategory === c ? colors.brandPrimary : colors.border,
                 }}
               >
-                <AppText variant="caption" weight="bold" style={{ color: activeCategory === c ? '#FFFFFF' : colors.textPrimary, fontSize: 11 }}>
+                <AppText variant="caption" weight="bold" style={{ color: activeCategory === c ? colors.onBrand : colors.textPrimary, fontSize: 11 }}>
                   {c}
                 </AppText>
               </Pressable>

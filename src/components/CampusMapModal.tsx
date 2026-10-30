@@ -225,7 +225,7 @@ export function CampusMapModal({
                       <AppText
                         variant="caption"
                         weight={isCurrent ? 'bold' : 'regular'}
-                        style={{ color: isCurrent ? '#ffffff' : colors.textPrimary }}
+                        style={{ color: isCurrent ? colors.onBrand : colors.textPrimary }}
                       >
                         {cInfo?.name ? `${cCode} - ${cInfo.name.split(' ')[0]}` : cCode}
                       </AppText>
@@ -279,8 +279,8 @@ export function CampusMapModal({
                 onPress={() => openDirections(selectedLandmark)}
                 style={[styles.directionBtn, { backgroundColor: colors.brandPrimary }]}
               >
-                <Ionicons name="navigate" size={14} color="#ffffff" />
-                <AppText variant="caption" weight="bold" style={{ color: '#ffffff' }}>
+                <Ionicons name="navigate" size={14} color={colors.onBrand} />
+                <AppText variant="caption" weight="bold" style={{ color: colors.onBrand }}>
                   Directions
                 </AppText>
               </Pressable>
@@ -347,7 +347,7 @@ export function CampusMapModal({
                     <AppText
                       variant="caption"
                       weight={isSelected ? 'bold' : 'regular'}
-                      style={{ color: isSelected ? '#ffffff' : colors.textSecondary }}
+                      style={{ color: isSelected ? colors.onBrand : colors.textSecondary }}
                     >
                       {cat}
                     </AppText>

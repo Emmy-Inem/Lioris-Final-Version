@@ -186,7 +186,7 @@ export default function TakedownRequestsScreen() {
                 borderColor: selected ? colors.brandPrimary : colors.border,
               }}
             >
-              <AppText variant="bodySmall" weight={selected ? 'bold' : 'medium'} tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="bodySmall" weight={selected ? 'bold' : 'medium'} tone={selected ? 'onBrand' : 'secondary'}>
                 {t === 'pending' ? 'Needs a decision' : 'Decided'}
               </AppText>
             </Pressable>

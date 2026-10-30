@@ -217,7 +217,7 @@ export function SearchScreen() {
                 borderColor: selected ? colors.brandPrimary : colors.border,
               }}
             >
-              <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'inverse' : 'secondary'}>
+              <AppText variant="bodySmall" weight="semiBold" tone={selected ? 'onBrand' : 'secondary'}>
                 {TAB_LABEL[t]}
               </AppText>
             </Pressable>
