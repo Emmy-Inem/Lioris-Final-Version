@@ -410,3 +410,27 @@ test.describe('client error reporting', () => {
     expect(JSON.stringify(body)).not.toMatch(/\?[a-z]+=/);
   });
 });
+
+test.describe('theme choice beats the device setting', () => {
+  test.use({ colorScheme: 'dark' });
+
+  test('a member who chose Light on a dark device never sees a dark page background or loading screen', async ({ page }) => {
+    await page.addInitScript(() => {
+      try { localStorage.setItem('lioris.themeMode', 'light'); } catch { /* storage blocked */ }
+    });
+    await page.goto('/login');
+    // Before the app has even mounted, the boot script has already applied the stored choice.
+    await expect(page.locator('html')).toHaveAttribute('data-lioris-theme', 'light');
+    await waitForApp(page);
+    const backgrounds = await page.evaluate(() => [document.documentElement, document.body].map((el) => getComputedStyle(el).backgroundColor));
+    for (const color of backgrounds) expect(color).toBe('rgb(248, 250, 249)');
+  });
+
+  test('a member on the System setting follows the device', async ({ page }) => {
+    await page.goto('/login');
+    await waitForApp(page);
+    await expect(page.locator('html')).toHaveAttribute('data-lioris-theme', 'dark');
+    const color = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(color).toBe('rgb(11, 17, 32)');
+  });
+});
