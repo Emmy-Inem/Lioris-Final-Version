@@ -93,9 +93,23 @@ function useWebA11yStyles(ringColor: string) {
  }, [ringColor]);
 }
 
+function readStoredThemeModeSync(): ThemeMode {
+ try {
+ if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+ const stored = localStorage.getItem(THEME_MODE_KEY);
+ if (stored === 'system' || stored === 'light' || stored === 'dark') return stored;
+ }
+ } catch {
+ // storage blocked: fall back to the system theme
+ }
+ return 'system';
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
  const systemScheme = useColorScheme();
- const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
+ // On web the stored choice is read synchronously, so the very first frame already uses the right theme instead of
+ // showing the system theme until the async storage read resolves (a dark flash for people who chose Light).
+ const [themeMode, setThemeModeState] = useState<ThemeMode>(() => readStoredThemeModeSync());
  const [customAccent, setCustomAccentState] = useState<string | null>(null);
  const [fontScale, setFontScaleState] = useState<FontScale>(1);
  const { user } = useAuth();
@@ -120,6 +134,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  }, []);
 
  const isDark = themeMode === 'system' ? systemScheme === 'dark' : themeMode === 'dark';
+
+ // Tell the page itself (html/body background, scrollbars, the route loading screen) which theme is active, so what
+ // shows behind the app between screens always matches the app and never the device setting.
+ useEffect(() => {
+ if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+ document.documentElement.setAttribute('data-lioris-theme', isDark ? 'dark' : 'light');
+ document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+ }, [isDark]);
 
  const { data: profile } = useQuery({
  queryKey: ['profile', 'me', user?.id],

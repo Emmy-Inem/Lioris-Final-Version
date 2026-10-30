@@ -11,6 +11,20 @@
   'use strict';
   if (typeof window === 'undefined') return;
 
+  // ---- 0. Theme before first paint -------------------------------------------
+  // The app stores its own light/dark choice. Without this, the page background (and the loading screen shown while
+  // a screen's code downloads) follows the DEVICE setting, so someone who picked Light on a dark phone saw dark
+  // flashes between screens. The app keeps the attribute current once it is running (src/theme/ThemeProvider.tsx).
+  try {
+    var storedTheme = window.localStorage.getItem('lioris.themeMode');
+    if (storedTheme === 'light' || storedTheme === 'dark') {
+      document.documentElement.setAttribute('data-lioris-theme', storedTheme);
+      document.documentElement.style.colorScheme = storedTheme;
+    }
+  } catch (e) {
+    /* storage blocked: the device setting applies */
+  }
+
   // ---- 1. Install prompt -----------------------------------------------------
   window.__liorisInstallPrompt = null;
   window.addEventListener('beforeinstallprompt', function (event) {

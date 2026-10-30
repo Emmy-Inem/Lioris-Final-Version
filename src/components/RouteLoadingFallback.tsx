@@ -10,7 +10,11 @@ import { ActivityIndicator, StyleSheet, View, useColorScheme } from 'react-nativ
  * Must accept (and ignore) the `route` / `params` props expo-router passes to a SuspenseFallback.
  */
 export function SuspenseFallback(_props: { route?: string; params?: unknown }) {
-  const dark = useColorScheme() === 'dark';
+  const system = useColorScheme();
+  // The app's own light/dark choice wins over the device setting (the page boot script mirrors it on <html>).
+  const chosen =
+    typeof document !== 'undefined' ? document.documentElement.getAttribute('data-lioris-theme') : null;
+  const dark = chosen === 'dark' || (chosen !== 'light' && system === 'dark');
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

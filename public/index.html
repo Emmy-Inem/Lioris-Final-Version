@@ -75,11 +75,21 @@
         flex: 1;
         background: url('/icon-192.png') center / 96px 96px no-repeat;
       }
+      /* The device's dark setting applies only when the app has not been told otherwise: the app's own choice is the
+         data-lioris-theme attribute (set by pwa-boot.js before first paint, then kept current by the app). */
       @media (prefers-color-scheme: dark) {
-        html,
-        body {
+        html:not([data-lioris-theme]),
+        html:not([data-lioris-theme]) body {
           background-color: #0b1120;
         }
+      }
+      html[data-lioris-theme='dark'],
+      html[data-lioris-theme='dark'] body {
+        background-color: #0b1120;
+      }
+      html[data-lioris-theme='light'],
+      html[data-lioris-theme='light'] body {
+        background-color: #f8faf9;
       }
     </style>
     <script src="/pwa-boot.js"></script>
