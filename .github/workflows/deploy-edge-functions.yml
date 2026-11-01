@@ -50,10 +50,10 @@ jobs:
             echo "present=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.token.outputs.present == 'true'
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         if: steps.token.outputs.present == 'true'
         with:
           version: latest
