@@ -1,4 +1,4 @@
--- LIORIS manual SQL, part 18 of 18: 20261114000000_remove_seed_bot_content.sql
+-- LIORIS manual SQL, part 18 of 19: 20261114000000_remove_seed_bot_content.sql
 -- Paste this whole file into the Supabase SQL editor and Run. Parts must be run in order; the guard below
 -- stops this part if an earlier one is missing. Safe to run twice.
 SET lock_timeout = '8s';
@@ -198,6 +198,3 @@ $do$;
 
 INSERT INTO public._manual_migration_log (version) VALUES ('20261114000000') ON CONFLICT (version) DO NOTHING;
 COMMIT;
-
-RESET lock_timeout;
-RESET statement_timeout;

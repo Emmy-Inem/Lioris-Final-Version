@@ -1,4 +1,4 @@
--- LIORIS manual SQL, part 8 of 18: 20261104000000_chat_messages_read_receipts.sql
+-- LIORIS manual SQL, part 8 of 19: 20261104000000_chat_messages_read_receipts.sql
 -- Paste this whole file into the Supabase SQL editor and Run. Parts must be run in order; the guard below
 -- stops this part if an earlier one is missing. Safe to run twice.
 SET lock_timeout = '8s';
