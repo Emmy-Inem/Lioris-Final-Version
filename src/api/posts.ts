@@ -16,6 +16,7 @@ import { getOwnProfileRow } from './profile';
 import { isPermissionRefusal, refusalMessage } from '../utils/permissionErrors';
 import { primeSignedUrls } from './signedUrls';
 import { pageMayHaveMore } from '../utils/pagination';
+import { extractMentionHandles } from '../utils/mentions';
 
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
@@ -1530,13 +1531,8 @@ export function buildPostShareUrl(roleGroup: string, postId: string): string {
   return Linking.createURL(path);
 }
 
-const MENTION_REGEX = /@([a-zA-Z0-9_.]{2,40})/g;
-
-/** Unique, lower-cased @handles found in a post's content, in no particular order. */
-export function extractMentionHandles(content: string): string[] {
-  const handles = Array.from(content.matchAll(MENTION_REGEX), (m) => m[1].toLowerCase());
-  return Array.from(new Set(handles));
-}
+/** Unique, lower-cased @handles found in a post's content (see utils/mentions.ts for the punctuation / e-mail rules). */
+export { extractMentionHandles };
 
 export interface ResolvedMentionUser {
   id: string;

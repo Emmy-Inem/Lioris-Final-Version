@@ -25,6 +25,7 @@ import { clearPostsSessionCache } from '@/api/posts';
 import { clearEventsSessionCache } from '@/api/events';
 import { clearMarketplaceSessionCache } from '@/api/marketplace';
 import { clearAllSessionCaches } from '@/utils/sessionCaches';
+import { uniqueChannelName } from '@/utils/channelName';
 
 /** Everything held in memory for the account that is going away. */
 function clearAccountSessionCaches(): void {
@@ -968,7 +969,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
       channel = supabase
-        .channel(`auth-profile-guard:${watchedUserId}`)
+        .channel(uniqueChannelName(`auth-profile-guard:${watchedUserId}`))
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${watchedUserId}` },
