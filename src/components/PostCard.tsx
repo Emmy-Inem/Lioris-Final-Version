@@ -30,6 +30,7 @@ import { useSignedUrl } from '@/api/signedUrls';
 import { submitReport } from '@/api/moderation';
 import { haptics } from'@/utils/haptics';
 import { getFriendlyErrorMessage } from '@/utils/errors';
+import { lookupMention } from '@/utils/mentions';
 
 /** Every cache that can show a post: the feed, the profile's "Authored" list and the saved list. */
 async function invalidatePostCaches(queryClient: ReturnType<typeof useQueryClient>, postId?: string) {
@@ -196,7 +197,7 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  function renderContent(content: string) {
    return content.split(CONTENT_TOKEN_SPLIT).map((part, i) => {
      if (MENTION_TOKEN.test(part)) {
-       const match = mentionByHandle.get(part.slice(1).toLowerCase());
+       const match = lookupMention(mentionByHandle, part);
        if (!match) return part;
        return (
          <AppText

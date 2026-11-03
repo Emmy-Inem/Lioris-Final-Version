@@ -6,6 +6,7 @@ import { getInstitutionByCode, getInstitutionForEmail } from './institutions';
 import { clearTokens, getSessionUser } from '../auth/tokenStorage';
 import { persistCampus } from '@/hooks/useViewScope';
 import { getFriendlyErrorMessage } from '../utils/errors';
+import { registerSessionCacheClearer } from '../utils/sessionCaches';
 
 export function nextLevelXp(level: number): number {
  if (level === 1) return 200;
@@ -16,6 +17,11 @@ export function nextLevelXp(level: number): number {
 }
 
 const profileState = new Map<string, UserProfile>();
+
+// Sign-out / account switch: cached profiles (including the previous account's own private fields) are dropped.
+registerSessionCacheClearer('profiles', () => {
+  profileState.clear();
+});
 
 /**
  * Evict a single user from the in-memory profile cache so the next

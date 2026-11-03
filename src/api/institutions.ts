@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { generateUUID } from '../utils/uuid';
+import { registerSessionCacheClearer } from '../utils/sessionCaches';
 
 export interface Institution {
  code: string;
@@ -228,6 +229,10 @@ export interface WaitlistEntry {
 }
 
 let waitlistState: WaitlistEntry[] = [];
+
+registerSessionCacheClearer('institution-waitlist', () => {
+  waitlistState = [];
+});
 
 export interface JoinWaitlistPayload {
  name?: string;

@@ -5,11 +5,17 @@ import { generateUUID } from '../utils/uuid';
 import { escapePostgrestLike } from '../utils/postgrest';
 import { broadcastNotification } from './notifications';
 import { recordAuditLogEntry } from './auditLog';
+import { registerSessionCacheClearer } from '../utils/sessionCaches';
 
 // Announcements this session has *successfully* written to Supabase, kept
 // here only so they render instantly before the next refetch. There are no
 // bundled fixtures: the local pool holds nothing but those own creations.
 let locallyCreatedAnnouncements: Announcement[] = [];
+
+// Sign-out / account switch: an announcement the previous (admin) account just published must not appear for the next.
+registerSessionCacheClearer('announcements', () => {
+  locallyCreatedAnnouncements = [];
+});
 
 
 

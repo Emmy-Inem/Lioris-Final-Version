@@ -24,6 +24,8 @@ import { clearMessagingSessionCache } from '@/api/messaging';
 import { clearPostsSessionCache } from '@/api/posts';
 import { clearEventsSessionCache } from '@/api/events';
 import { clearMarketplaceSessionCache } from '@/api/marketplace';
+import { clearAllSessionCaches } from '@/utils/sessionCaches';
+import { uniqueChannelName } from '@/utils/channelName';
 
 /** Everything held in memory for the account that is going away. */
 function clearAccountSessionCaches(): void {
@@ -33,11 +35,26 @@ function clearAccountSessionCaches(): void {
   } catch {
     // best effort
   }
-  clearMessagingSessionCache();
-  clearPostsSessionCache();
-  clearEventsSessionCache();
-  clearMarketplaceSessionCache();
-  clearBlockedAndMuted();
+  // One clearer throwing (a listener, a storage hiccup) must not leave the rest holding the previous account's data.
+  const steps: Array<() => void> = [
+    clearMessagingSessionCache,
+    clearPostsSessionCache,
+    clearEventsSessionCache,
+    clearMarketplaceSessionCache,
+    clearBlockedAndMuted,
+    clearLocalNotificationsCache,
+    clearSavedItemsMemoryCache,
+    clearPortalVisitsMemoryCache,
+    // Jobs, announcements, reports, resources, profile cache ...: modules register themselves (utils/sessionCaches).
+    () => void clearAllSessionCaches(),
+  ];
+  for (const step of steps) {
+    try {
+      step();
+    } catch {
+      // best effort
+    }
+  }
 }
 import { loadBlockedUserIds, loadMutedUserIds, clearBlockedAndMuted } from '@/api/connections';
 import { getOwnProfileRow, completeOnboardingOnServer } from '@/api/profile';
@@ -952,7 +969,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
       channel = supabase
-        .channel(`auth-profile-guard:${watchedUserId}`)
+        .channel(uniqueChannelName(`auth-profile-guard:${watchedUserId}`))
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${watchedUserId}` },

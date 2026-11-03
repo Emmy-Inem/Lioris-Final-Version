@@ -3,9 +3,11 @@ import { AppState, Platform } from 'react-native';
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/api/supabase';
+import { uniqueChannelName } from '@/utils/channelName';
 import {
   createCoalescer,
   matchesTarget,
+  messageEventFromChange,
   planInvalidations,
   DELAY_FAST_MS,
   type Coalescer,
@@ -14,7 +16,14 @@ import {
 } from '@/utils/realtimeInvalidation';
 
 export type RealtimeEvent =
-  | { type: 'message.created'; conversationId: string; messageId?: string; message?: any }
+  | {
+      type: 'message.created';
+      conversationId: string;
+      messageId?: string;
+      message?: any;
+      /** INSERT for a new message; UPDATE for e.g. a read receipt (see isNewMessageEvent). */
+      eventType?: 'INSERT' | 'UPDATE' | 'DELETE';
+    }
   | { type: 'connection.updated'; connectionId: string; status: string }
   | { type: 'notification.created'; notificationId?: string; notification?: any }
   | { type: 'rsvp.updated'; eventId: string; rsvpCount: number }
@@ -108,13 +117,10 @@ function buildChannel(userId: string | null): RealtimeChannel {
   if (userId) notificationsConfig.filter = `recipient_id=eq.${userId}`;
 
   return supabase
-    .channel('app_public_realtime_changes')
+    // Unique per open: openChannel() closes the previous channel (async) and must not get that same dying object back.
+    .channel(uniqueChannelName('app_public_realtime_changes'))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, (payload: any) =>
-      onTableChange('chat_messages', payload, (row) => ({
-        type: 'message.created',
-        conversationId: row?.channel_id || '',
-        message: row,
-      })),
+      onTableChange('chat_messages', payload, () => messageEventFromChange(payload)),
     )
     .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_channels' }, (payload: any) =>
       onTableChange('chat_channels', payload),

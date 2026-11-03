@@ -15,6 +15,8 @@ import { isSuperAdminIdentity, resolveCampusReadScope } from '../utils/campusAcc
 import { getOwnProfileRow } from './profile';
 import { isPermissionRefusal, refusalMessage } from '../utils/permissionErrors';
 import { primeSignedUrls } from './signedUrls';
+import { pageMayHaveMore } from '../utils/pagination';
+import { extractMentionHandles } from '../utils/mentions';
 
 // Posts this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch (and so
@@ -359,7 +361,23 @@ function filterPosts(pool: Post[], query: FeedQuery): Post[] {
 
 const DEFAULT_FEED_PAGE_SIZE = 100;
 
+export interface FeedPage {
+  posts: Post[];
+  /** False only when the database itself ran out of rows (not when client-side filters emptied the page). */
+  hasMore: boolean;
+}
+
 export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
+  return (await loadFeedPage(query)).posts;
+}
+
+/** One page for the infinite feed: the posts plus whether the database may hold more after this page. */
+export async function listFeedPostsPage(query: FeedQuery = {}): Promise<FeedPage> {
+  const { posts, rowCount } = await loadFeedPage(query);
+  return { posts, hasMore: pageMayHaveMore(rowCount, query.pageSize ?? DEFAULT_FEED_PAGE_SIZE) };
+}
+
+async function loadFeedPage(query: FeedQuery): Promise<{ posts: Post[]; rowCount: number }> {
   let viewerInstitutionCode: string | undefined;
   let includeAllCampuses = false;
   let hadSession = false;
@@ -393,7 +411,8 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     viewerInstitutionCode = includeAllCampuses || resolvedCampus === 'GLOBAL' ? undefined : resolvedCampus;
 
     const { rows } = await selectPostsWithFallback((select) => {
-      let dbQuery = supabase.from('posts').select(select).order('created_at', { ascending: false });
+      // `id` breaks ties between posts created in the same instant: without it offset pages can repeat or skip rows.
+      let dbQuery = supabase.from('posts').select(select).order('created_at', { ascending: false }).order('id', { ascending: false });
       if (query.category) {
         dbQuery = dbQuery.ilike('category', `%${escapePostgrestLike(query.category)}%`);
       }
@@ -459,18 +478,21 @@ export async function listFeedPosts(query: FeedQuery = {}): Promise<Post[]> {
     if (mediaToPrime.length > 0) {
       void primeSignedUrls('campus-media', mediaToPrime);
     }
-    return decorated;
+    return { posts: decorated, rowCount: rows.length };
   } catch (err) {
     // A real failure must reach React Query (error state + retry) instead of coming back as a successful, cached
     // feed. The local pool is only for signed-out previews or an explicit allowOffline.
     if (hadSession && !query.allowOffline) throw err;
     console.warn('[Posts] listFeedPosts failed, showing local pool only:', err);
     const isFirstPage = (query.page ?? 0) === 0;
-    return filterPosts(isFirstPage ? [...locallyCreatedPosts] : [], {
-      ...query,
-      viewerInstitutionCode,
-      includeAllCampuses,
-    });
+    return {
+      posts: filterPosts(isFirstPage ? [...locallyCreatedPosts] : [], {
+        ...query,
+        viewerInstitutionCode,
+        includeAllCampuses,
+      }),
+      rowCount: 0,
+    };
   }
 }
 
@@ -1509,13 +1531,8 @@ export function buildPostShareUrl(roleGroup: string, postId: string): string {
   return Linking.createURL(path);
 }
 
-const MENTION_REGEX = /@([a-zA-Z0-9_.]{2,40})/g;
-
-/** Unique, lower-cased @handles found in a post's content, in no particular order. */
-export function extractMentionHandles(content: string): string[] {
-  const handles = Array.from(content.matchAll(MENTION_REGEX), (m) => m[1].toLowerCase());
-  return Array.from(new Set(handles));
-}
+/** Unique, lower-cased @handles found in a post's content (see utils/mentions.ts for the punctuation / e-mail rules). */
+export { extractMentionHandles };
 
 export interface ResolvedMentionUser {
   id: string;

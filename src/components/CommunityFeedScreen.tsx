@@ -23,7 +23,8 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useIsOfflinePaused } from '@/hooks/useIsOfflinePaused';
-import { listFeedPosts, createPost, notifyPostMentions } from '@/api/posts';
+import { listFeedPosts, listFeedPostsPage, createPost, notifyPostMentions } from '@/api/posts';
+import { dedupeById } from '@/utils/pagination';
 import { listMyJoinedCommunityIds, joinCommunity, leaveCommunity, DEFAULT_JOINED_COMMUNITY_IDS, getCommunityStatsMap } from '@/api/forumMemberships';
 import { listCommunities, proposeCommunity, listMyModeratedCommunityIds, ForumCommunityRecord } from '@/api/communities';
 import { getInstitutionByCode } from '@/api/institutions';
@@ -417,8 +418,8 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   // Feed is paginated 20 posts at a time (see listFeedPosts' page/pageSize,
   // following the same convention as src/api/resources.ts). Filtering
   // (bots, campus scope, status, etc.) happens client-side per page inside
-  // listFeedPosts, so "more to load" is only a heuristic: a page that came
-  // back full-size (FEED_PAGE_SIZE) might still have more behind it.
+  // listFeedPosts. "More to load" comes from listFeedPostsPage().hasMore: whether the
+  // DATABASE returned a full page, not how many posts survived those filters.
   const FEED_PAGE_SIZE = 20;
   const {
     data: feedPages,
@@ -434,7 +435,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
   } = useInfiniteQuery({
     queryKey: ['feed', scope, 'full', debouncedQuery, viewScope, viewerInstitutionCode, showAllCampuses, selectedChannel, showBots],
     queryFn: ({ pageParam }) =>
-      listFeedPosts({
+      listFeedPostsPage({
         scope,
         q: debouncedQuery || undefined,
         viewScope,
@@ -446,12 +447,14 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
         pageSize: FEED_PAGE_SIZE,
       }),
     initialPageParam: 0,
-    // The database now narrows by campus, so an empty page is the real end. A short page can also just mean some
-    // rows were hidden (blocked, bots), which used to stop "My Campus" scrolling early.
-    getNextPageParam: (lastPage, allPages) => (lastPage.length === 0 ? undefined : allPages.length),
+    // `hasMore` comes from how many rows the DATABASE returned: a full page whose rows were all hidden client-side
+    // (blocked authors, bot posts, "Polls") is empty yet not the end of the feed.
+    getNextPageParam: (lastPage, allPages) => (lastPage.hasMore ? allPages.length : undefined),
   });
 
-  const rawPosts = React.useMemo(() => feedPages?.pages.flat() ?? [], [feedPages]);
+  // Offset pages shift when a post is published between two loads, so a row can appear at the end of one page and
+  // the start of the next: list each post once.
+  const rawPosts = React.useMemo(() => dedupeById((feedPages?.pages ?? []).map((p) => p.posts)), [feedPages]);
   // Paused (no connection) with nothing cached: say "You're offline" instead of an empty forum.
   const feedOffline = useIsOfflinePaused({ fetchStatus: feedFetchStatus, data: feedPages });
 

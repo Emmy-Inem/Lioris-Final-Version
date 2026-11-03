@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient, QueryKey } from '@tanstack/react-query';
 import { supabase } from '@/api/supabase';
+import { uniqueChannelName } from '@/utils/channelName';
 
 export interface LiveTable {
   table: string;
@@ -32,7 +33,7 @@ export function useLiveRefresh(channelName: string, tables: LiveTable[], queryKe
 
     let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
-      channel = supabase.channel(channelName);
+      channel = supabase.channel(uniqueChannelName(channelName));
       for (const t of JSON.parse(tablesKey) as LiveTable[]) {
         channel = channel.on('postgres_changes', { event: '*', schema: 'public', table: t.table, ...(t.filter ? { filter: t.filter } : {}) }, refresh);
       }

@@ -13,14 +13,18 @@ import { listConversations, sendMessage } from '@/api/messaging';
 import { isCallMessage, extractCallDetails, CallDetails, CALL_DECLINED_MARKER } from '@/api/calling';
 import { isUserBlocked, isUserMuted } from '@/api/connections';
 import { haptics } from '@/utils/haptics';
-
-const CALL_INVITE_MAX_AGE_MS = 3 * 60_000;
+import { CALL_INVITE_MAX_AGE_MS, inviteRingMsRemaining } from '@/utils/callInvite';
+import { isNewMessageEvent } from '@/utils/realtimeInvalidation';
 
 interface IncomingCall {
   conversationId: string;
   details: CallDetails;
   callerName: string;
   callerAvatar?: string | null;
+  /** Id of the [CALL_INVITE] chat message, so a re-delivered row (realtime also sends UPDATEs) never rings twice. */
+  messageId?: string;
+  /** Server timestamp of the invitation: the ring stops when it is no longer a live call. */
+  createdAt?: string;
 }
 
 /**
@@ -58,9 +62,11 @@ export function IncomingCallListener() {
   conversationsRef.current = conversations;
   const userIdRef = useRef(user?.id);
   userIdRef.current = user?.id;
+  // Invitations already rung for, answered or dismissed. An UPDATE of the same chat row used to ring again.
+  const handledInvitesRef = useRef<Set<string>>(new Set());
 
   const handleRealtimeEvent = useCallback((event: RealtimeEvent) => {
-    if (event.type !== 'message.created') return;
+    if (event.type !== 'message.created' || !isNewMessageEvent(event)) return;
     const row: any = event.message;
     const myId = userIdRef.current;
     if (!myId || !row?.content || row.sender_id === myId) return;
@@ -79,12 +85,20 @@ export function IncomingCallListener() {
     const details = extractCallDetails(row.content);
     if (!details) return;
 
+    const messageId: string | undefined = typeof row.id === 'string' ? row.id : undefined;
+    if (messageId) {
+      if (handledInvitesRef.current.has(messageId)) return;
+      handledInvitesRef.current.add(messageId);
+    }
+
     haptics.error();
     setIncoming({
       conversationId: row.channel_id,
       details,
       callerName: conv.participantName,
       callerAvatar: conv.participantAvatarUrl,
+      messageId,
+      createdAt: typeof row.created_at === 'string' ? row.created_at : undefined,
     });
   }, []);
 
@@ -96,7 +110,15 @@ export function IncomingCallListener() {
   useEffect(() => {
     if (!incoming) return;
     const id = setInterval(() => haptics.error(), 1200);
-    return () => clearInterval(id);
+    // A caller who gave up must not leave this phone buzzing forever: the invitation expires like any dead call.
+    const expiry = setTimeout(
+      () => setIncoming((current) => (current === incoming ? null : current)),
+      inviteRingMsRemaining(incoming.createdAt, Date.now(), CALL_INVITE_MAX_AGE_MS),
+    );
+    return () => {
+      clearInterval(id);
+      clearTimeout(expiry);
+    };
   }, [incoming]);
 
   function handleDecline() {

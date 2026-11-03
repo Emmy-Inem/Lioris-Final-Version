@@ -39,6 +39,7 @@ import { isUnverifiedPersonalUser } from '@/utils/verificationGate';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { submitVerificationRequest } from '@/api/verification';
 import { haptics } from '@/utils/haptics';
+import { isNewMessageEvent } from '@/utils/realtimeInvalidation';
 
 interface OutgoingMessage extends Message {
   failed?: boolean;
@@ -136,7 +137,9 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const handleRealtimeEvent = React.useCallback(
     (event: any) => {
       if (event.type === 'message.created' && event.conversationId === conversationId) {
-        if (event.message?.sender_id && event.message.sender_id !== user?.id) {
+        // Only a NEW message needs marking as read. Marking the thread read UPDATEs every unread row, and each of
+        // those UPDATEs arrives here as an event: reacting to them re-ran the mark-as-read call once per message.
+        if (isNewMessageEvent(event) && event.message?.sender_id && event.message.sender_id !== user?.id) {
           void markConversationAsRead(conversationId);
         }
         queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });

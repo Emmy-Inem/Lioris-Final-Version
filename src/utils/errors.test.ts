@@ -99,3 +99,45 @@ test('age-rule refusals from the database show their own sentence, even with the
   // an ordinary row-level-security failure keeps the generic wording
   assert.match(getFriendlyErrorMessage({ code: '42501', message: 'permission denied for table x' }), /permission/);
 });
+
+test('raw database and runtime text never reaches the member, even when short and without a code', () => {
+  const raw = [
+    'invalid input syntax for type uuid: "abc"',
+    'value too long for type character varying(100)',
+    'function public.get_feed(uuid) does not exist',
+    'Could not find the function public.foo(p_id) in the schema cache',
+    "Cannot read properties of undefined (reading 'id')",
+    "undefined is not an object (evaluating 'row.title')",
+    'x.map is not a function',
+    'Unexpected token < in JSON at position 0',
+    'deadlock detected',
+  ];
+  for (const message of raw) {
+    assert.equal(getFriendlyErrorMessage({ message }, 'FALLBACK'), 'FALLBACK', message);
+  }
+});
+
+test('"already exists" only means a duplicate account when the message is about an account or e-mail', () => {
+  assert.equal(
+    getFriendlyErrorMessage({ message: 'A community with that name already exists.' }, 'FALLBACK'),
+    'A community with that name already exists.',
+  );
+  assert.match(getFriendlyErrorMessage({ message: 'User already registered' }), /account with this email/i);
+  assert.match(getFriendlyErrorMessage({ message: 'A user with this email address already exists' }), /account with this email/i);
+});
+
+test('app-written sentences are still passed through', () => {
+  assert.equal(getFriendlyErrorMessage({ message: 'This listing has expired.' }, 'FALLBACK'), 'This listing has expired.');
+  assert.equal(getFriendlyErrorMessage({ message: 'Event does not exist anymore.' }, 'FALLBACK'), 'Event does not exist anymore.');
+});
+
+test('a bare "permission denied" from the database gets the permission message', () => {
+  assert.match(getFriendlyErrorMessage({ message: 'permission denied for table profiles' }), /don't have permission/i);
+});
+
+test('an upload size refusal keeps the bucket-specific limit instead of the generic 10 MB text', () => {
+  const msg = 'File size (30.0MB) exceeds the maximum allowed limit of 25MB for campus-media.';
+  assert.equal(getFriendlyErrorMessage(new Error(msg)), msg);
+  // The storage server's own wording (no limit given) still gets the generic message.
+  assert.match(getFriendlyErrorMessage({ message: 'The object exceeded the maximum allowed size', status: 413 }), /too large/i);
+});

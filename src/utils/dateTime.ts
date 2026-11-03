@@ -67,3 +67,21 @@ export function relativeTime(iso: string, now: number = Date.now()): string {
 export function endTimeOf(iso: string, durationMinutes: number): string {
   return new Date(new Date(iso).getTime() + durationMinutes * 60000).toISOString();
 }
+
+/**
+ * Formats an ISO string to the UTC YYYYMMDDTHHmmssZ form calendar providers need. Never throws: an unparseable `iso`
+ * falls back to `fallbackDate`, and an unparseable fallback to now (an Invalid Date used to reach toISOString(), which
+ * throws RangeError and made "Add to calendar" do nothing for an event with a corrupt start time).
+ */
+export function toCalendarUtcString(iso?: string | null, fallbackDate?: Date): string {
+  const candidates = [iso ? new Date(iso) : null, fallbackDate ?? null];
+  const valid = candidates.find((d): d is Date => !!d && !isNaN(d.getTime())) ?? new Date();
+  return valid.toISOString().replace(/[-:]|\.\d{3}/g, '');
+}
+
+/** Two hours after `startAt` (or after now when it is missing or unparseable): the default length of an event with no end. */
+export function calendarEndFallback(startAt?: string | null): Date {
+  const start = startAt ? new Date(startAt) : new Date();
+  const base = isNaN(start.getTime()) ? Date.now() : start.getTime();
+  return new Date(base + 2 * 3600000);
+}
