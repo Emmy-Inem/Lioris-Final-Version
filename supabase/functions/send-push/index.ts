@@ -35,10 +35,13 @@
 //   optional: supabase secrets set EXPO_ACCESS_TOKEN=<Expo access token>
 //
 // Response: { success: true, sent, removed, skipped?: <reason> }
+//           502 { success: false, error: 'push_provider_unavailable' } when Expo answered none of the batches
+//           (the de-duplication slot is released first, so the webhook can be retried).
 
 import { timingSafeEqual } from '../_shared/auth.ts';
 import { readJsonBody } from '../_shared/body.ts';
 import { consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
+import { classifyTickets, nothingDelivered, type ExpoTicket } from '../_shared/pushTickets.ts';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const MAX_BODY_BYTES = 64 * 1024;
@@ -72,13 +75,6 @@ interface WebhookPayload {
   table?: unknown;
   schema?: unknown;
   record?: NotificationRecord | null;
-}
-
-interface ExpoTicket {
-  status?: string;
-  id?: string;
-  message?: string;
-  details?: { error?: string };
 }
 
 function json(body: unknown, status: number): Response {
@@ -257,7 +253,8 @@ Deno.serve(async (req: Request) => {
     // Spam controls, applied last so skipped rows (blocked, muted, no token) spend nothing. A limiter
     // outage fails OPEN here: dropping a real notification is worse than a rare duplicate.
     // (1) De-duplicate by notification id: webhook retries / replays push at most once per 10 minutes.
-    const dedupe = await consumeRateLimit(admin, `push:${notificationId}`, 1, DEDUPE_WINDOW_SECONDS, { audit: false });
+    const dedupeKey = `push:${notificationId}`;
+    const dedupe = await consumeRateLimit(admin, dedupeKey, 1, DEDUPE_WINDOW_SECONDS, { audit: false });
     if (dedupe === 'limited') return json({ success: true, sent: 0, removed: 0, skipped: 'duplicate' }, 200);
     // (2) Per-sender and per-recipient hourly caps, so peer-inserted notifications cannot be used to
     //     spam a device. Critical system notifications (admin-only types) are exempt.
@@ -287,19 +284,27 @@ Deno.serve(async (req: Request) => {
 
     let sent = 0;
     const deadTokens: string[] = [];
+    let batchesAttempted = 0;
+    let batchesAnswered = 0;
     for (const batch of chunk(messages, EXPO_BATCH_SIZE)) {
+      batchesAttempted++;
       const tickets = await postToExpo(batch);
       if (!tickets) continue;
-      tickets.forEach((ticket, i) => {
-        if (ticket?.status === 'ok') {
-          sent++;
-        } else if (ticket?.details?.error === 'DeviceNotRegistered') {
-          deadTokens.push(String(batch[i]?.to));
-        } else if (ticket?.status === 'error') {
-          // Log the error class only - never the message body or token.
-          console.warn('[send-push] Expo ticket error:', ticket.details?.error ?? 'unknown');
-        }
-      });
+      batchesAnswered++;
+      const outcome = classifyTickets(batch.map((m) => String(m.to)), tickets);
+      sent += outcome.sent;
+      deadTokens.push(...outcome.deadTokens);
+      // Log the error class only - never the message body or token.
+      for (const errorClass of outcome.errors) console.warn('[send-push] Expo ticket error:', errorClass);
+    }
+
+    // Expo was unreachable for EVERY batch: nobody got this notification. Hand the de-duplication slot back
+    // (otherwise a retry of the webhook is skipped as a duplicate for 10 minutes and the push is lost for
+    // good) and answer 502 instead of a success-class status, so the caller can see it failed and retry.
+    if (nothingDelivered(batchesAttempted, batchesAnswered)) {
+      const { error: releaseError } = await admin.from('api_rate_limits').delete().eq('key', dedupeKey);
+      if (releaseError) console.error('[send-push] Could not release the de-duplication slot:', releaseError.message);
+      return json({ success: false, error: 'push_provider_unavailable', sent: 0, removed: 0 }, 502);
     }
 
     let removed = 0;

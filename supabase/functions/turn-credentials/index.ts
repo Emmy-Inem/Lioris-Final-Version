@@ -59,15 +59,17 @@ Deno.serve(async (req: Request) => {
   if (preflight) return preflight;
   if (req.method !== 'POST') return jsonResponse(req, { error: 'Method not allowed' }, 405);
 
+  // Authenticate FIRST: an anonymous caller always gets 401 (the deploy smoke checks and verify-production.sh
+  // expect that), and cannot probe whether TURN is configured.
+  const auth = await requireUser(req);
+  if (!auth.ok) return auth.response;
+  const uid = auth.caller.user.id;
+
   const keyId = Deno.env.get('TURN_KEY_ID');
   const apiToken = Deno.env.get('TURN_KEY_API_TOKEN');
   if (!keyId || !apiToken) {
     return jsonResponse(req, { error: 'not_configured' }, 503);
   }
-
-  const auth = await requireUser(req);
-  if (!auth.ok) return auth.response;
-  const uid = auth.caller.user.id;
 
   const admin = createServiceClient();
   if (!admin) {

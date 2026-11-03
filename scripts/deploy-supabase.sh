@@ -144,7 +144,8 @@ say ""
 say "== 4. Smoke checks (anon key, no user session) =="
 if [ "$DRY_RUN" -eq 1 ] || [ "$SKIP_SMOKE" -eq 1 ]; then
   say "  skipped. Would POST {} to each function and expect:"
-  say "    gemini-proxy, admin-delete-user, admin-impersonate-user, delete-my-account, turn-credentials -> 401"
+  say "    gemini-proxy, support-ai-chat, turn-credentials, delete-my-account and every admin-* function -> 401"
+  say "    login-with-username -> answers itself (invalid_credentials), proving JWT verification is off"
   say "    purge-expired-verification-documents, send-push -> 401 (500 = secret not set yet)"
   say "    overpass-proxy -> 400 (invalid coordinates)   report-client-error -> 400/202/204"
 else

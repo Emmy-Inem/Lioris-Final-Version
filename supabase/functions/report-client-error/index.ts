@@ -36,6 +36,7 @@ import { corsHeaders, handlePreflight, jsonResponse } from '../_shared/cors.ts';
 import { readJsonBody } from '../_shared/body.ts';
 import { clientIp, consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
 import { isUuid } from '../_shared/auth.ts';
+import { scrub } from '../_shared/scrub.ts';
 
 const MAX_BODY_BYTES = 16 * 1024;
 const MAX_MESSAGE = 1000;
@@ -56,16 +57,6 @@ const LEVELS = new Set(['error', 'warning', 'info']);
 
 function truncate(value: string, max: number): string {
   return value.length > max ? `${value.slice(0, max)}...[truncated]` : value;
-}
-
-function scrub(input: string): string {
-  return input
-    .replace(/eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*/g, '[jwt]')
-    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/gi, 'Bearer [token]')
-    .replace(/\bsb_(?:publishable|secret)_[A-Za-z0-9_-]+/g, '[key]')
-    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/g, '[email]')
-    .replace(/(https?:\/\/[^\s?#"'<>)]+)[?#][^\s"'<>)]*/g, '$1')
-    .replace(/\b(access_token|refresh_token|token|apikey|api_key|password|code)=[^\s&"']+/gi, '$1=[redacted]');
 }
 
 function cleanString(value: unknown, max: number): string | null {

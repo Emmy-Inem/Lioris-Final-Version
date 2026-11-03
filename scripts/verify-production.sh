@@ -78,9 +78,12 @@ fn_expect() { # name "codes..."  (space separated list of accepted codes)
   # shellcheck disable=SC2086
   if in_list "$CODE" $expected; then pass "$fn -> $CODE"; else fail "$fn -> $CODE (expected $expected)"; fi
 }
-for fn in gemini-proxy admin-delete-user admin-impersonate-user delete-my-account turn-credentials; do
+for fn in gemini-proxy support-ai-chat admin-create-user admin-force-signout admin-delete-user admin-impersonate-user \
+          admin-manage-institution admin-review-giving-campaign admin-review-paid-event delete-my-account turn-credentials; do
   fn_expect "$fn" "401"
 done
+# Pre-login by design (verify_jwt = false): the function itself answers 401 invalid_credentials to an empty body.
+fn_expect login-with-username "401"
 fn_expect purge-expired-verification-documents "401"
 fn_expect send-push "401"
 fn_expect overpass-proxy "400"
