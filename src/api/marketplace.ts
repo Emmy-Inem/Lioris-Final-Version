@@ -2,6 +2,8 @@ import { MarketplaceListing } from './types';
 import { supabase } from './supabase';
 import { getSessionUser } from '../auth/tokenStorage';
 import { generateUUID } from '../utils/uuid';
+import { parseNairaToKobo } from '../utils/marketplacePrice';
+import { formatNaira } from '../utils/paidEvents';
 
 export interface MarketplaceQuery {
  q?: string;
@@ -261,13 +263,13 @@ async function persistListingImage(value: string): Promise<string> {
  return resolveMediaUrl(trimmed, 'marketplace');
 }
 
-/** Parses a free-typed price into whole Naira, or throws instead of silently publishing a fake price. */
+/** Parses a free-typed price into kobo, or throws instead of silently publishing a wrong price. */
 function parsePriceOrThrow(price: string): number {
- const clean = Number(price.replace(/[^0-9]/g, ''));
- if (!Number.isFinite(clean) || clean <= 0) {
- throw new Error('Please enter a valid asking price greater than ₦0.');
+ const kobo = parseNairaToKobo(price);
+ if (kobo === null) {
+ throw new Error('Please enter the asking price as a plain naira amount, e.g. ₦15,000 or 15000.50 (no letters like "k").');
  }
- return clean;
+ return kobo;
 }
 
 export function isWishlisted(id: string): boolean {
@@ -362,15 +364,15 @@ export async function createListing(payload: CreateListingPayload): Promise<Mark
   let campusCode = isSuperAdmin ? ((payload as any).campusCode || profile?.campus_code || 'GLOBAL') : (profile?.campus_code || 'GLOBAL');
  if (!campusCode) campusCode = 'GLOBAL';
 
- const priceClean = parsePriceOrThrow(payload.price);
+ const priceKobo = parsePriceOrThrow(payload.price);
  const { error } = await supabase.from('marketplace_listings').insert({
  id: listingId,
  seller_id: sellerId,
  campus_code: campusCode,
  title: payload.title,
  description: payload.description,
- price_kobo: priceClean * 100,
- price_display: payload.price.startsWith('₦') ? payload.price : `₦${payload.price}`,
+ price_kobo: priceKobo,
+ price_display: formatNaira(priceKobo / 100),
  currency: 'NGN',
  condition: payload.condition,
  category: payload.category,
@@ -427,9 +429,9 @@ export async function updateListing(listingId: string, updates: UpdateListingPay
  if (updates.condition !== undefined) dbUpdates.condition = updates.condition;
  if (updates.category !== undefined) dbUpdates.category = updates.category;
  if (updates.price !== undefined) {
- const priceClean = parsePriceOrThrow(updates.price);
- dbUpdates.price_kobo = priceClean * 100;
- dbUpdates.price_display = updates.price.startsWith('₦') ? updates.price : `₦${updates.price}`;
+ const priceKobo = parsePriceOrThrow(updates.price);
+ dbUpdates.price_kobo = priceKobo;
+ dbUpdates.price_display = formatNaira(priceKobo / 100);
  }
  if (updates.imageUrls !== undefined) {
  const raw = (updates.imageUrls ?? []).slice(0, 4).filter((v): v is string => !!v);

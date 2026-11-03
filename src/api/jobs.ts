@@ -8,6 +8,7 @@ import { getInstitutionForEmail } from './institutions';
 import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
 import { inferWorkplaceType, inferExperienceLevel } from '../utils/careerFilters';
 import { getFriendlyErrorMessage, isMinorRestrictedError } from '../utils/errors';
+import { registerSessionCacheClearer } from '../utils/sessionCaches';
 
 export { inferWorkplaceType, inferExperienceLevel };
 
@@ -25,6 +26,11 @@ export interface JobsQuery {
 // so they render instantly before the next refetch. There are no bundled
 // fixtures: getLocalPool() below holds nothing but those own creations.
 let locallyCreatedJobs: JobListing[] = [];
+
+// Sign-out / account switch: the previous account's postings must not be merged into the next account's board.
+registerSessionCacheClearer('jobs', () => {
+  locallyCreatedJobs = [];
+});
 
 function getLocalPool(): JobListing[] {
   return [...locallyCreatedJobs];

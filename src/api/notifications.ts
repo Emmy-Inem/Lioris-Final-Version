@@ -430,8 +430,33 @@ export async function registerDevicePushToken(token: string): Promise<void> {
  * the session). With no argument it uses the token registered in this session.
  * Never throws.
  */
+/**
+ * The Expo push token of this device WITHOUT asking for anything: only when notification permission was already
+ * granted on a physical iOS/Android device. Used on sign-out after an app restart, when no token was registered in
+ * this JS session (the registration only runs at sign-in / onboarding, so lastRegisteredPushToken is empty), which used
+ * to leave the previous account's push_tokens row in place and its notifications arriving on a signed-out phone.
+ */
+async function currentDevicePushToken(): Promise<string | null> {
+ if (Platform.OS === 'web') return null;
+ try {
+ const Notifications = await import('expo-notifications');
+ const { status } = await Notifications.getPermissionsAsync();
+ if (status !== 'granted') return null;
+ const Constants = (await import('expo-constants')).default;
+ const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+ // Sign-out must never hang on Expo's servers: give up after 4 seconds.
+ const response = await Promise.race([
+ Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined),
+ new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+ ]);
+ return response?.data || null;
+ } catch {
+ return null;
+ }
+}
+
 export async function unregisterDevicePushToken(token?: string): Promise<void> {
- const target = token ?? lastRegisteredPushToken;
+ const target = token ?? lastRegisteredPushToken ?? (await currentDevicePushToken());
  if (!target) return;
  try {
  const { error } = await supabase.from('push_tokens').delete().eq('token', target);

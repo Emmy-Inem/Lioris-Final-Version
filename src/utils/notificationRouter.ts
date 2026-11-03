@@ -15,7 +15,12 @@ export function resolveNotificationRoute(
     ? userRole
     : 'student';
 
-  if (rawPath && typeof rawPath === 'string' && rawPath.trim().length > 0) {
+  // A deep link is an in-app path. Protocol-relative ("//host"), backslash and control-character forms are not, and
+  // would otherwise be returned verbatim as a "root path" below and handed to router.push(); they fall through to
+  // the notification-type fallback instead.
+  const isInAppPath = (p: string) => !/^\/\//.test(p) && !/[\\\u0000-\u001f\u007f]/.test(p);
+
+  if (rawPath && typeof rawPath === 'string' && rawPath.trim().length > 0 && isInAppPath(rawPath.trim())) {
     const trimmed = rawPath.trim();
 
     // Strip any leading /(student|staff|alumni|admin) prefix so both bare and

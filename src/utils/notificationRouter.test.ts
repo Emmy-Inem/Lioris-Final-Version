@@ -128,3 +128,13 @@ test('resolveNotificationRoute only returns routes that exist for the recipient 
   }
   assert.deepEqual(missing, []);
 });
+
+test('protocol-relative, backslash and control-character paths are never returned as routes', () => {
+  for (const evil of ['//evil.example/phish', '//evil.example', '/\\evil.example', '/ok\npath', '\\\\host\\share']) {
+    const route = resolveNotificationRoute(evil, 'announcement', 'student');
+    assert.equal(route, '/(student)/dashboard', evil);
+  }
+  // ordinary root paths and in-app deep links still work
+  assert.equal(resolveNotificationRoute('/privacy', 'system', 'student'), '/privacy');
+  assert.equal(resolveNotificationRoute('/messages/abc', 'message', 'staff'), '/(staff)/messages/abc');
+});

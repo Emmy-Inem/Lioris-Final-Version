@@ -117,6 +117,36 @@ const EVENT_NON_LIST_SUBKEYS = ['detail', 'waitlist', 'ticket', 'payment-info'] 
 
 type Row = Record<string, any> | null | undefined;
 
+export type ChangeEventType = 'INSERT' | 'UPDATE' | 'DELETE';
+
+/** The chat_messages row change as the in-app `message.created` event. `eventType` says whether it really was new. */
+export function messageEventFromChange(payload: { eventType?: string; new?: Row; old?: Row }): {
+  type: 'message.created';
+  conversationId: string;
+  message: Record<string, any>;
+  eventType?: ChangeEventType;
+} {
+  const row = (payload.new ?? {}) as Record<string, any>;
+  const eventType =
+    payload.eventType === 'INSERT' || payload.eventType === 'UPDATE' || payload.eventType === 'DELETE'
+      ? payload.eventType
+      : undefined;
+  return {
+    type: 'message.created',
+    conversationId: String(row.channel_id ?? payload.old?.channel_id ?? ''),
+    message: row,
+    eventType,
+  };
+}
+
+/**
+ * True only for a message that was just inserted. The same feed also delivers UPDATEs (every read receipt is one):
+ * acting on those re-marked the thread as read once per message and could re-trigger call prompts.
+ */
+export function isNewMessageEvent(event: { eventType?: string }): boolean {
+  return event.eventType === undefined || event.eventType === 'INSERT';
+}
+
 function pickId(newRow: Row, oldRow: Row, column: string): string {
   const value = newRow?.[column] ?? oldRow?.[column];
   return value ? String(value) : '';

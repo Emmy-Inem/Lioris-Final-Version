@@ -5,6 +5,7 @@ import { getSessionUser } from '../auth/tokenStorage';
 import { isUserBlocked, isUserMuted } from './connections';
 import { assertWithinStorageQuota } from './platformSettings';
 import { generateUUID } from '../utils/uuid';
+import { registerSessionCacheClearer } from '../utils/sessionCaches';
 import { getInstitutionForEmail } from './institutions';
 import { assertSafeHttpUrl, sanitizeHttpUrl } from '../utils/safeUrl';
 import { assertUuid } from '../utils/postgrest';
@@ -46,6 +47,11 @@ const MIME_EXTENSIONS: Record<string, string> = {
 };
 
 let locallyCreatedResources: Resource[] = [];
+
+// Sign-out / account switch: uploads of the previous account must not be merged into the next account's library.
+registerSessionCacheClearer('resources', () => {
+  locallyCreatedResources = [];
+});
 
 export interface ResourcesQuery {
   q?: string;
