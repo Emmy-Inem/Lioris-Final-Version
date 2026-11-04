@@ -6,6 +6,9 @@ module.exports = [
     ignores: [
       'node_modules/**',
       'dist/**',
+      '.claude/**',
+      'playwright-report/**',
+      'test-results/**',
       '.expo/**',
       'scratch/**',
       'assets/**',
