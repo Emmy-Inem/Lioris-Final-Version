@@ -112,7 +112,6 @@ function SettingsAccordionHeader({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${section.fullLabel}, ${isCollapsed ? 'collapsed' : 'expanded'}`}
       accessibilityState={{ expanded: !isCollapsed }}
       aria-expanded={!isCollapsed}
       onPress={onToggle}

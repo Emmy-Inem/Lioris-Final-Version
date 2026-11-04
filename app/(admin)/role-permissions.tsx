@@ -277,7 +277,6 @@ export default function RolePermissionsScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   aria-pressed={selected}
-                  accessibilityLabel={`${tab.label} role permissions`}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',

@@ -213,7 +213,7 @@ export function DesktopSidebar() {
  <Pressable
  onPress={user?.actualRole === 'admin' && user?.isSuperAdmin ? () => setWorkspaceModalOpen(true) : undefined}
  accessibilityRole={user?.actualRole === 'admin' && user?.isSuperAdmin ? 'button' : undefined}
- accessibilityLabel={user?.actualRole === 'admin' && user?.isSuperAdmin ? 'Switch campus network' : undefined}
+ accessibilityLabel={user?.actualRole === 'admin' && user?.isSuperAdmin ? `${campusName}, switch campus network` : undefined}
  style={[
  styles.campusPill,
  {

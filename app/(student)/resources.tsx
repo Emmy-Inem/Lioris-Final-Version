@@ -381,7 +381,7 @@ export default function ResourcesScreen() {
             <Pressable
               onPress={() => setLibraryModalOpen(true)}
               accessibilityRole="button"
-              accessibilityLabel="Search Global Academic Library"
+              accessibilityLabel="Global Library: search the global academic library"
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -402,7 +402,7 @@ export default function ResourcesScreen() {
           <Pressable
             onPress={() => setResearchModalOpen(true)}
             accessibilityRole="button"
-            accessibilityLabel="Search Research Papers & Thesis"
+            accessibilityLabel="Research Hub: search research papers and thesis"
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -848,7 +848,7 @@ export default function ResourcesScreen() {
                 <Pressable
                   onPress={() => setLibraryModalOpen(true)}
                   accessibilityRole="button"
-                  accessibilityLabel="Search Global Academic Library"
+                  accessibilityLabel="Global Library: search the global academic library"
                   style={{
                     backgroundColor: colors.brandPrimary,
                     borderRadius: radius.pill,
@@ -869,7 +869,7 @@ export default function ResourcesScreen() {
               <Pressable
                 onPress={() => setResearchModalOpen(true)}
                 accessibilityRole="button"
-                accessibilityLabel="Search Research Papers & Thesis"
+                accessibilityLabel="Research Hub: search research papers and thesis"
                 style={{
                   backgroundColor: colors.brandPrimary,
                   borderRadius: radius.pill,

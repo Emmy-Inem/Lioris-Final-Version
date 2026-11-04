@@ -138,7 +138,6 @@ export default function MinorsConsentScreen() {
           <Pressable
             onPress={() => setShowMissing((v) => !v)}
             accessibilityRole="button"
-            accessibilityLabel="Members without a date of birth"
             style={{ marginTop: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 6 }}
           >
             <Ionicons name={showMissing ? 'chevron-down' : 'chevron-forward'} size={14} color={colors.brandPrimary} />

@@ -10,7 +10,7 @@ import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
 import { AppTextField } from './AppTextField';
 import { DepartmentPicker } from './DepartmentPicker';
-import { Avatar } from './Avatar';
+import { Avatar, avatarInitials } from './Avatar';
 import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
 import { PostCard } from './PostCard';
@@ -492,7 +492,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
  {/* Change Photo Trigger */}
  <Pressable
  accessibilityRole="button"
- accessibilityLabel="Change cover photo"
+ accessibilityLabel="Change Photos: cover photo"
  onPress={() => setPhotoPickerOpen(true)}
  style={{
  position: 'absolute',
@@ -526,7 +526,7 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
           <View style={isDesktop ? { width: 360, gap: spacing.md, marginTop: -60 } : undefined}>
  <SolidCard radius={22} style={{ padding: isDesktop ? spacing.lg : spacing.md, position: 'relative' }}>
  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.sm }}>
- <Pressable accessibilityRole="button" accessibilityLabel="Change profile photo" onPress={() => setPhotoPickerOpen(true)} style={{ position: 'relative' }}>
+ <Pressable accessibilityRole="button" accessibilityLabel={`${avatarInitials(profile?.fullName ?? user?.fullName ?? 'You')}: change profile photo`} onPress={() => setPhotoPickerOpen(true)} style={{ position: 'relative' }}>
  <Avatar name={profile?.fullName ?? user?.fullName ?? 'You'} uri={profile?.avatarUrl ?? user?.avatarUrl ?? undefined} size={isDesktop ? 96 : 76} />
  <View
  style={{
@@ -639,7 +639,6 @@ export function ProfileScreen({ extraRows }: { extraRows?: React.ReactNode }) {
         <Pressable
           onPress={() => router.push(`/${roleGroup}/saved` as any)}
           accessibilityRole="button"
-          accessibilityLabel="Open your saved items"
           style={{
             flexDirection: 'row',
             alignItems: 'center',

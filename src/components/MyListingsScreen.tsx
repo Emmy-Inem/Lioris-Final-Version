@@ -115,7 +115,6 @@ export function MyListingsScreen() {
               accessibilityRole="button"
               accessibilityState={{ selected }}
               aria-pressed={selected}
-              accessibilityLabel={`${f.label}, ${count} listings`}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',

@@ -150,7 +150,6 @@ export default function AdminOverviewScreen() {
         {/* Universal Search Quick Bar */}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Universal Search: Find features, members, discussions, or controls"
           onPress={() => {
             haptics.light();
             setSearchModalOpen(true);
@@ -199,7 +198,6 @@ export default function AdminOverviewScreen() {
         {/* Live Analytics & Real User Activity Quick Hub */}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Open Campus Analytics & User Activity Hub"
           onPress={() => {
             haptics.light();
             router.push('/(admin)/analytics' as any);
@@ -308,7 +306,6 @@ export default function AdminOverviewScreen() {
               <Pressable
                 key={group.key}
                 accessibilityRole="button"
-                accessibilityLabel={`${group.label}. ${HUB_DESCRIPTIONS[group.key]}`}
                 onPress={() => {
                   haptics.light();
                   router.push(group.sections[0].route as any);
