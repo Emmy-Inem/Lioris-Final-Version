@@ -33,11 +33,24 @@ const INTERACTIVE_DESCENDANT =
   'a[href],button,input,textarea,select,summary,[tabindex="0"],[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="radio"],[role="switch"],[role="menuitem"],[role="slider"],[role="textbox"],[role="combobox"],[role="option"]';
 const ICON_GLYPHS = /[\uE000-\uF8FF\s]/g;
 
+function isScrollContainer(el: Element): boolean {
+  const style = typeof getComputedStyle === 'function' ? getComputedStyle(el) : null;
+  return !!style && /auto|scroll/.test(`${style.overflowY} ${style.overflowX}`);
+}
+
 function giveRoleToPressable(el: Element) {
   if (el.hasAttribute('role') || el.getAttribute('tabindex') !== '0') return;
-  const name = el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') || (el.textContent ?? '').replace(ICON_GLYPHS, '');
+  const label = el.getAttribute('aria-label');
+  const visibleText = (el.textContent ?? '').replace(ICON_GLYPHS, '').trim().toLowerCase();
+  const name = label || el.getAttribute('aria-labelledby') || visibleText;
   if (!name) return;
   if (el.querySelector(INTERACTIVE_DESCENDANT)) return;
+  // A keyboard-focusable scroll area (a long page of text) is a region, not an action.
+  if (isScrollContainer(el)) return;
+  // WCAG 2.5.3 (Label in Name): a button's accessible name must contain its visible text. A label that does not
+  // (e.g. aria-label "Lioris home" on a control showing "LIORIS Campus Network") would turn a harmless plain
+  // element into a failing button, so such elements keep no role until their label is fixed at the source.
+  if (label && visibleText && !label.toLowerCase().includes(visibleText)) return;
   el.setAttribute('role', 'button');
 }
 
