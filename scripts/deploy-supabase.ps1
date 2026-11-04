@@ -26,8 +26,15 @@ $SupabaseUrl = "https://$ProjectRef.supabase.co"
 # Public (publishable) key - safe to embed, it ships in every client bundle.
 $AnonKey = if ($env:SUPABASE_ANON_KEY) { $env:SUPABASE_ANON_KEY } else { 'sb_publishable_TB0Pw8k2oJQTmoO951YaIQ_xzOyGpZF' }
 
-# Functions deployed with --no-verify-jwt (mirrors supabase/config.toml).
-$JwtOff = @('overpass-proxy', 'purge-expired-verification-documents', 'send-push', 'report-client-error')
+# Functions deployed with --no-verify-jwt. Read from supabase/config.toml ([functions.<name>] verify_jwt = false) so the two
+# can never drift apart: login-with-username is called BEFORE sign-in, so a JWT check on it rejects every username sign-in.
+$JwtOff = @()
+$cfgPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'supabase/config.toml'
+$cfgName = $null
+foreach ($line in Get-Content $cfgPath) {
+  if ($line -match '^\[functions\.([^\]]+)\]') { $cfgName = $Matches[1] }
+  elseif ($cfgName -and $line -match '^verify_jwt\s*=\s*false') { $JwtOff += $cfgName }
+}
 
 $RequiredSecrets = @(
   'SUPABASE_SERVICE_ROLE_KEY', 'GEMINI_API_KEY', 'ALLOWED_ORIGINS', 'REQUIRE_ADMIN_MFA',
