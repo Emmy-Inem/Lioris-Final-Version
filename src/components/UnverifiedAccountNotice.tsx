@@ -136,7 +136,7 @@ export function UnverifiedAccountNotice() {
         {!isPending ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Verify student account now"
+            accessibilityLabel="Verify Now: verify your student account"
             onPress={() => {
               haptics.light();
               setModalOpen(true);

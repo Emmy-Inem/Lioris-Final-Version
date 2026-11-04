@@ -15,7 +15,7 @@ import { CampusMapModal } from '@/components/CampusMapModal';
 import { AppTutorialModal } from '@/components/AppTutorialModal';
 import { AppText } from '@/components/AppText';
 import { AppButton } from '@/components/AppButton';
-import { Avatar } from '@/components/Avatar';
+import { Avatar, avatarInitials } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { AmbassadorBadge } from '@/components/AmbassadorBadge';
@@ -350,7 +350,7 @@ export default function StudentDashboard() {
                 <Pressable
                   onPress={() => router.push('/(student)/profile')}
                   accessibilityRole="button"
-                  accessibilityLabel="View profile"
+                  accessibilityLabel={`${avatarInitials(profile?.fullName ?? user?.fullName ?? 'Student')}: view profile`}
                   style={{
                     borderRadius: 999,
                     borderWidth: 2.5,
@@ -408,7 +408,6 @@ export default function StudentDashboard() {
 
                   {profile?.verificationStatus !== 'verified' && user?.role !== 'admin' ? (
                     <Pressable accessibilityRole="link"
-                      accessibilityLabel="Verify your student ID"
                       onPress={() => router.push('/(student)/profile')}
                       hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
                       style={{ alignSelf: 'flex-start', marginTop: 3 }}

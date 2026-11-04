@@ -1490,7 +1490,7 @@ export function CommunityFeedScreen({ scope }: { scope: PostVisibilityScope }) {
                   <Pressable
                     onPress={handleOpenComposer}
                     accessibilityRole="button"
-                    accessibilityLabel="Attach photo or media"
+                    accessibilityLabel="Attach Photo / Media"
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                   >
                     <Ionicons name="image-outline" size={16} color={colors.brandPrimary} />

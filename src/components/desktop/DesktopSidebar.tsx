@@ -170,7 +170,7 @@ export function DesktopSidebar() {
         <Pressable
           onPress={() => router.push(isAmbassadorWorkspace ? ('/(admin)/dashboard' as any) : role === 'admin' ? ('/(admin)/dashboard' as any) : (`/(${role})/dashboard` as any))}
           accessibilityRole="link"
-          accessibilityLabel="Lioris home"
+          accessibilityLabel="Lioris Campus Network home"
           style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
         >
  <LiorisLogo size={36} variant="symbol" />
@@ -366,7 +366,9 @@ export function DesktopSidebar() {
         <Pressable
           onPress={() => router.push(isAmbassadorWorkspace ? ('/(admin)/profile' as any) : (`/(${role})/profile` as any))}
           accessibilityRole="link"
-          accessibilityLabel={`Open profile for ${user?.fullName || 'your account'}`}
+          // Expanded, the card shows the name, role and department, which already name the link (Label in Name);
+          // collapsed, only the avatar shows, so it needs its own label.
+          accessibilityLabel={collapsed ? `Open profile for ${user?.fullName || 'your account'}` : undefined}
           style={[styles.userCard, { justifyContent: collapsed ? 'center' : 'flex-start' }]}
         >
           <Avatar

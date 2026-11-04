@@ -33,6 +33,14 @@ interface AvatarProps {
   alt?: string;
 }
 
+/** The letters an avatar without a photo shows (first and last name). Exported so a control wrapping an avatar can include them in its label (WCAG 2.5.3 Label in Name). */
+export function avatarInitials(name: string | null | undefined): string {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  return parts.length > 1
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : (parts[0]?.[0] || '').toUpperCase();
+}
+
 export function Avatar({ name, uri, size = 44, alt }: AvatarProps) {
   const { colors, isDark } = useTheme();
 
@@ -51,10 +59,7 @@ export function Avatar({ name, uri, size = 44, alt }: AvatarProps) {
     return null;
   })();
 
-  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
-  const initials = parts.length > 1
-    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    : (parts[0]?.[0] || '').toUpperCase();
+  const initials = avatarInitials(name);
 
   return (
     <View
@@ -87,6 +92,9 @@ export function Avatar({ name, uri, size = 44, alt }: AvatarProps) {
       ) : initials ? (
         <AppText
           weight="bold"
+          // Decorative: the person's name is always given by a nearby label (or by the control that wraps the avatar), and
+          // letters that are not part of that name would break Label in Name (WCAG 2.5.3) for avatar-only buttons.
+          aria-hidden
           style={{
             fontSize: Math.max(11, Math.round(size * 0.36)),
             color: colors.brandPrimary,

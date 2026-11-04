@@ -15,7 +15,7 @@ import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { UnverifiedAccountNotice } from '@/components/UnverifiedAccountNotice';
 import { ErrorStateView } from '@/components/ErrorStateView';
 import { refetchFailedQueries, summarizeQueryErrors } from '@/utils/queryError';
-import { Avatar } from '@/components/Avatar';
+import { Avatar, avatarInitials } from '@/components/Avatar';
 import { AnnouncementsWidget } from '@/components/AnnouncementsWidget';
 import { AppTutorialModal } from '@/components/AppTutorialModal';
 import { JobCard } from '@/components/JobCard';
@@ -248,7 +248,7 @@ export default function AlumniDashboard() {
                 <Pressable
                   onPress={() => router.push('/(alumni)/profile')}
                   accessibilityRole="button"
-                  accessibilityLabel="View profile"
+                  accessibilityLabel={`${avatarInitials(fullName)}: view profile`}
                   style={{
                     borderRadius: 999,
                     borderWidth: 2.5,
