@@ -31,6 +31,17 @@ export class WebRTCCallSession implements IWebRTCCallSession {
     this.config = config;
   }
 
+  /**
+   * hangup() can run while start() is still awaiting the camera/microphone prompt or the TURN lookup. Without this
+   * check start() carried on afterwards: it kept the media it was granted (camera light stays on), built a peer
+   * connection and opened a signalling channel that nothing would ever close.
+   */
+  private abortedByHangup(): boolean {
+    if (!this.isCleanedUp) return false;
+    this.releaseLocalStream();
+    return true;
+  }
+
   public async start(): Promise<void> {
     if (typeof window === 'undefined') return;
 
@@ -69,6 +80,8 @@ export class WebRTCCallSession implements IWebRTCCallSession {
         }
       }
 
+      if (this.abortedByHangup()) return;
+
       // 2. Setup RTCPeerConnection
       const RTCPC = (window as any).RTCPeerConnection || (window as any).webkitRTCPeerConnection;
       if (!RTCPC) {
@@ -77,6 +90,7 @@ export class WebRTCCallSession implements IWebRTCCallSession {
 
       // STUN + (when configured) TURN relay credentials; STUN-only on any failure.
       const iceServers = await getIceServers();
+      if (this.abortedByHangup()) return;
       this.peerConnection = new RTCPC({
         iceServers,
         iceCandidatePoolSize: 4,

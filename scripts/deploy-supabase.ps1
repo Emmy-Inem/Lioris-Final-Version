@@ -118,7 +118,8 @@ Write-Host ''
 Write-Host '== 4. Smoke checks (anon key, no user session) =='
 if ($DryRun -or $SkipSmoke) {
   Write-Host '  skipped. Would POST {} to each function and expect:'
-  Write-Host '    gemini-proxy, admin-delete-user, admin-impersonate-user, delete-my-account, turn-credentials -> 401'
+  Write-Host '    gemini-proxy, support-ai-chat, turn-credentials, delete-my-account and every admin-* function -> 401'
+  Write-Host '    login-with-username -> 401 invalid_credentials (JWT verification off)'
   Write-Host '    purge-expired-verification-documents, send-push -> 401 (500 = secret not set yet)'
   Write-Host '    overpass-proxy -> 400 (invalid coordinates)   report-client-error -> 400/202/204'
 } else {
@@ -128,6 +129,13 @@ if ($DryRun -or $SkipSmoke) {
     'admin-impersonate-user'               = @(401)
     'delete-my-account'                    = @(401)
     'turn-credentials'                     = @(401)
+    'support-ai-chat'                      = @(401)
+    'admin-create-user'                    = @(401)
+    'admin-force-signout'                  = @(401)
+    'admin-manage-institution'             = @(401)
+    'admin-review-giving-campaign'         = @(401)
+    'admin-review-paid-event'              = @(401)
+    'login-with-username'                  = @(401)
     'purge-expired-verification-documents' = @(401)
     'send-push'                            = @(401)
     'overpass-proxy'                       = @(400)

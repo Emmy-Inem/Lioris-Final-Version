@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 // @ts-ignore TS5097
-import { createCoalescer, matchesTarget, planInvalidations } from './realtimeInvalidation.ts';
+import { createCoalescer, isNewMessageEvent, matchesTarget, messageEventFromChange, planInvalidations } from './realtimeInvalidation.ts';
 
 /** A manual clock so the coalescer can be tested without real timers. */
 function fakeTimers() {
@@ -153,5 +153,26 @@ describe('planInvalidations', () => {
 
   it('ignores tables it does not know', () => {
     assert.deepEqual(planInvalidations('profiles', {}, {}), []);
+  });
+});
+
+describe('chat message change events', () => {
+  it('keeps the change type so a read receipt is not mistaken for a new message', () => {
+    const insert = messageEventFromChange({ eventType: 'INSERT', new: { id: 'm1', channel_id: 'c1', sender_id: 'u2' } });
+    const update = messageEventFromChange({ eventType: 'UPDATE', new: { id: 'm1', channel_id: 'c1', is_read: true } });
+    assert.equal(insert.conversationId, 'c1');
+    assert.equal(isNewMessageEvent(insert), true);
+    assert.equal(update.conversationId, 'c1');
+    assert.equal(isNewMessageEvent(update), false);
+  });
+
+  it('a DELETE still names its conversation when only the old row is present, and is not new', () => {
+    const del = messageEventFromChange({ eventType: 'DELETE', new: {}, old: { id: 'm1', channel_id: 'c9' } });
+    assert.equal(del.conversationId, 'c9');
+    assert.equal(isNewMessageEvent(del), false);
+  });
+
+  it('an event without a change type (older callers) is treated as new', () => {
+    assert.equal(isNewMessageEvent({}), true);
   });
 });

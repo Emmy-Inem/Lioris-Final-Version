@@ -1,4 +1,4 @@
--- LIORIS manual SQL, part 3 of 18: 20261030000000_optional_admin_mfa_enforcement.sql
+-- LIORIS manual SQL, part 3 of 19: 20261030000000_optional_admin_mfa_enforcement.sql
 -- Paste this whole file into the Supabase SQL editor and Run. Parts must be run in order; the guard below
 -- stops this part if an earlier one is missing. Safe to run twice.
 SET lock_timeout = '8s';

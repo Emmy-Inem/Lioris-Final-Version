@@ -1,6 +1,7 @@
 import { Alert, Platform } from 'react-native';
 import { openExternalUrl } from './openExternalUrl';
 import { haptics } from './haptics';
+import { calendarEndFallback, toCalendarUtcString } from './dateTime';
 
 export interface CalendarEventPayload {
   id?: string;
@@ -11,12 +12,7 @@ export interface CalendarEventPayload {
   endAt?: string | null;
 }
 
-/** Formats an ISO string (or Date) to UTC YYYYMMDDTHHmmssZ required by calendar providers */
-export function toCalendarUtcString(iso?: string | null, fallbackDate?: Date): string {
-  const d = iso ? new Date(iso) : fallbackDate ?? new Date();
-  const valid = isNaN(d.getTime()) ? (fallbackDate ?? new Date()) : d;
-  return valid.toISOString().replace(/[-:]|\.\d{3}/g, '');
-}
+export { toCalendarUtcString };
 
 /**
  * Builds a direct Google Calendar event creation URL (render action).
@@ -24,7 +20,7 @@ export function toCalendarUtcString(iso?: string | null, fallbackDate?: Date): s
  */
 export function getGoogleCalendarUrl(event: CalendarEventPayload): string {
   const startUtc = toCalendarUtcString(event.startAt, new Date(Date.now() + 86400000));
-  const fallbackEnd = new Date(new Date(event.startAt || Date.now()).getTime() + 2 * 3600000);
+  const fallbackEnd = calendarEndFallback(event.startAt);
   const endUtc = toCalendarUtcString(event.endAt, fallbackEnd);
 
   const title = encodeURIComponent(event.title || 'Campus Event');
@@ -55,7 +51,7 @@ export function generateIcsContent(event: CalendarEventPayload): string {
   const now = new Date();
   const dtStamp = toCalendarUtcString(now.toISOString());
   const dtStart = toCalendarUtcString(event.startAt, new Date(Date.now() + 86400000));
-  const fallbackEnd = new Date(new Date(event.startAt || Date.now()).getTime() + 2 * 3600000);
+  const fallbackEnd = calendarEndFallback(event.startAt);
   const dtEnd = toCalendarUtcString(event.endAt, fallbackEnd);
   const uid = event.id ? `${event.id}@lioris.app` : `evt-${Date.now()}@lioris.app`;
 

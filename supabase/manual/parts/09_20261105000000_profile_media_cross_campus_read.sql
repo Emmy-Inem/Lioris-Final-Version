@@ -1,4 +1,4 @@
--- LIORIS manual SQL, part 9 of 18: 20261105000000_profile_media_cross_campus_read.sql
+-- LIORIS manual SQL, part 9 of 19: 20261105000000_profile_media_cross_campus_read.sql
 -- Paste this whole file into the Supabase SQL editor and Run. Parts must be run in order; the guard below
 -- stops this part if an earlier one is missing. Safe to run twice.
 SET lock_timeout = '8s';

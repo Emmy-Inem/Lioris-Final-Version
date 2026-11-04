@@ -136,6 +136,24 @@ export async function countActiveAdmins(admin: SupabaseClient, excludeId?: strin
 }
 
 /**
+ * Best-effort sweep of tables that keep the raw user id WITHOUT a foreign key, so neither the FK loop of
+ * purge_user_data() nor the Auth deletion removes them: the rate-limit counters (`<action>:<uid>` keys) and the
+ * notification send log. Never throws: the account is already gone, a failure here is only logged.
+ */
+async function dropUserIdentifiers(admin: SupabaseClient, uid: string): Promise<void> {
+  try {
+    const limits = await admin.from('api_rate_limits').delete().like('key', `%:${uid}`);
+    if (limits.error) console.error('[purge] could not drop rate-limit keys:', limits.error.message);
+    const sendLog = await admin.from('notification_send_log').delete().eq('sender_id', uid);
+    if (sendLog.error && sendLog.error.code !== '42P01') {
+      console.error('[purge] could not drop notification_send_log rows:', sendLog.error.message);
+    }
+  } catch (err) {
+    console.error('[purge] identifier sweep failed:', err instanceof Error ? err.message : 'unknown');
+  }
+}
+
+/**
  * Full erasure: storage -> DB rows -> Auth user. Returns normally only when all
  * three succeeded. Throws (with the failing step attached) otherwise; the Auth
  * user is NOT deleted unless the earlier steps succeeded, so callers may retry.
@@ -151,7 +169,14 @@ export async function eraseUser(
     throw Object.assign(new Error('storage_cleanup_failed'), { cause: err });
   }
   try {
-    await purgeUserData(admin, uid);
+    const purged = (await purgeUserData(admin, uid)) as { skipped_restrictive_fks?: unknown } | null;
+    // Rows that reference the user with a RESTRICT / NO ACTION foreign key are not removed by the purge and make
+    // the Auth deletion below fail on every retry. Surface the table.column names (no personal data) so the
+    // blocking table can be fixed in SQL instead of the user seeing an endless "safe to retry".
+    const skipped = purged?.skipped_restrictive_fks;
+    if (Array.isArray(skipped) && skipped.length > 0) {
+      console.error('[purge] purge_user_data skipped restrictive foreign keys:', skipped.map(String).join(', '));
+    }
   } catch (err) {
     throw Object.assign(new Error('data_purge_failed'), { cause: err });
   }
@@ -159,5 +184,6 @@ export async function eraseUser(
   if (error) {
     throw Object.assign(new Error('auth_delete_failed'), { cause: error });
   }
+  await dropUserIdentifiers(admin, uid);
   return { storage };
 }

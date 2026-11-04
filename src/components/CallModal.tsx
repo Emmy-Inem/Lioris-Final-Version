@@ -12,6 +12,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useRealtimeChannel, RealtimeEvent } from '@/realtime/useRealtimeChannel';
 import { haptics } from '@/utils/haptics';
+import { isNewMessageEvent } from '@/utils/realtimeInvalidation';
 import { WebRTCCallSession } from '@/api/webrtc';
 import { CALL_DECLINED_MARKER } from '@/api/calling';
 import { CallMediaSurface } from './CallMediaSurface';
@@ -163,6 +164,8 @@ export function CallModal({
   // every time the `seconds` timer ticks.
   const conversationIdRef = useRef(conversationId);
   conversationIdRef.current = conversationId;
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
   const userIdRef = useRef(user?.id);
   userIdRef.current = user?.id;
   const partnerNameRef = useRef(partnerName);
@@ -173,7 +176,8 @@ export function CallModal({
   toastRef.current = toast;
 
   const handleRealtimeEvent = useCallback((event: RealtimeEvent) => {
-    if (event.type !== 'message.created') return;
+    // INSERT only: a read-receipt UPDATE of an OLD [CALL_DECLINED] row used to hang up a call that had just started.
+    if (event.type !== 'message.created' || !isNewMessageEvent(event) || !visibleRef.current) return;
     const row: any = event.message;
     const myId = userIdRef.current;
     const convId = conversationIdRef.current;

@@ -19,6 +19,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '@/api/supabase';
 import { getBreadcrumbs } from './breadcrumbs';
+import { scrubBreadcrumbs, scrubText } from '@/utils/scrubText';
 
 export type ErrorLevel = 'error' | 'warning' | 'info';
 export type ErrorContext = Record<string, unknown>;
@@ -53,24 +54,7 @@ function randomId(): string {
 // Scrubbing
 // ---------------------------------------------------------------------------
 
-/** Removes personal data / credentials from free text. Exported for unit tests. */
-export function scrubText(input: string): string {
-  return (
-    input
-      // JWT-looking strings (three base64url segments, header starts with eyJ)
-      .replace(/eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*/g, '[jwt]')
-      // Authorization bearer tokens
-      .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/gi, 'Bearer [token]')
-      // Supabase publishable / secret keys
-      .replace(/\bsb_(?:publishable|secret)_[A-Za-z0-9_-]+/g, '[key]')
-      // Emails
-      .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/g, '[email]')
-      // Query strings / fragments on absolute URLs (they can carry tokens and PII)
-      .replace(/(https?:\/\/[^\s?#"'<>)]+)[?#][^\s"'<>)]*/g, '$1')
-      // key=value credentials that survive outside URLs
-      .replace(/\b(access_token|refresh_token|token|apikey|api_key|password|code)=[^\s&"']+/gi, '$1=[redacted]')
-  );
-}
+export { scrubText };
 
 function truncate(value: string, max: number): string {
   return value.length > max ? `${value.slice(0, max)}...[truncated]` : value;
@@ -246,7 +230,7 @@ function report(level: ErrorLevel, error: unknown, context?: ErrorContext): void
         platform: Platform.OS,
         errorName: name,
         // What the user was doing right before this, so a report is more than a stack trace.
-        breadcrumbs: getBreadcrumbs(),
+        breadcrumbs: scrubBreadcrumbs(getBreadcrumbs()),
       },
     };
 

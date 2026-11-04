@@ -18,8 +18,12 @@ Everything here is a manual step: nothing is deployed automatically by the repo.
 The functions call RPCs / tables from these migrations, so apply them **before** deploying:
 
 - `public.consume_rate_limit(p_key text, p_limit int, p_window_seconds int) returns boolean` (service_role only)
-- `public.purge_user_data(p_user_id uuid) returns jsonb` (service_role only)
-- `public.list_expired_verification_documents(p_days int default 30) returns table(bucket text, path text)` (service_role only)
+- `public.consume_rate_limit_ex(p_key text, p_limit int, p_window_seconds int) returns jsonb` (`{ allowed, count }`; service_role only; `20261108000000_edge_support.sql`. The limiter falls back to `consume_rate_limit` when it is missing)
+- `public.purge_user_data(p_user_id uuid) returns jsonb` (service_role only; refuses `role = 'admin'`, which includes Campus Ambassadors until they are revoked)
+- `public.list_expired_verification_documents(p_days int default 30, p_limit int default 500) returns table(bucket text, path text, verification_id uuid)` and `public.clear_verification_document_paths(p_ids uuid[]) returns int` (service_role only)
+- `public.admin_revoke_user_sessions(p_user_id uuid, p_since timestamptz default null)` and `public.bump_client_error(p_fingerprint text, p_window_seconds int default 3600)` (service_role only; `20261108000000_edge_support.sql`; used by `admin-force-signout` / `admin-impersonate-user` and `report-client-error`)
+- `public.admin_review_giving_campaign`, `admin_update_giving_total`, `admin_apply_payment_review`, `admin_store_link_check`, `admin_save_partnership` (service_role only; `20261109000000_admin_workflow_hardening.sql` and `20260925140000_paid_events.sql`), `public.campus_delete_impact` / `public.admin_delete_campus` (`admin-manage-institution`) and `public.get_email_for_username` (`login-with-username`)
+- `public.claim_push_token(p_token text, p_platform text default null)` (authenticated; the app calls it, `send-push` only reads and deletes `push_tokens`)
 - `public.push_tokens` (owner-only RLS; read by `send-push` with the service role)
 - `public.latest_consent(p_type text default 'terms_and_privacy') returns text` and `public.record_consent(p_version text, p_age_confirmed boolean default true)` (authenticated; used by the in-app re-consent gate, which fails open if they are missing)
 
@@ -43,9 +47,12 @@ supabase secrets set EXPO_ACCESS_TOKEN=<Expo access token>
 | Secret | Used by | Notes |
 | --- | --- | --- |
 | `SUPABASE_SERVICE_ROLE_KEY` | all functions | Server-only. Never in a client `.env`. |
-| `GEMINI_API_KEY` | gemini-proxy | Rotate the key that was previously exposed in the web bundle. |
-| `ALLOWED_ORIGINS` | all browser-facing functions | Comma separated, exact origins, no trailing slash. Unset = built-in defaults (vercel.app, lioris.app, www.lioris.app, localhost:8081/19006). Drop the localhost entries in production. |
-| `REQUIRE_ADMIN_MFA` | admin-delete-user, admin-impersonate-user, admin-manage-institution, admin-review-paid-event, admin-review-giving-campaign | `true`: always require an AAL2 (TOTP-verified) session. `false`: never. Unset (default): only for admins who have enrolled a TOTP factor - matching the app policy that 2FA is voluntary. An admin who is asked for it gets `403 mfa_required`; the User Directory then prompts for the 6-digit code and retries. With `true`, an admin who never enrolled cannot use these functions until they enrol (Settings > Security). |
+| `GEMINI_API_KEY` | gemini-proxy, support-ai-chat | Rotate the key that was previously exposed in the web bundle. |
+| `ALLOWED_ORIGINS` | all browser-facing functions | Comma separated, exact origins, no trailing slash. Unset = the built-in production origins (lioris-campus.vercel.app, lioris-final-version.vercel.app, lioris.app, www.lioris.app); the localhost dev origins (8081 / 19006) are added only when `ENV=dev`. |
+| `ENV` | all browser-facing functions | Optional. `dev` adds the localhost dev origins to the default `ALLOWED_ORIGINS`. Never set it in production. |
+| `AI_DISABLED` | gemini-proxy, support-ai-chat | Optional kill switch: `true` / `1` answers `503 not_configured` at once (an admin can also flip `platform_settings.ai_disabled` with no redeploy). |
+| `AI_DAILY_CAP` | gemini-proxy, support-ai-chat | Optional. Global requests per 24 h across both functions (default 3000). |
+| `REQUIRE_ADMIN_MFA` | every `admin-*` function (admin-create-user, admin-force-signout, admin-delete-user, admin-impersonate-user, admin-manage-institution, admin-review-paid-event, admin-review-giving-campaign) | `true`: always require an AAL2 (TOTP-verified) session. `false`: never. Unset (default): only for admins who have enrolled a TOTP factor - matching the app policy that 2FA is voluntary. An admin who is asked for it gets `403 mfa_required`; the User Directory then prompts for the 6-digit code and retries. With `true`, an admin who never enrolled cannot use these functions until they enrol (Settings > Security). |
 | `CRON_SECRET` | purge-expired-verification-documents | At least 16 characters; compared in constant time. |
 | `PUSH_WEBHOOK_SECRET` | send-push | At least 16 characters; sent by the Database Webhook as header `x-webhook-secret`; compared in constant time. Missing = the function refuses everything (500). |
 | `TURN_KEY_ID`, `TURN_KEY_API_TOKEN` | turn-credentials | Cloudflare Realtime TURN key (below). Missing = `503 not_configured` and calls fall back to STUN only. |
@@ -73,6 +80,8 @@ WebRTC media/ICE traffic is not governed by the page CSP, so `vercel.json` needs
 | --- | --- | --- |
 | gemini-proxy | true | `supabase functions deploy gemini-proxy` |
 | support-ai-chat | true | `supabase functions deploy support-ai-chat` (customer-care AI assistant in Settings > Help & Support; reuses the GEMINI_API_KEY secret) |
+| admin-create-user | true | `supabase functions deploy admin-create-user` (Super Admin: any campus / role; Campus Admin incl. Campus Ambassador: own campus, student / alumni / staff only) |
+| admin-force-signout | true | `supabase functions deploy admin-force-signout` (revokes every session of a non-admin user; Campus Admins only for their own campus) |
 | admin-delete-user | true | `supabase functions deploy admin-delete-user` |
 | admin-impersonate-user | true | `supabase functions deploy admin-impersonate-user` |
 | admin-manage-institution | true | `supabase functions deploy admin-manage-institution` |
@@ -84,6 +93,7 @@ WebRTC media/ICE traffic is not governed by the page CSP, so `vercel.json` needs
 | purge-expired-verification-documents | false (cron, secret header) | `supabase functions deploy purge-expired-verification-documents --no-verify-jwt` |
 | send-push | false (database webhook, secret header) | `supabase functions deploy send-push --no-verify-jwt` |
 | report-client-error | false (errors happen before login) | `supabase functions deploy report-client-error --no-verify-jwt` |
+| login-with-username | false (called before sign-in) | `supabase functions deploy login-with-username --no-verify-jwt` |
 
 Or deploy everything: `scripts/deploy-supabase.sh` / `scripts\deploy-supabase.ps1` (`--dry-run` / `-DryRun` to preview). The script checks the CLI is logged in and linked to `fdtnbluslkabwsmspbem`, lists required secrets that are still missing, deploys every function directory and finishes with smoke checks (anon key, expected 401 for auth-required functions).
 
@@ -118,9 +128,9 @@ select cron.schedule(
 
 - `admin-impersonate-user`: `{ targetUserId, reason }` (reason >= 10 chars) to start, `{ action: 'end', targetUserId }` to end. The **end** call needs the *admin's own* AAL2 session, so the client must restore the admin session before calling it (the impersonated session is the target's, not the admin's).
 - `admin-delete-user`: `{ targetUserId, reason }` (reason >= 10 chars). Admin targets are refused: demote first.
-- `delete-my-account`: `{ confirm: 'DELETE' }`.
+- `delete-my-account`: `{ confirm: 'DELETE' }` (plus `password` when the session is older than 10 minutes; `403 reauth_required` otherwise). Administrators, Campus Ambassadors included, get `409 admin_must_demote` until their admin role is removed.
 - `turn-credentials`: `POST {}` as a signed-in user -> `{ iceServers, ttl }` or `503 { error: 'not_configured' }`.
-- `send-push`: called only by the Database Webhook (`{ type: 'INSERT', table: 'notifications', record }` + `x-webhook-secret`).
+- `send-push`: called only by the Database Webhook (`{ type: 'INSERT', table: 'notifications', record }` + `x-webhook-secret`). `502 push_provider_unavailable` means Expo answered nothing; the de-duplication slot is released, so the same row can be re-sent.
 - The minted impersonation session is a real session and cannot be time-limited server-side. The audit trail (`impersonation_started` / `impersonation_ended`) is the control.
 - Re-consent: when `TERMS_VERSION` in `src/constants/legal.ts` changes, every signed-in user sees a blocking "We updated our Terms & Privacy Policy" prompt (`src/components/ReConsentGate.tsx`) until `record_consent` succeeds. It never blocks on network/RPC errors. Bump the version only when the documents materially change.
 

@@ -1,4 +1,4 @@
--- LIORIS manual SQL, part 4 of 18: 20261031000000_fix_superadmin_rls_and_verification_gaps.sql
+-- LIORIS manual SQL, part 4 of 19: 20261031000000_fix_superadmin_rls_and_verification_gaps.sql
 -- Paste this whole file into the Supabase SQL editor and Run. Parts must be run in order; the guard below
 -- stops this part if an earlier one is missing. Safe to run twice.
 SET lock_timeout = '8s';

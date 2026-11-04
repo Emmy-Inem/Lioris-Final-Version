@@ -19,6 +19,34 @@ export interface ErrorShape {
  */
 const AGE_RULE_MESSAGE_RE = /\b(MINOR_RESTRICTED|AGE_UNDER_13|DOB_LOCKED|DOB_INVALID|GUARDIAN_INVALID|GUARDIAN_NOT_NEEDED|CONSENT_INVALID):\s*(.+)$/;
 
+/**
+ * Short Postgres / PostgREST / JavaScript runtime messages that carry no code in the error object, so the keyword
+ * checks above miss them and the length check let them through as if they were sentences written for the member.
+ */
+const TECHNICAL_TEXT_RE = new RegExp(
+  [
+    'permission denied for',
+    'invalid input syntax',
+    'value too long for type',
+    '(?:function|operator|schema|table|relation|type|extension)\\s+["\\w.(),: ]+\\s+does not exist',
+    'schema cache',
+    'sqlstate',
+    'deadlock detected',
+    'could not serialize',
+    'null value in',
+    'cannot read propert',
+    'undefined is not',
+    'is not a function',
+    'is not defined',
+    'is not iterable',
+    'unexpected token',
+    'unexpected end of json',
+    'json parse',
+    '\\bjwt\\b',
+  ].join('|'),
+  'i',
+);
+
 /** True when the error is the database refusing something because of the member's age (a limited minor account). */
 export function isMinorRestrictedError(error: unknown): boolean {
   const msg = typeof error === 'string' ? error : (error as any)?.message ?? '';
@@ -62,6 +90,10 @@ export function getFriendlyErrorMessage(error: unknown, fallback?: string): stri
   const ageRule = AGE_RULE_MESSAGE_RE.exec(rawMsg);
   if (ageRule) return ageRule[2].trim();
 
+  // Our own upload check ("File size (30.0MB) exceeds the maximum allowed limit of 25MB for campus-media.") already
+  // states the real limit for that bucket; the generic "file size" rule below would replace it with a wrong "10 MB".
+  if (/exceeds the maximum allowed limit of \d+(?:\.\d+)?\s?MB/i.test(rawMsg) && rawMsg.length < 200) return rawMsg;
+
   const msg = rawMsg.toLowerCase().trim();
   const code = rawCode.toLowerCase().trim();
 
@@ -92,7 +124,8 @@ export function getFriendlyErrorMessage(error: unknown, fallback?: string): stri
   if (
     msg.includes('user already registered') ||
     msg.includes('user_already_exists') ||
-    msg.includes('already exists') ||
+    // "already exists" alone is too broad: "A community with that name already exists" is not a duplicate account.
+    (msg.includes('already exists') && /\b(e-?mail|account|user)\b/.test(msg)) ||
     msg.includes('duplicate key') && msg.includes('email') ||
     code === '23505' && msg.includes('email')
   ) {
@@ -174,6 +207,7 @@ export function getFriendlyErrorMessage(error: unknown, fallback?: string): stri
   if (
     msg.includes('violates row-level security') ||
     msg.includes('security policy') ||
+    msg.includes('permission denied for') ||
     code === '42501'
   ) {
     return "You don't have permission to perform this action. Please check your verification status or sign in again.";
@@ -231,6 +265,7 @@ export function getFriendlyErrorMessage(error: unknown, fallback?: string): stri
   // If rawMsg is already a clean user-facing sentence (e.g. without SQL or technical keywords), return it
   if (
     rawMsg &&
+    !TECHNICAL_TEXT_RE.test(rawMsg) &&
     !rawMsg.includes('PGRST') &&
     !rawMsg.includes('syntax error') &&
     !rawMsg.includes('violates') &&

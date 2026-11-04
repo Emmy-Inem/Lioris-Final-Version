@@ -136,7 +136,7 @@ Path: **Authentication > Sign In / Providers > Multi-Factor** (may appear as "MF
 - **TOTP (App Authenticator)**: **Enabled** for enrol and verify. The app enrols staff and admin inline (`verify-mfa.tsx`).
 - Phone/SMS MFA: OFF (no SMS provider).
 - Max enrolled factors per user: 10 is fine.
-- After enabling, sign in as an admin and staff test account and confirm the session reaches AAL2 (`auth.jwt() ->> 'aal' = 'aal2'`). The edge functions `admin-delete-user` and `admin-impersonate-user` reject non-AAL2 admins while `REQUIRE_ADMIN_MFA` is not `false`.
+- After enabling, sign in as an admin and staff test account and confirm the session reaches AAL2 (`auth.jwt() ->> 'aal' = 'aal2'`). The edge functions `admin-delete-user` and `admin-impersonate-user` reject non-AAL2 admins while `REQUIRE_ADMIN_MFA` is `true` (when it is unset, only admins who enrolled a factor are asked for AAL2; `false` never asks).
 - Store recovery guidance for staff who lose their authenticator (admin removes the factor from the User Directory / dashboard, user re-enrols).
 
 ## 8. Database > Backups and point-in-time recovery

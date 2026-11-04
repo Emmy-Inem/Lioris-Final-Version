@@ -3,6 +3,7 @@
 import { createClient, type SupabaseClient, type User } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 import { jsonResponse } from './cors.ts';
 import { createServiceClient } from './ratelimit.ts';
+import { isConfirmedRootUser } from './rootAdmin.ts';
 
 export interface AuthedProfile {
   id: string;
@@ -129,9 +130,8 @@ export async function requireAdmin(req: Request, opts: { requireMfa?: boolean } 
     .eq('id', caller.user.id)
     .maybeSingle();
 
-  const isRootSuperAdmin =
-    caller.user.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
-    profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com';
+  // The root-e-mail bootstrap needs a CONFIRMED e-mail, exactly like auth_is_super_admin() in the database.
+  const isRootSuperAdmin = isConfirmedRootUser(caller.user, profile?.email);
 
   if (!isRootSuperAdmin && (error || !profile || profile.role !== 'admin' || profile.is_suspended === true)) {
     return {
@@ -165,11 +165,7 @@ export async function requireAdmin(req: Request, opts: { requireMfa?: boolean } 
  * absolute platform-wide authority.
  */
 export function isCallerSuperAdmin(caller: { user: User; profile?: { admin_role?: string | null; email?: string | null } }): boolean {
-  return (
-    caller.profile?.admin_role === 'super_admin' ||
-    caller.user.email?.toLowerCase().trim() === 'inememmanuel@gmail.com' ||
-    caller.profile?.email?.toLowerCase().trim() === 'inememmanuel@gmail.com'
-  );
+  return caller.profile?.admin_role === 'super_admin' || isConfirmedRootUser(caller.user, caller.profile?.email);
 }
 
 /**

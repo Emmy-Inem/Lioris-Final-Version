@@ -32,6 +32,7 @@ import { VerificationRequiredGate } from './VerificationRequiredGate';
 import { ErrorStateView } from './ErrorStateView';
 import { haptics } from '@/utils/haptics';
 import { getFriendlyErrorMessage } from '@/utils/errors';
+import { lookupMention } from '@/utils/mentions';
 
 const STOCK_IMAGES: Record<string, any> = {
   event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
@@ -198,7 +199,7 @@ export function PostDetailScreen() {
   function renderContent(content: string) {
     return content.split(CONTENT_TOKEN_SPLIT).map((part, i) => {
       if (MENTION_TOKEN.test(part)) {
-        const match = mentionByHandle.get(part.slice(1).toLowerCase());
+        const match = lookupMention(mentionByHandle, part);
         if (!match) return part;
         return (
           <AppText

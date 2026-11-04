@@ -4,12 +4,18 @@ import { getSessionUser } from '../auth/tokenStorage';
 import { recordAuditLogEntry } from './auditLog';
 import { createNotification } from './notifications';
 import { generateUUID } from '../utils/uuid';
+import { registerSessionCacheClearer } from '../utils/sessionCaches';
 
 // Reports this session has *successfully* written to Supabase, kept here
 // only so they render instantly before the next refetch. Never mixed with
 // mockData.ts fixtures - those only come from getMockPool() below, and
 // only while the admin's "Mock Data Visibility" toggle is on.
 let locallyCreatedReports: Report[] = [];
+
+// Sign-out / account switch: reports filed by the previous account must not be merged into the next account's list.
+registerSessionCacheClearer('moderation-reports', () => {
+  locallyCreatedReports = [];
+});
 
 
 

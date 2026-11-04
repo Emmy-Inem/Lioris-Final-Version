@@ -123,6 +123,7 @@ export async function searchAlumniDirectory(
 
 import { generateUUID } from '../utils/uuid';
 import { getSessionUser } from '../auth/tokenStorage';
+import { createUserIdSet } from '../utils/userIdSet';
 
 // POST /connections - PRD Section 15.3
 export async function sendConnectionRequest(recipientId: string): Promise<Connection> {
@@ -362,7 +363,7 @@ export async function listSuggestedConnections(): Promise<SuggestedConnection[]>
 }
 
 // User Safety & Content Filtering - Persists user blocking to Supabase & active session
-const blockedUserIdsState = new Set<string>();
+const blockedUserIdsState = createUserIdSet();
 
 /** Forget the previous account's blocks and mutes (sign-out / account switch). */
 export function clearBlockedAndMuted(): void {
@@ -371,10 +372,11 @@ export function clearBlockedAndMuted(): void {
 }
 
 export function getBlockedUserIds(): string[] {
- return Array.from(blockedUserIdsState);
+ return blockedUserIdsState.values();
 }
 
 export async function loadBlockedUserIds(): Promise<string[]> {
+ const load = blockedUserIdsState.beginLoad();
  try {
  const { data: authData } = await supabase.auth.getUser();
  if (authData?.user?.id) {
@@ -383,15 +385,17 @@ export async function loadBlockedUserIds(): Promise<string[]> {
  .select('blocked_id')
  .eq('blocker_id', authData.user.id);
  if (!error && data) {
- for (const row of data) {
- blockedUserIdsState.add(row.blocked_id);
- }
+ // Replaces the list (so an unblock made elsewhere takes effect) and is ignored when the account changed
+ // while the request was running.
+ blockedUserIdsState.applyLoad(load, data.map((row: any) => row.blocked_id));
  }
  }
  } catch {
  // fallback
+ } finally {
+ blockedUserIdsState.abortLoad(load);
  }
- return Array.from(blockedUserIdsState);
+ return blockedUserIdsState.values();
 }
 
 export function isUserBlocked(userId?: string | null): boolean {
@@ -422,7 +426,7 @@ export async function blockUser(userId: string, userName?: string): Promise<void
 }
 
 export async function unblockUser(userId: string): Promise<void> {
- blockedUserIdsState.delete(userId);
+ blockedUserIdsState.remove(userId);
  try {
  const { data: authData } = await supabase.auth.getUser();
  if (authData?.user?.id) {
@@ -441,7 +445,7 @@ export async function unblockUser(userId: string): Promise<void> {
 // resources from your feeds, but never affects messaging (they can still
 // message you, and you can still message them). Deliberately not threaded
 // into src/api/messaging.ts for that reason.
-const mutedUserIdsState = new Set<string>();
+const mutedUserIdsState = createUserIdSet();
 
 export function isUserMuted(userId?: string | null): boolean {
  if (!userId) return false;
@@ -449,6 +453,7 @@ export function isUserMuted(userId?: string | null): boolean {
 }
 
 export async function loadMutedUserIds(): Promise<string[]> {
+ const load = mutedUserIdsState.beginLoad();
  try {
  const { data: authData } = await supabase.auth.getUser();
  if (authData?.user?.id) {
@@ -457,15 +462,15 @@ export async function loadMutedUserIds(): Promise<string[]> {
  .select('muted_id')
  .eq('muter_id', authData.user.id);
  if (!error && data) {
- for (const row of data) {
- mutedUserIdsState.add(row.muted_id);
- }
+ mutedUserIdsState.applyLoad(load, data.map((row: any) => row.muted_id));
  }
  }
  } catch {
  // fallback
+ } finally {
+ mutedUserIdsState.abortLoad(load);
  }
- return Array.from(mutedUserIdsState);
+ return mutedUserIdsState.values();
 }
 
 export async function muteUser(userId: string, _userName?: string): Promise<void> {
@@ -484,7 +489,7 @@ export async function muteUser(userId: string, _userName?: string): Promise<void
 }
 
 export async function unmuteUser(userId: string): Promise<void> {
- mutedUserIdsState.delete(userId);
+ mutedUserIdsState.remove(userId);
  try {
  const { data: authData } = await supabase.auth.getUser();
  if (authData?.user?.id) {

@@ -15,6 +15,7 @@
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 import { readJsonBody } from '../_shared/body.ts';
 import { clientIp, consumeRateLimit, createServiceClient } from '../_shared/ratelimit.ts';
+import { isUsableOverpassResponse } from '../_shared/overpass.ts';
 
 const MAX_BODY_BYTES = 1024; // the client only ever sends { lat, lon }
 const IP_RATE_LIMIT = 30; // requests per IP per 10 minutes
@@ -65,8 +66,11 @@ Deno.serve(async (req: Request) => {
   if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
   const body = parsed.value;
 
-  const rawLat = Number(body?.lat);
-  const rawLon = Number(body?.lon);
+  // Number(null) / Number('') / Number(true) are 0 / 0 / 1: only a real number or a numeric string counts.
+  const toCoord = (v: unknown): number =>
+    typeof v === 'number' || (typeof v === 'string' && v.trim() !== '') ? Number(v) : Number.NaN;
+  const rawLat = toCoord(body?.lat);
+  const rawLon = toCoord(body?.lon);
   if (!Number.isFinite(rawLat) || !Number.isFinite(rawLon) || Math.abs(rawLat) > 90 || Math.abs(rawLon) > 180) {
     return json({ error: 'lat and lon must be valid coordinates.' }, 400);
   }
@@ -113,7 +117,9 @@ Deno.serve(async (req: Request) => {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-      JSON.parse(text); // reject non-JSON (e.g. an HTML error page served with 200)
+      // Reject non-JSON (an HTML error page served with 200) AND Overpass's "200 + remark: runtime error /
+      // timed out" answers, so a failing mirror loses the race and the failure is never cached.
+      if (!isUsableOverpassResponse(text)) throw new Error('unusable Overpass response');
       return text;
     } catch (err) {
       attempts.push(`${host}: ${err instanceof Error ? `${err.name} ${err.message}` : String(err)}`);

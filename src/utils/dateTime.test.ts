@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 // @ts-ignore TS5097
-import { addDays, endTimeOf, nextSaturday, parseLocalDateTime, relativeTime, toDateInput } from './dateTime.ts';
+import { addDays, calendarEndFallback, endTimeOf, nextSaturday, parseLocalDateTime, relativeTime, toCalendarUtcString, toDateInput } from './dateTime.ts';
 
 test('parseLocalDateTime accepts real dates and rejects impossible ones', () => {
   const ok = parseLocalDateTime('2026-09-26', '15:30');
@@ -44,4 +44,18 @@ test('relativeTime is coarse and directional', () => {
 
 test('endTimeOf adds minutes', () => {
   assert.equal(endTimeOf('2026-09-26T12:00:00.000Z', 90), '2026-09-26T13:30:00.000Z');
+});
+
+test('calendar timestamps never throw, even when the event time is corrupt', () => {
+  assert.equal(toCalendarUtcString('2026-09-26T15:30:00.000Z'), '20260926T153000Z');
+  // An unparseable start and an unparseable fallback used to reach toISOString() and throw RangeError.
+  const bad = calendarEndFallback('garbage');
+  assert.ok(!isNaN(bad.getTime()));
+  assert.doesNotThrow(() => toCalendarUtcString(null, new Date(NaN)));
+  assert.doesNotThrow(() => toCalendarUtcString('garbage', new Date(NaN)));
+  assert.match(toCalendarUtcString('garbage', new Date('2026-01-02T03:04:05Z')), /^20260102T030405Z$/);
+});
+
+test('calendarEndFallback is two hours after the start', () => {
+  assert.equal(calendarEndFallback('2026-09-26T10:00:00Z').toISOString(), '2026-09-26T12:00:00.000Z');
 });

@@ -55,6 +55,18 @@ export class WebRTCCallSession implements IWebRTCCallSession {
     this.config = config;
   }
 
+  /**
+   * hangup() can run while start() is still awaiting the permission prompt, the camera/microphone or the TURN lookup.
+   * Without this check start() carried on afterwards: it kept the media it was granted, left the native audio session
+   * (InCallManager) running and opened a peer connection and signalling channel that nothing would ever close.
+   */
+  private abortedByHangup(): boolean {
+    if (!this.isCleanedUp) return false;
+    this.releaseLocalStream();
+    this.stopInCallManager();
+    return true;
+  }
+
   public async start(): Promise<void> {
     try {
       this.config.onConnectionStateChange?.('connecting');
@@ -63,6 +75,7 @@ export class WebRTCCallSession implements IWebRTCCallSession {
       // NSCameraUsageDescription/NSMicrophoneUsageDescription strings the first
       // time getUserMedia runs; Android needs an explicit runtime request first.
       const granted = await ensureAndroidPermissions(this.config.isVideo);
+      if (this.abortedByHangup()) return;
       if (!granted) {
         throw new Error('Camera/microphone permission was not granted.');
       }
@@ -87,6 +100,8 @@ export class WebRTCCallSession implements IWebRTCCallSession {
         }
       }
 
+      if (this.abortedByHangup()) return;
+
       // Owns the native audio session for the call: routes video calls to the
       // loudspeaker and voice calls to the earpiece by default, and enables the
       // proximity sensor (screen off near the ear) for voice calls.
@@ -99,6 +114,7 @@ export class WebRTCCallSession implements IWebRTCCallSession {
 
       // 2. Setup RTCPeerConnection
       const iceServers = await getIceServers();
+      if (this.abortedByHangup()) return;
       this.peerConnection = new RTCPeerConnection({
         iceServers,
         iceCandidatePoolSize: 4,

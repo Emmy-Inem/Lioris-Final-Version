@@ -81,6 +81,20 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(req, { error: 'forbidden', message: 'You can only create members for your own campus.' }, 403);
     }
   }
+  if (!callerIsSuper && role === 'staff') {
+    // Appointing staff is a role grant. The database refuses a Campus Admin's role change while the Super Admin
+    // has switched "Manage Roles & Campuses" (can_manage_roles) off for campus admins (prevent_profile_role_escalation),
+    // and this function writes with the service role, so it has to honour the same switch itself. Evaluated as
+    // the CALLER (their JWT), because has_role_permission() reads auth.uid(). Fails closed.
+    const { data: mayManageRoles, error: permError } = await caller.callerClient.rpc('has_role_permission', { p_key: 'can_manage_roles' });
+    if (permError) {
+      console.error('[admin-create-user] has_role_permission failed:', permError.message);
+      return jsonResponse(req, { error: 'unavailable', message: 'Could not verify your permissions. Try again shortly.' }, 503);
+    }
+    if (mayManageRoles !== true) {
+      return jsonResponse(req, { error: 'forbidden', message: 'Creating staff accounts is switched off for Campus Admins. Ask a Super Admin.' }, 403);
+    }
+  }
   if (role === 'admin' && adminRole !== 'super_admin' && adminRole !== 'campus_admin') {
     return jsonResponse(req, { error: 'invalid_admin_role', message: 'Choose Super Admin or Campus Admin.' }, 400);
   }
@@ -131,11 +145,18 @@ Deno.serve(async (req: Request) => {
     onboarding_complete: role === 'admin' || role === 'staff',
     student_id_number: matricNo || null, // never invented
   };
-  let profileError = (await admin.from('profiles').update(update).eq('id', userId)).error;
+  // .select('id'): an UPDATE that matches no row is not an error, and would otherwise report success for an
+  // account whose role / campus were never written (an "admin" who is still a plain student).
+  const writeProfile = async (patch: Record<string, unknown>): Promise<{ message: string } | null> => {
+    const { data, error } = await admin.from('profiles').update(patch).eq('id', userId).select('id');
+    if (error) return error;
+    return (data ?? []).length === 0 ? { message: 'profile row not found' } : null;
+  };
+  let profileError = await writeProfile(update);
   if (profileError) {
     // Most likely a taken username default; the profile row exists, so retry once without touching it.
     console.error('[admin-create-user] profile update failed:', profileError.message);
-    profileError = (await admin.from('profiles').update({ ...update, student_id_number: null }).eq('id', userId)).error;
+    profileError = await writeProfile({ ...update, student_id_number: null });
   }
   if (profileError) {
     // Do not leave a half-built account behind.
