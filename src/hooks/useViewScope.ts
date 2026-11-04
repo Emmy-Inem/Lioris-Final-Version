@@ -106,7 +106,7 @@ export async function getStoredCampus(): Promise<string | null> {
   }
 }
 
-export function resetToDefaultCampusScope(qc = globalQueryClient, isSuperAdmin = false) {
+export function resetToDefaultCampusScope(qc = globalQueryClient, _isSuperAdmin = false) {
   qc.setQueryData(VIEW_SCOPE_KEY, 'campus' as ViewScope);
   persistScope('campus');
   qc.setQueryData(ACTIVE_CAMPUS_KEY, null as ActiveCampus);

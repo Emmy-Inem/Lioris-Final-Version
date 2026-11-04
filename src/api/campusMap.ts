@@ -1933,8 +1933,6 @@ export function formatDistanceAndEta(meters: number): { distanceText: string; et
  * browser User-Agent with a 406 that has no CORS headers, so a direct browser call can never succeed.
  * Results are cached per campus for 30 minutes because the upstream is slow (10-20s).
  */
-const OVERPASS_PROXY_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fdtnbluslkabwsmspbem.supabase.co'}/functions/v1/overpass-proxy`;
-const OVERPASS_PROXY_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_TB0Pw8k2oJQTmoO951YaIQ_xzOyGpZF';
 const OVERPASS_CACHE_TTL_MS = 30 * 60 * 1000;
 const overpassCache = new Map<string, { at: number; data: any }>();
 
@@ -2053,7 +2051,7 @@ export function searchLandmarks(
   );
 }
 
-export function getOsmEmbedUrl(lat: number, lon: number, zoom: number = 17): string {
+export function getOsmEmbedUrl(lat: number, lon: number, _zoom: number = 17): string {
   const delta = 0.003;
   const minLon = lon - delta;
   const minLat = lat - delta;

@@ -71,7 +71,7 @@ export async function prepareResourceDownload(resource: { title: string; fileUrl
     const res = await supabase.storage.from('resources').createSignedUrl(path, DOWNLOAD_URL_TTL_SECONDS, { download: fileName });
     signed = res.data;
     signError = res.error as any;
-  } catch (err: any) {
+  } catch {
     throw new ResourceFileError('network', 'Could not reach the server. Check your connection and try again.');
   }
 

@@ -9,7 +9,7 @@ import {
   Share,
   Platform,
 } from 'react-native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { AppText } from '@/components/AppText';
@@ -115,11 +115,10 @@ export default function SystemHealthScreen() {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const toast = useToast();
-  const queryClient = useQueryClient();
   const [cleaning, setCleaning] = useState(false);
   const [expandedError, setExpandedError] = useState<string | null>(null);
 
-  const { data: health, isLoading, isError, error, refetch, isFetching } = useQuery<SystemHealthReport>({
+  const { data: health, isError, error, refetch, isFetching } = useQuery<SystemHealthReport>({
     queryKey: ['system_health_report'],
     queryFn: fetchSystemHealth,
     refetchInterval: 15000,

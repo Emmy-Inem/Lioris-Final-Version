@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleGate } from '@/auth/RoleGate';
@@ -11,7 +11,7 @@ import { FloatingLiquidGlassTabBar, FloatingLiquidGlassTabBarView } from '@/comp
 import { BlurredTabsHost } from '@/components/BlurredTabsHost';
 
 export default function AdminLayout() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
   // Default closed while auth is resolving: a campus admin must never see a

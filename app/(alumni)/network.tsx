@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, View, TextInput, ActivityIndicator, Pressable, ScrollView } from 'react-native';
+import { FlatList, View, TextInput, Pressable, ScrollView } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
@@ -10,7 +10,6 @@ import { SolidCard } from'./SolidCard';
 import { AppText } from'./AppText';
 import { Avatar } from'./Avatar';
 import { Badge } from'./Badge';
-import { UserTypeBadge } from'./UserTypeBadge';
 import { VerifiedBadge } from './VerifiedBadge';
 import { AppTextField } from'./AppTextField';
 import { AppButton } from'./AppButton';
@@ -23,7 +22,7 @@ import { useTheme } from'@/theme/ThemeProvider';
 import { useAuth } from'@/auth/AuthContext';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
 import { Post } from'@/api/types';
-import { togglePostLike, listPostComments, createPostComment, toggleCommentLike, voteOnPoll, deletePost, updatePost, extractMentionHandles, buildPostShareUrl } from'@/api/posts';
+import { togglePostLike, voteOnPoll, deletePost, updatePost, extractMentionHandles, buildPostShareUrl } from'@/api/posts';
 import { toggleSavedItem, SAVED_ITEMS_KEY, isItemSavedSync, subscribeSavedItems } from '@/api/bookmarks';
 import { resolvePostMentionsBatched } from '@/api/mentionResolver';
 import { useSignedUrl } from '@/api/signedUrls';
@@ -136,7 +135,7 @@ interface PostCardProps {
 }
 
 export const PostCard = React.memo(function PostCard({ post, canModerateCommunity = false, forceScopeBadge = false }: PostCardProps) {
- const { colors, spacing, radius, isDark } = useTheme();
+ const { colors, spacing, radius } = useTheme();
  const insets = useSafeAreaInsets();
  const { user } = useAuth();
  const segments = useSegments();

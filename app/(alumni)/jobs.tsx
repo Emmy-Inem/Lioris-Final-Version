@@ -8,8 +8,6 @@ import {
   View,
   Modal,
   StyleSheet,
-  Platform,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,7 +17,6 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { AppText } from '@/components/AppText';
 import { SolidCard } from '@/components/SolidCard';
-import { GlassCard } from '@/components/GlassCard';
 import { Badge } from '@/components/Badge';
 import { Avatar } from '@/components/Avatar';
 import { AppButton } from '@/components/AppButton';
@@ -57,7 +54,7 @@ const DATE_POSTED_OPTIONS = [
 ] as const;
 
 export default function AlumniJobsScreen() {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { colors, spacing, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
   const isUnverified = isUnverifiedPersonalUser(user);
@@ -79,7 +76,7 @@ export default function AlumniJobsScreen() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [alertsModalOpen, setAlertsModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
-  const [savingJobId, setSavingJobId] = useState<string | null>(null);
+  const [, setSavingJobId] = useState<string | null>(null);
   const [applyModalJob, setApplyModalJob] = useState<JobListing | null>(null);
   const [applicantsJob, setApplicantsJob] = useState<JobListing | null>(null);
   const [appliedJobIds, setAppliedJobIds] = useState<Record<string, boolean>>({});

@@ -102,7 +102,7 @@ const VENUE_TYPE_LABELS: Record<NonNullable<CampusEvent['venueType']>, string> =
 };
 
 export function EventsModerationTab() {
- const { colors, spacing, radius, isDark } = useTheme();
+ const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
  const { user } = useAuth();
  const insets = useSafeAreaInsets();

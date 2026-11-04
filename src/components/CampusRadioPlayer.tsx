@@ -28,7 +28,7 @@ import {
 const CATEGORIES = ['All', 'Campus & Education', 'News & Talk', 'Music & Culture', 'Study & Lo-Fi'] as const;
 
 export function CampusRadioPlayer() {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { colors, spacing, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
 
@@ -65,7 +65,7 @@ export function CampusRadioPlayer() {
       try {
         const results = await searchOnlineStations(searchQuery);
         if (mounted) setStationList(results);
-      } catch (err) {
+      } catch {
         if (mounted) setStationList(VERIFIED_STATIONS);
       } finally {
         if (mounted) setSearching(false);

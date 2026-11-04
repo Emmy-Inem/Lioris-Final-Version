@@ -103,7 +103,7 @@ export function AcademicLibraryModal({
     try {
       const results = await searchAcademicLibrary(searchTerm, 20);
       setBooks(results);
-    } catch (err: any) {
+    } catch {
       toast.warning('Using verified offline catalog (network sync delayed)');
       setBooks(getCuratedLibraryCatalog());
     } finally {

@@ -1,8 +1,6 @@
 import React from'react';
-import { ActivityIndicator, View } from'react-native';
 import { Redirect } from'expo-router';
 import { useAuth } from'./AuthContext';
-import { useTheme } from'@/theme/ThemeProvider';
 import { UserRole } from'@/api/types';
 import { roleRequiresMfa } from'./mfaPolicy';
 import { AppLoadingScreen } from '@/components/AppLoadingScreen';

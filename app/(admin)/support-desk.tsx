@@ -19,7 +19,6 @@ import { AppButton } from '@/components/AppButton';
 import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { Avatar } from '@/components/Avatar';
-import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorStateView } from '@/components/ErrorStateView';
 import { queryErrorMode } from '@/utils/queryError';
@@ -94,7 +93,7 @@ export default function SupportDeskScreen() {
   const queryClient = useQueryClient();
 
   const [statusFilter, setStatusFilter] = useState<'all' | SupportTicketStatus>('all');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | SupportTicketCategory>('all');
+  const [categoryFilter] = useState<'all' | SupportTicketCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
 

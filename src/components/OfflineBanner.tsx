@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Platform, Pressable } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { onlineManager } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';

@@ -469,7 +469,7 @@ function PostCard({
 const REPORT_REASONS = ['Spam or ads', 'Harassment or bullying', 'Inappropriate content', 'Cheating or plagiarism', 'Something else'];
 
 function ReportPostSheet({ visible, postId, onClose }: { visible: boolean; postId: string; onClose: () => void }) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, radius } = useTheme();
   const toast = useToast();
   const [reason, setReason] = useState(REPORT_REASONS[0]);
   const [details, setDetails] = useState('');

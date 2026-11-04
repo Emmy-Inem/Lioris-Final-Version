@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -7,7 +7,6 @@ import { ScreenContainer } from './ScreenContainer';
 import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
 import { AppButton } from './AppButton';
-import { EmptyState } from './EmptyState';
 import { SolidCard } from './SolidCard';
 import { PostCardSkeletonList } from './Skeleton';
 import { ErrorStateView } from './ErrorStateView';

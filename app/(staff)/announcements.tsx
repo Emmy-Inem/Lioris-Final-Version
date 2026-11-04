@@ -34,7 +34,7 @@ const AUDIENCES: PublishAnnouncementPayload['audienceScope'][] = ['student', 'al
 const PRIORITIES: PublishAnnouncementPayload['priority'][] = ['normal', 'high', 'critical'];
 
 export default function StaffAnnouncementsScreen() {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
   const { campusCode } = useCampusScope();

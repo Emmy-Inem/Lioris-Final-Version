@@ -3,11 +3,8 @@ import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
 import { GlassCard } from '@/components/GlassCard';
-import { Badge } from '@/components/Badge';
 import { useTheme } from '@/theme/ThemeProvider';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
-import { useAuth } from '@/auth/AuthContext';
 import { useCampusScope } from '@/hooks/useCampusScope';
 import { fetchCampusWeather, CampusWeather, CAMPUS_COORDINATES } from '@/api/weather';
 
@@ -16,11 +13,9 @@ interface CampusWeatherWidgetProps {
   onPressDetails?: () => void;
 }
 
-export function CampusWeatherWidget({ campusCode, onPressDetails }: CampusWeatherWidgetProps) {
+export function CampusWeatherWidget({ campusCode }: CampusWeatherWidgetProps) {
   const { colors, spacing, isDark } = useTheme();
-  const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
-  const { user } = useAuth();
   const { campusCode: scopedCampus, homeInstitutionCode } = useCampusScope();
 
   const effectiveCampus = (campusCode && campusCode !== 'GLOBAL')

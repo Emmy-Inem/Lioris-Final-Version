@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Alert, FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -10,7 +10,6 @@ import { AppButton } from '@/components/AppButton';
 import { AnalyticsSummarySkeleton, ListItemSkeletonList } from '@/components/Skeleton';
 import { ErrorStateView } from '@/components/ErrorStateView';
 import { queryErrorMode } from '@/utils/queryError';
-import { GlassCard } from '@/components/GlassCard';
 import { Avatar } from '@/components/Avatar';
 import { Badge } from '@/components/Badge';
 import { useTheme } from '@/theme/ThemeProvider';

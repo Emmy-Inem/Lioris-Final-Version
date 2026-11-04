@@ -14,9 +14,7 @@ import { openExternalUrl } from '@/utils/openExternalUrl';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '@/components/AppText';
-import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
-import { AppButton } from '@/components/AppButton';
 import { AndroidCampusMap } from '@/components/AndroidCampusMap';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -62,7 +60,7 @@ export function CampusMapModal({
   initialLandmarkName,
   campusFilter,
 }: CampusMapModalProps) {
-  const { colors, spacing } = useTheme();
+  const { colors } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const toast = useToast();

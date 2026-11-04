@@ -27,7 +27,7 @@ import { haptics } from '@/utils/haptics';
 type Tab = 'find' | 'mine';
 
 export default function StudentMentorshipScreen() {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const { campusCode } = useCampusScope();
   const queryClient = useQueryClient();

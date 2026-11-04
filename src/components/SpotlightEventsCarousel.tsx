@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from'react';
-import { NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { Image } from'expo-image';
 import { router } from'expo-router';
 import { Ionicons } from'@expo/vector-icons';
 import { AppText } from'./AppText';
-import { Badge } from'./Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useReducedMotion } from '@/theme/useReducedMotion';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';

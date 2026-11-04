@@ -41,7 +41,7 @@ import {
 } from '@/api/mentorship';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { submitReport } from '@/api/moderation';
-import { getCallRoomName, getCallUrl, startCallInChat } from '@/api/calling';
+import { startCallInChat } from '@/api/calling';
 import { Mentorship, MentorshipSession, MentorSessionMode } from '@/api/types';
 import { SESSION_MODES, mentorshipStatusLabel, mentorshipStatusTone, sessionStatusLabel } from '@/utils/mentorship';
 import { formatWhen, parseLocalDateTime, relativeTime, endTimeOf } from '@/utils/dateTime';

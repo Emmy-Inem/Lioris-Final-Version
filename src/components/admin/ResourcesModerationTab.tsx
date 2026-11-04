@@ -27,7 +27,7 @@ const LEVELS: Resource['academicLevel'][] = ['100L', '200L', '300L', '400L', '50
 const FILE_TYPES: Resource['fileType'][] = ['PDF', 'DOCX', 'ZIP', 'EPUB'];
 
 export function ResourcesModerationTab() {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { colors, spacing, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();

@@ -1,5 +1,5 @@
 import { GestureHandlerRootView } from '@/components/GestureRoot';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';

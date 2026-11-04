@@ -1,23 +1,21 @@
 import React, { useState } from 'react';
-import { View, Pressable, Platform } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppText } from './AppText';
 import { ApplyForVerificationModal } from './ApplyForVerificationModal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
-import { useResponsive } from '@/hooks/useResponsive';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { submitVerificationRequest } from '@/api/verification';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
 
 export function UnverifiedAccountNotice() {
-  const { colors, radius, isDark } = useTheme();
+  const { radius, isDark } = useTheme();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const toast = useToast();
-  const { isDesktop } = useResponsive();
   const [modalOpen, setModalOpen] = useState(false);
 
   const { data: profile } = useQuery({

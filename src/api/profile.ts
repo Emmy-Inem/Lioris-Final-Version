@@ -177,7 +177,6 @@ export async function getMyProfile(user?: {
  const fallback = defaultProfileFor(resolvedUser);
   try {
     let data: any = null;
-    let error: any = null;
 
     const fullRes = await supabase
       .from('profiles')
@@ -196,8 +195,6 @@ export async function getMyProfile(user?: {
         .maybeSingle();
       if (!fallbackRes.error && fallbackRes.data) {
         data = fallbackRes.data;
-      } else {
-        error = fallbackRes.error;
       }
     }
 

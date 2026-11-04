@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from'react-native-reanimated';
 import { useTheme } from'@/theme/ThemeProvider';
 import { useReducedMotion } from'@/theme/useReducedMotion';
 

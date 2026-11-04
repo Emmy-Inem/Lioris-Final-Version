@@ -1,7 +1,7 @@
 import React, { useState } from'react';
 import { AdminSectionTabs } from '@/components/admin/AdminSectionTabs';
 import { useAdminBadges } from '@/components/admin/useAdminBadges';
-import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { Alert, FlatList, Modal, Pressable, ScrollView, View } from'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -17,7 +17,6 @@ import { Badge } from'@/components/Badge';
 import { Avatar } from'@/components/Avatar';
 import { UserTypeBadge } from'@/components/UserTypeBadge';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
-import { AmbassadorBadge } from '@/components/AmbassadorBadge';
 import { ActionSheetModal } from'@/components/ActionSheetModal';
 import { EmptyState } from'@/components/EmptyState';
 import { ErrorStateView } from '@/components/ErrorStateView';
@@ -44,16 +43,6 @@ import { getReportCountForUser, suspendUserAccount, unsuspendUserAccount } from 
 import { haptics } from '@/utils/haptics';
 import { useAuth } from '@/auth/AuthContext';
 
-
-function formatRelativeTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return 'Never';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  if (diff < 60_000) return 'Just now';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
-  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)}d ago`;
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 interface DirectoryUser {
  id: string;
@@ -93,7 +82,7 @@ export default function UserDirectoryScreen() {
  }, [params.q]);
  const [role, setRole] = useState('All Roles');
   const [campus, setCampus] = useState(currentUser?.isCampusAdmin && currentUser?.campusCode ? currentUser.campusCode : ALL_CAMPUSES);
-  const [botFilter, setBotFilter] = useState<'all' | 'real_only' | 'bots_only'>('all');
+  const [botFilter] = useState<'all' | 'real_only' | 'bots_only'>('all');
  const [users, setUsers] = useState<DirectoryUser[]>([]);
  const [loading, setLoading] = useState(true);
  const [loadError, setLoadError] = useState<unknown>(null);

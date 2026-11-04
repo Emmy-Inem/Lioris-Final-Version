@@ -16,7 +16,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useToast } from '@/context/ToastContext';
 import { haptics } from '@/utils/haptics';
 import { usePermissions } from '@/context/RolePermissionsContext';
-import { SystemRole, PermissionKey, RolePermissionRecord } from '@/api/rolePermissions';
+import { SystemRole, RolePermissionRecord } from '@/api/rolePermissions';
 
 interface RoleTabDef {
   key: SystemRole;

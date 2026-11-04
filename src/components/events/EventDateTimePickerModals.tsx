@@ -256,7 +256,7 @@ export function EventClockPickerModal({
   onClose,
   onSelectPresetRange,
 }: EventClockPickerModalProps) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing } = useTheme();
 
   // Parse current 24-hr time into 12-hr representation
   const parsed = useMemo(() => {

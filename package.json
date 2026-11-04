@@ -11,7 +11,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "test": "node -e \"const fs=require('fs'),cp=require('child_process');const f=fs.readdirSync('src/utils').filter(n=>/.test.ts$/.test(n)).map(n=>'src/utils/'+n);if(!f.length){console.log('No unit tests found.');process.exit(0)}process.exit(cp.spawnSync(process.execPath,['--test',...f],{stdio:'inherit'}).status??1)\"",
     "test:sql": "npm test --prefix tools/sql-harness",
     "native-runtime": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/native-runtime.mjs",

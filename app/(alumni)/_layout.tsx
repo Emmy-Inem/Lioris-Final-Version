@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { Redirect, Tabs, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleGate } from '@/auth/RoleGate';
@@ -25,7 +25,6 @@ const ROUTE_FLAG: Record<string, string> = {
 };
 
 export default function AlumniLayout() {
-  const { colors, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { isFeatureEnabled } = useFeatureFlags();
   const segments = useSegments();

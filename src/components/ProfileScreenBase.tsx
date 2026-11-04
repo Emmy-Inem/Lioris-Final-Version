@@ -14,7 +14,6 @@ import { Avatar } from './Avatar';
 import { SolidCard } from './SolidCard';
 import { AppButton } from './AppButton';
 import { PostCard } from './PostCard';
-import { Badge } from './Badge';
 import { VerifiedBadge } from './VerifiedBadge';
 import { AmbassadorBadge } from './AmbassadorBadge';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -1243,7 +1242,7 @@ function AuthoringRow({
   onPublish: () => void;
   onDelete: () => void;
 }) {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { spacing, radius, isDark } = useTheme();
   const isScheduled = type === 'scheduled';
   const badgeBg = isScheduled
     ? (isDark ? 'rgba(124, 58, 237, 0.2)' : '#EDE9FE')

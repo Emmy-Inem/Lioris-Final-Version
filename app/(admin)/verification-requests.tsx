@@ -333,7 +333,7 @@ export default function VerificationRequestsScreen() {
       try {
         await approveRequestCore(req);
         succeeded += 1;
-      } catch (err) {
+      } catch {
         failed += 1;
       }
     }
@@ -364,7 +364,7 @@ export default function VerificationRequestsScreen() {
       try {
         await rejectRequestCore(req, finalReason);
         succeeded += 1;
-      } catch (err) {
+      } catch {
         failed += 1;
       }
     }

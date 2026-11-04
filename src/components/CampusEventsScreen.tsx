@@ -1,16 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, FlatList, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
-import { Image } from 'expo-image';
+import React, { useState } from 'react';
+import { FlatList, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, useSegments } from 'expo-router';
+import { useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from './ScreenContainer';
 import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
-import { Badge } from './Badge';
-import { SolidCard } from './SolidCard';
 import { GlassCard } from './GlassCard';
-import { EmptyState } from './EmptyState';
 import { EventCardSkeletonGrid } from './Skeleton';
 import { ErrorStateView } from './ErrorStateView';
 import { useToast } from '@/context/ToastContext';
@@ -60,7 +56,6 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   const roleGroup = segments[0] ?? '(student)';
   const { user } = useAuth();
   const isSuperAdmin = isSuperAdminIdentity(user);
-  const isStaffOrAdmin = isSuperAdmin || user?.role === 'admin' || user?.role === 'staff' || user?.actualRole === 'admin';
 
   const isAlumniScope = scope === 'alumni' || roleGroup === '(alumni)';
   const activeFilters = isAlumniScope ? ALUMNI_EVENT_FILTERS : STUDENT_EVENT_FILTERS;
@@ -95,11 +90,6 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
   const institution = currentCampus !== 'ALL' ? getInstitutionByCode(currentCampus) : undefined;
   const institutionName = currentCampus === 'ALL' ? 'All Nigerian Universities' : institution?.name ?? 'Campus';
 
-  // Automatic Horizontal Carousel State
-  const [activeSlide, setActiveSlide] = useState(0);
-  const carouselRef = useRef<FlatList>(null);
-  const desktopFiltersScrollRef = useRef<ScrollView>(null);
-  const isInteracting = useRef(false);
 
 
 
@@ -151,11 +141,6 @@ export function CampusEventsScreen({ scope }: { scope: EventsQuery['scope'] }) {
     }
     return true;
   });
-
-  function handleOpenEvent(eventId: string) {
-    haptics.light();
-    router.push(`/${roleGroup}/events/${eventId}` as any);
-  }
 
   const renderHeader = () => (
     <View style={{ marginBottom: spacing.sm }}>

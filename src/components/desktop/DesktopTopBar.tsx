@@ -6,7 +6,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAuth } from '@/auth/AuthContext';
 import { AppText } from '@/components/AppText';
-import { AppButton } from '@/components/AppButton';
 import { PublishThreadModal } from '@/components/PublishThreadModal';
 import { PermissionGate } from '@/components/PermissionGate';
 import { listNotifications, markNotificationRead, markAllNotificationsRead } from '@/api/notifications';
@@ -34,7 +33,7 @@ const RAW_QUICK_COMMANDS: { id: string; title: string; subtitle: string; icon: a
 export function DesktopTopBar() {
  const { colors, isDark } = useTheme();
  const { user, switchRole } = useAuth();
-  const { flags, isFeatureEnabled } = useFeatureFlags();
+  const { isFeatureEnabled } = useFeatureFlags();
   const queryClient = useQueryClient();
   const toast = useToast();
   const [composerOpen, setComposerOpen] = useState(false);

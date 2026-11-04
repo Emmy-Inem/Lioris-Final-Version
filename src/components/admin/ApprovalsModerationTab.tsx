@@ -1,5 +1,5 @@
 import React, { useState } from'react';
-import { Alert, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from'@expo/vector-icons';
 import { useQuery, useQueryClient } from'@tanstack/react-query';
@@ -28,7 +28,7 @@ interface ApprovalsModerationTabProps {
 }
 
 export function ApprovalsModerationTab({ scope = 'admin', campusCode }: ApprovalsModerationTabProps) {
- const { colors, spacing, radius, isDark } = useTheme();
+ const { colors, spacing, radius } = useTheme();
  const { isDesktop } = useResponsive();
  const insets = useSafeAreaInsets();
  const queryClient = useQueryClient();

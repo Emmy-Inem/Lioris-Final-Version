@@ -56,14 +56,6 @@ export default function ExploreForumsScreen() {
     enabled: !!user,
   });
 
-  const isModeratorOrAdmin = !!(
-    profile?.isCampusAmbassador ||
-    user?.role === 'admin' ||
-    user?.actualRole === 'admin' ||
-    user?.isSuperAdmin ||
-    user?.role === 'staff' ||
-    (user?.email && user.email.toLowerCase().trim() === 'inememmanuel@gmail.com')
-  );
   const isUnverified = isUnverifiedPersonalUser(profile);
 
   const [search, setSearch] = useState('');

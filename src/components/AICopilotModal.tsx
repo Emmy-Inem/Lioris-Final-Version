@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { resizeImageForUpload, resizePickedAsset } from '@/utils/pickImage';
 import { AppText } from '@/components/AppText';
-import { SolidCard } from '@/components/SolidCard';
 import { Badge } from '@/components/Badge';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -283,7 +282,7 @@ export function AICopilotModal({
   initialCourse,
   initialPrompt,
 }: AICopilotModalProps) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, radius } = useTheme();
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const { isFeatureEnabled } = useFeatureFlags();

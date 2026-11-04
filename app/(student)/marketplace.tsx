@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { FlatList, Pressable, ScrollView, TextInput, View, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { router, useSegments } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,7 +76,6 @@ export default function MarketplaceScreen() {
    setSellModalOpen(true);
  }
 
- const categoriesScrollRef = useRef<ScrollView>(null);
 
 
 

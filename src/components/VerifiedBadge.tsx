@@ -27,10 +27,9 @@ export function VerifiedBadge({
   color,
   role = 'student',
   name,
-  institution,
   showModalOnPress = true,
 }: VerifiedBadgeProps) {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { colors, spacing, isDark } = useTheme();
   const [modalOpen, setModalOpen] = useState(false);
 
   const details = getVerificationDetails({ role, fullName: name });

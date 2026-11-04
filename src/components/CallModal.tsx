@@ -41,7 +41,7 @@ export function CallModal({
   partnerAvatar,
   partnerDepartment,
 }: CallModalProps) {
-  const { colors, spacing, radius } = useTheme();
+  const { colors, spacing } = useTheme();
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();

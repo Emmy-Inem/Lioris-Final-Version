@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ScrollView, View, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -7,8 +7,6 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppHeader } from '@/components/AppHeader';
 import { SolidCard } from '@/components/SolidCard';
 import { GlassCard } from '@/components/GlassCard';
-import { CampusWeatherWidget } from '@/components/CampusWeatherWidget';
-import { CampusRadioPlayer } from '@/components/CampusRadioPlayer';
 import { UnverifiedAccountNotice } from '@/components/UnverifiedAccountNotice';
 import { ErrorStateView } from '@/components/ErrorStateView';
 import { isUnverifiedPersonalUser } from '@/utils/verificationGate';

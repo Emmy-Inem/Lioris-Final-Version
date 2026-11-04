@@ -12,7 +12,7 @@ export interface QuickAction {
 
 /** Ported structurally from the"ACTION CENTER"section of DashboardScreen. */
 export function ActionCenterRow({ actions }: { actions: QuickAction[] }) {
- const { colors, spacing, radius } = useTheme();
+ const { colors, spacing } = useTheme();
 
  return (
  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>

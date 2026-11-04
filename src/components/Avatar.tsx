@@ -33,7 +33,7 @@ interface AvatarProps {
   alt?: string;
 }
 
-export function Avatar({ name, uri, size = 44, role, alt }: AvatarProps) {
+export function Avatar({ name, uri, size = 44, alt }: AvatarProps) {
   const { colors, isDark } = useTheme();
 
   const imageSource = (() => {

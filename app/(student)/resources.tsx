@@ -132,7 +132,6 @@ export default function ResourcesScreen() {
 
   // Desktop horizontal scroll refs
   const portalsScrollRef = useRef<ScrollView>(null);
-  const categoriesScrollRef = useRef<ScrollView>(null);
 
   const scrollPortals = (direction: 'left' | 'right') => {
     const node = (portalsScrollRef.current as any)?.getScrollableNode?.() || (portalsScrollRef.current as any);

@@ -40,7 +40,7 @@ const MAJOR_FEATURES: FeatureHighlight[] = [
 ];
 
 export default function GetStartedScreen() {
-  const { spacing, colors, radius } = useTheme();
+  const { spacing, colors } = useTheme();
   const { user, refreshUser } = useAuth();
   const advance = useAdvanceOnboarding('/(auth)/onboarding/get-started');
   const { completeOnboarding } = useAuth();

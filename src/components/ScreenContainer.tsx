@@ -26,8 +26,8 @@ export function ScreenContainer({
  children,
  ...rest
 }: ScreenContainerProps) {
- const { colors, spacing } = useTheme();
- const { isDesktop, containerPadding, contentMaxWidth } = useResponsive();
+ const { colors } = useTheme();
+ const { isDesktop, containerPadding } = useResponsive();
  const queryClient = useQueryClient();
  const [refreshing, setRefreshing] = useState(false);
 

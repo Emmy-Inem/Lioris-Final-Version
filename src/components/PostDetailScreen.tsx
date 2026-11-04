@@ -112,7 +112,7 @@ export function PostDetailScreen() {
       router.replace(getFeedRoute(user?.role) as any);
     }
   };
-  const { isDesktop, contentMaxWidth } = useResponsive();
+  const { isDesktop } = useResponsive();
   const { user } = useAuth();
   // Role Permissions: no reply bar while commenting is switched off for this role.
   const { hasPermission } = usePermissions();
@@ -305,8 +305,7 @@ export function PostDetailScreen() {
  }, [post]);
 
  // Report state
- const [reportOpen, setReportOpen] = useState(false);
- const [reportReason, setReportReason] = useState('');
+ const [, setReportOpen] = useState(false);
 
  const { data: comments, refetch: refetchComments, isLoading: commentsLoading, isError: commentsFailed, error: commentsError } = useQuery({
  queryKey: ['post-comments', id],

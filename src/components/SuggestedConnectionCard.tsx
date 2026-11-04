@@ -18,8 +18,8 @@ export interface SuggestedPerson {
   level: number;
 }
 
-export function SuggestedConnectionCard({ person, index }: { person: SuggestedPerson; index: number }) {
-  const { colors, spacing, radius, isDark } = useTheme();
+export function SuggestedConnectionCard({ person }: { person: SuggestedPerson; index: number }) {
+  const { colors, radius, isDark } = useTheme();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<'none' | 'pending'>('none');
   const [submitting, setSubmitting] = useState(false);

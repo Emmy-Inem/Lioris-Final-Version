@@ -94,7 +94,7 @@ export class WebRTCCallSession implements IWebRTCCallSession {
           try {
             this.localStream = await mediaDevices.getUserMedia({ audio: true });
             this.config.onLocalStream?.(this.localStream);
-          } catch (audioErr) {
+          } catch {
             console.warn('[WebRTC/native] Audio fallback also failed');
           }
         }

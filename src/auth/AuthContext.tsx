@@ -383,34 +383,6 @@ async function fetchOwnProfile(userId: string, timeoutMs = 6000): Promise<any | 
   return attempt().catch(() => null);
 }
 
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-function defaultSessionUser(userEmail: string, role: UserRole, fullName: string, adminRole?: AdminRoleType | null, campusCode?: string | null): SessionUser {
-  const isSuperAdmin = userEmail.toLowerCase().trim() === 'inememmanuel@gmail.com' || (role === 'admin' && adminRole === 'super_admin');
-  const isCampusAdmin = role === 'admin' && !isSuperAdmin;
-  return {
-    id: generateUUID(),
-    fullName,
-    email: userEmail,
-    role,
-    actualRole: role,
-    adminRole: isSuperAdmin ? 'super_admin' : isCampusAdmin ? 'campus_admin' : null,
-    campusCode: campusCode || (isSuperAdmin ? 'GLOBAL' : null),
-    department: null,
-    isSuperAdmin,
-    isCampusAdmin,
-    isCampusAmbassador: false,
-    workspaceMode: 'default',
-    onboardingComplete: false,
-    mfaVerified: !roleRequiresMfa(role),
-  };
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);

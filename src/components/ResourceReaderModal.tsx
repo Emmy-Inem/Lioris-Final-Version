@@ -15,7 +15,6 @@ import { AppButton } from './AppButton';
 import { AppTextField } from './AppTextField';
 import { StarRating } from './common/StarRating';
 import { useTheme } from '@/theme/ThemeProvider';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/auth/AuthContext';
 import { Resource } from '@/api/types';
 import {
@@ -45,7 +44,6 @@ export function ResourceReaderModal({
   onClose,
 }: ResourceReaderModalProps) {
   const { colors, spacing, radius, isDark } = useTheme();
-  const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const { user } = useAuth();

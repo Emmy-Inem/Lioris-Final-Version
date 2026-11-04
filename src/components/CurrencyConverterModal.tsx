@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { SolidCard } from './SolidCard';
-import { Badge } from './Badge';
 import { AppTextField } from './AppTextField';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -26,7 +25,7 @@ interface CurrencyConverterModalProps {
 const PRESET_AMOUNTS = [5000, 20000, 50000, 100000, 250000];
 
 export function CurrencyConverterModal({ visible, onClose, initialAmount = 25000 }: CurrencyConverterModalProps) {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { colors } = useTheme();
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
 

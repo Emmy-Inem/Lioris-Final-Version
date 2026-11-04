@@ -1,10 +1,9 @@
 import { ConnectionRequestCard } from './ConnectionRequestCard';
 import React, { useState } from 'react';
-import { Alert, FlatList, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeOut, LinearTransition } from 'react-native-reanimated';
 import { ScreenContainer } from './ScreenContainer';
 import { AppHeader } from './AppHeader';
 import { AppText } from './AppText';
@@ -18,9 +17,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import {
  listNotifications,
  markNotificationRead,
- deleteNotification,
  markAllNotificationsRead,
- clearAllNotifications,
 } from '@/api/notifications';
 import { listIncomingConnectionRequests, listSuggestedConnections } from '@/api/connections';
 import { useFeatureFlags } from '@/context/FeatureFlagsContext';
@@ -104,9 +101,7 @@ export function NotificationsScreen() {
     }
   }
 
-  const handleDelete = (id: string) => runMutation(() => deleteNotification(id));
   const handleReadAll = () => runMutation(() => markAllNotificationsRead());
-  const handleClear = () => runMutation(() => clearAllNotifications());
 
   // A failed load must not read as "You're all caught up": show the error, or a notice above the cached list.
   const alertsErrorMode = queryErrorMode({ isError, data: notifications });

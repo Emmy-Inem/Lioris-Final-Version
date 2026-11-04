@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   View,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
@@ -58,7 +57,7 @@ export function RequestMentorshipModal({
   onClose,
   onSuccess,
 }: RequestMentorshipModalProps) {
-  const { colors, spacing, radius, isDark } = useTheme();
+  const { colors, spacing, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const toast = useToast();

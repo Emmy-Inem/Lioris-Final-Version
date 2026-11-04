@@ -30,7 +30,7 @@ export const ONBOARDING_STEPS: Record<Extract<UserRole, 'student' | 'alumni'>, s
   ],
 };
 
-export function firstOnboardingStep(role?: UserRole): string {
+export function firstOnboardingStep(_role?: UserRole): string {
   return '/(auth)/onboarding/build-profile';
 }
 

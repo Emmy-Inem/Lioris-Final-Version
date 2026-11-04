@@ -43,8 +43,8 @@ import {
 } from '@/api/events';
 import { getOrCreateConversationWithUser } from '@/api/messaging';
 import { isItemSaved, toggleSavedItem, SAVED_ITEMS_KEY } from '@/api/bookmarks';
-import { CAMPUS_LANDMARKS, CAMPUS_CENTERS, CampusLandmark } from '@/api/campusMap';
-import { EventCategory, EventAgendaItem } from '@/api/types';
+import { CAMPUS_LANDMARKS } from '@/api/campusMap';
+import { EventAgendaItem } from '@/api/types';
 import { useSignedUrl } from '@/api/signedUrls';
 import { getMyProfile, markVerificationPending } from '@/api/profile';
 import { submitVerificationRequest } from '@/api/verification';
@@ -59,15 +59,6 @@ import { PaymentReviewSheet } from './admin/PaymentReviewSheet';
 import { ErrorStateView } from './ErrorStateView';
 import { getEventPaymentDetails, saveEventPaymentDetails } from '@/api/paidEvents';
 import { EMPTY_TICKET_FORM, TicketFormValues, paidLabel, parsePrice, registeredBadge, validateTicketForm } from '@/utils/paidEvents';
-
-const EVENT_MEDIA_MAP: Record<string, any> = {
-  event_tech_hackathon: require('../../assets/images/event_tech_hackathon.jpg'),
-  event_academic_symposium: require('../../assets/images/event_academic_symposium.jpg'),
-  campus_students_photo: require('../../assets/images/campus_students_photo.jpg'),
-  campus_library_study: require('../../assets/images/campus_library_study.jpg'),
-  student_rep_group: require('../../assets/images/student_rep_group.jpg'),
-  hero_student_3d: require('../../assets/images/hero_student_3d.jpg'),
-};
 
 const CATEGORIES = ['Academic', 'Career', 'Workshop', 'Seminar', 'Social', 'Alumni'] as const;
 const VENUE_FORMATS = ['Physical Event', 'Lioris Live Event (In-App)', 'External Event'] as const;
@@ -688,7 +679,6 @@ export function EventDetailScreen() {
     );
   }
 
-  const hasValidCover = !!effectiveCoverUrl;
   const heroImageSource: { uri: string } | null = effectiveCoverUrl ? { uri: effectiveCoverUrl } : null;
 
   const reviewLabel =

@@ -13,8 +13,7 @@ import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useLiquidGlass, PRESETS } from '@/context/LiquidGlassContext';
-import { GlassCard } from '@/components/GlassCard';
+import { useLiquidGlass } from '@/context/LiquidGlassContext';
 import { haptics } from '@/utils/haptics';
 
 interface LiquidGlassCustomizerModalProps {
