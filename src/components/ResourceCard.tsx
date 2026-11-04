@@ -211,7 +211,7 @@ export const ResourceCard = React.memo(function ResourceCard({
             }}
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Bookmark lecture note'}
+            accessibilityLabel={bookmarked ? `Remove bookmark: ${resource.title}` : `Bookmark ${resource.title}`}
             style={{
               padding: 6,
               borderRadius: radius.pill,

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 import { saveAttachment } from '@/utils/saveAttachment';
-import { router } from 'expo-router';
+import { useSegments } from 'expo-router';
+import { goBackOr } from '@/utils/goBack';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -115,6 +116,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
   const { colors, spacing, radius, isDark } = useTheme();
   const { isDesktop } = useResponsive();
   const { user } = useAuth();
+  const segments = useSegments();
   // Role Permissions: with messaging switched off for this role the composer is replaced by a notice.
   const { hasPermission } = usePermissions();
   const canSend = hasPermission('can_send_messages');
@@ -461,7 +463,7 @@ export function ChatThread({ conversationId }: { conversationId: string }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
           {!isDesktop && (
             <Pressable accessibilityRole="button" accessibilityLabel="Go back"
-              onPress={() => router.back()}
+              onPress={() => goBackOr(`/${segments[0] || '(student)'}/messages`)}
               hitSlop={12}
               style={{
                 width: 36,

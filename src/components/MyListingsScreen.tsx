@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
-import { router } from 'expo-router';
+import { goBackOr } from '@/utils/goBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from './ScreenContainer';
@@ -80,7 +80,7 @@ export function MyListingsScreen() {
     <ScreenContainer glow={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: isDesktop ? spacing.xs : spacing.sm, marginBottom: spacing.sm }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => goBackOr('/(student)/marketplace')}
           accessibilityRole="button"
           accessibilityLabel="Go back"
           style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -10 }}
@@ -151,7 +151,7 @@ export function MyListingsScreen() {
           title={filter === 'all' ? "You haven't listed anything yet" : `No ${filter} listings`}
           description="Tap “List an Item” from the Marketplace screen to publish your first listing."
           actionLabel="Browse the marketplace"
-          onAction={() => router.back()}
+          onAction={() => goBackOr('/(student)/marketplace')}
         />
       ) : (
         <FlatList

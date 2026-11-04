@@ -75,6 +75,7 @@ export function UserProfileModal({
  const [reportOpen, setReportOpen] = useState(false);
  const [reportReason, setReportReason] = useState('');
  const [submittingReport, setSubmittingReport] = useState(false);
+ const [reportError, setReportError] = useState<string | null>(null);
 
  useEffect(() => {
  if (visible && userId) {
@@ -513,7 +514,8 @@ export function UserProfileModal({
  label="Reason for Flag"
  placeholder="e.g. Harassment, impersonation, spam..."
  value={reportReason}
- onChangeText={setReportReason}
+ onChangeText={(text) => { setReportReason(text); if (reportError) setReportError(null); }}
+ error={reportError ?? undefined}
  multiline
  numberOfLines={3}
  />
@@ -524,7 +526,11 @@ export function UserProfileModal({
  variant="accent"
  loading={submittingReport}
  onPress={async () => {
- if (!reportReason.trim()) return;
+ if (submittingReport) return;
+ if (!reportReason.trim()) {
+ setReportError('Tell moderators what is wrong with this account.');
+ return;
+ }
  setSubmittingReport(true);
  try {
  await submitReport({

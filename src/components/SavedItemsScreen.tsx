@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
 import { router, useSegments } from 'expo-router';
+import { goBackOr } from '@/utils/goBack';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from './ScreenContainer';
@@ -132,7 +133,7 @@ export function SavedItemsScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: isDesktop ? spacing.xs : 0, marginBottom: spacing.sm }}>
         {!isDesktop && (
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBackOr(`/${roleGroup}/dashboard`)}
             accessibilityRole="button"
             accessibilityLabel="Go back"
             style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -10 }}

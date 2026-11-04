@@ -126,6 +126,7 @@ export default function ResetPasswordScreen() {
   const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
 
   async function handleSendRecovery() {
+    if (submitting || cooldown > 0) return;
     const cleanEmail = email.trim().toLowerCase();
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -157,6 +158,7 @@ export default function ResetPasswordScreen() {
   }
 
   async function handleVerifyOtp() {
+    if (submitting) return;
     const cleanOtp = otp.replace(/\D/g, '');
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -183,6 +185,7 @@ export default function ResetPasswordScreen() {
   }
 
   async function handleSavePassword() {
+    if (submitting) return;
     setErrorMessage(null);
     setSuccessMessage(null);
     if (!isPasswordValid(newPassword)) {
@@ -242,7 +245,7 @@ export default function ResetPasswordScreen() {
                 </View>
               </SolidCard>
               <AppTextField label="New Password" placeholder="Enter your new password" autoComplete="new-password" textContentType="newPassword" secureTextEntry showPasswordToggle value={newPassword} onChangeText={setNewPassword} />
-              <AppTextField label="Confirm New Password" placeholder="Enter it again" autoComplete="new-password" textContentType="newPassword" secureTextEntry showPasswordToggle value={confirmPassword} onChangeText={setConfirmPassword} />
+              <AppTextField label="Confirm New Password" placeholder="Enter it again" autoComplete="new-password" textContentType="newPassword" secureTextEntry showPasswordToggle value={confirmPassword} onChangeText={setConfirmPassword} returnKeyType="go" onSubmitEditing={() => { if (isPasswordValid(newPassword) && newPassword === confirmPassword) void handleSavePassword(); }} />
               <SolidCard style={{ padding: spacing.sm, backgroundColor: colors.surface }}>
                 <AppText variant="caption" weight="bold" tone="secondary" style={{ marginBottom: spacing.xs }}>PASSWORD REQUIREMENTS</AppText>
                 <View style={{ gap: 4 }}>
@@ -265,7 +268,7 @@ export default function ResetPasswordScreen() {
           ) : step === 'request' ? (
             <View style={{ gap: spacing.md }}>
               <AppText tone="secondary" variant="bodySmall">Enter your registered email. We will send one recovery email containing a secure reset link and a 6-digit code.</AppText>
-              <AppTextField label="Registered Email" placeholder="name@university.edu.ng" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" />
+              <AppTextField label="Registered Email" placeholder="name@university.edu.ng" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" returnKeyType="send" onSubmitEditing={() => { if (email.trim()) void handleSendRecovery(); }} />
               <TurnstileWidget ref={turnstileRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
               <AppButton label={cooldown > 0 ? `Resend in ${cooldown}s` : 'Send Reset Email'} onPress={handleSendRecovery} loading={submitting} disabled={!email.trim() || cooldown > 0 || submitting} fullWidth />
               <Pressable onPress={() => setStep('sent')} style={{ alignSelf: 'center', padding: spacing.xs }}>
@@ -280,7 +283,7 @@ export default function ResetPasswordScreen() {
                 <AppText variant="caption" tone="secondary" style={{ textAlign: 'center' }}>Open the secure link for the quickest route, or enter the 6-digit code below. Check Spam or Junk if needed.</AppText>
               </View>
               <AppTextField label="Email" placeholder="name@university.edu.ng" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-              <AppTextField label="6-Digit Recovery Code" placeholder="123456" value={otp} onChangeText={(value) => setOtp(value.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" maxLength={6} />
+              <AppTextField label="6-Digit Recovery Code" placeholder="123456" value={otp} onChangeText={(value) => setOtp(value.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" maxLength={6} returnKeyType="go" onSubmitEditing={() => { if (otp.length === 6 && email.trim()) void handleVerifyOtp(); }} />
               <AppButton label="Verify Code" onPress={handleVerifyOtp} loading={submitting} disabled={submitting || otp.length !== 6 || !email.trim()} fullWidth />
               <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.md }}>
                 <Pressable onPress={() => setStep('request')} style={{ padding: spacing.xs }}><AppText variant="caption" tone="secondary">Use another email</AppText></Pressable>

@@ -2,7 +2,8 @@ import { useFeatureFlags, FeatureKey } from '@/context/FeatureFlagsContext';
 import React, { useState } from 'react';
 import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBackOr } from '@/utils/goBack';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from './ScreenContainer';
 import { AppText } from './AppText';
@@ -178,7 +179,7 @@ export function SearchScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: isDesktop ? spacing.xs : spacing.lg, marginBottom: spacing.md }}>
         {!isDesktop && (
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => goBackOr('/')}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Close search"

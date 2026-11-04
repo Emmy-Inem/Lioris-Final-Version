@@ -40,7 +40,7 @@ export function DateOfBirthField({ fields, onChange, parsed, showHint = true, la
         {label}
       </AppText>
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
           <AppTextField
             accessibilityLabel="Day of birth"
             placeholder="DD"
@@ -51,7 +51,7 @@ export function DateOfBirthField({ fields, onChange, parsed, showHint = true, la
             onChangeText={(t) => onChange({ ...fields, day: digitsOnly(t, 2) })}
           />
         </View>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
           <AppTextField
             accessibilityLabel="Month of birth"
             placeholder="MM"
@@ -62,7 +62,7 @@ export function DateOfBirthField({ fields, onChange, parsed, showHint = true, la
             onChangeText={(t) => onChange({ ...fields, month: digitsOnly(t, 2) })}
           />
         </View>
-        <View style={{ flex: 1.5 }}>
+        <View style={{ flex: 1.5, minWidth: 0 }}>
           <AppTextField
             accessibilityLabel="Year of birth"
             placeholder="YYYY"

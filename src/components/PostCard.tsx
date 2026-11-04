@@ -240,6 +240,8 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
  // Report state
  const [reportOpen, setReportOpen] = useState(false);
  const [reportReason, setReportReason] = useState('');
+ const [reportError, setReportError] = useState<string | null>(null);
+ const [reportSubmitting, setReportSubmitting] = useState(false);
 
  const isGlobalPost = post.visibilityScope === 'global' || post.scopeVisibility === 'global';
  const isAuthor = Boolean(
@@ -899,7 +901,8 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
               label="Reason for Flag"
               placeholder="e.g. Harassment, unauthorized exam paper..."
               value={reportReason}
-              onChangeText={setReportReason}
+              onChangeText={(text) => { setReportReason(text); if (reportError) setReportError(null); }}
+              error={reportError ?? undefined}
               multiline
               numberOfLines={3}
             />
@@ -908,8 +911,14 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
               <AppButton
                 label="Submit Report"
                 variant="accent"
+                loading={reportSubmitting}
                 onPress={async () => {
-                  if (!reportReason.trim()) return;
+                  if (reportSubmitting) return;
+                  if (!reportReason.trim()) {
+                    setReportError('Tell moderators what is wrong with this post.');
+                    return;
+                  }
+                  setReportSubmitting(true);
                   try {
                     await submitReport({
                       targetType: 'post',
@@ -922,6 +931,8 @@ export const PostCard = React.memo(function PostCard({ post, canModerateCommunit
                     Alert.alert('Report Dispatched', 'Campus moderators have been notified.');
                   } catch (err: any) {
                     Alert.alert('Report Failed', getFriendlyErrorMessage(err, 'Could not submit your report. Please try again.'));
+                  } finally {
+                    setReportSubmitting(false);
                   }
                 }}
               />

@@ -69,6 +69,10 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="shortcut icon" href="/favicon.svg" />
         {/* The `react-native-web` recommended style reset */}
         <ScrollViewStyleReset />
+        {/* User-written text (names, titles, links) can contain one very long unbroken word. react-native-web's text is
+            a flex child whose minimum width is that word, so it pushed sibling buttons off-screen; letting it break
+            anywhere keeps every action reachable. Single-line (ellipsis) text is unaffected. */}
+        <style dangerouslySetInnerHTML={{ __html: '[dir="auto"]{overflow-wrap:anywhere}' }} />
       </head>
       <body>{children}</body>
     </html>

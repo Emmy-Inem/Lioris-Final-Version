@@ -130,6 +130,7 @@ export default function VerifyEmailScreen() {
   }, [params.token_hash, params.type]);
 
   async function handleVerify() {
+    if (submitting) return;
     setErrorMessage(null);
     setNotice(null);
     if (!email) {
@@ -234,6 +235,8 @@ export default function VerifyEmailScreen() {
             }}
             placeholder="e.g. 91319799"
             maxLength={10}
+            returnKeyType="go"
+            onSubmitEditing={() => { void handleVerify(); }}
           />
 
           {errorMessage ? (

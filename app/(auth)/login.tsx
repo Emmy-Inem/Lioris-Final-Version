@@ -67,6 +67,7 @@ export default function LoginScreen() {
  }
 
  async function handleLogin() {
+ if (submitting) return;
  setErrorMessage(null);
  if (!email.trim()) {
  setErrorMessage('Please enter your email or username.');
@@ -193,6 +194,8 @@ export default function LoginScreen() {
       setPassword(text);
       if (errorMessage) setErrorMessage(null);
     }}
+    returnKeyType="go"
+    onSubmitEditing={() => { if (email && password) void handleLogin(); }}
   />
 
   <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.md, marginTop: -spacing.xs }}>
