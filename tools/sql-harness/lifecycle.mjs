@@ -521,7 +521,7 @@ await check('no FK from a public table to profiles(id) is left without a coverin
 });
 
 // --------------------------------------------------------------------------- 8. campus deletion safety
-const migrationSql = readFileSync(resolve(ROOT, LIFECYCLE), 'utf8');
+const migrationSql = readFileSync(resolve(ROOT, LIFECYCLE), 'utf8').replace(/\r\n/g, '\n');
 const section = (from, to) => { const a = migrationSql.indexOf(from); const b = migrationSql.indexOf(to, a); assert(a > 0 && b > a, `section ${from} not found`); return migrationSql.slice(a, b); };
 async function seedCampus(c) {
   await c.q(`INSERT INTO public.campuses (code, name, short_name) VALUES ('ZTEST','Zeta Test University','Zeta')`);

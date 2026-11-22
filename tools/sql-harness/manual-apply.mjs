@@ -30,7 +30,7 @@ async function freshDb() {
   for (const f of files) if (f.slice(0, 14) < FIRST) await applyFile(db, `supabase/migrations/${f}`, false, () => {});
   return db;
 }
-const script = readFileSync(resolve(ROOT, 'supabase/manual/02_apply_all.sql'), 'utf8');
+const script = readFileSync(resolve(ROOT, 'supabase/manual/02_apply_all.sql'), 'utf8').replace(/\r\n/g, '\n');
 
 await check('02_apply_all.sql applies in one paste, records every part, and a second run changes nothing', async () => {
   const db = await freshDb();

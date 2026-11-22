@@ -302,10 +302,10 @@ Three independent read-only reviews of the student journey, each finding verifie
 * CI: the dependency-audit step (15 high advisories in build tooling whose only "fix" is downgrading Expo/React Native)
   no longer skips the web-bundle export and bundle secret scan after it.
 
-**Still open (deliberate or needs a product decision)**
-* The dependency advisories above (build tooling: metro, react-native, expo-updates -> node-forge) until Expo ships a clean release.
-* `event_reminders` is not read server-side (reminders are device-local notifications).
-* iOS saves downloads through "Save to Files" (a Files-app folder needs a native config change in the next store build).
+**Resolved in follow-up rounds (Rounds 5–6)**
+* The production dependency advisories are cleared (`0` vulnerabilities via `overrides` in `package.json`), and the CI audit step is restored as a hard gate.
+* `event_reminders` is now stored, read and dispatched server-side (`20261112000000_reminders_and_public_analytics.sql`).
+* iOS saves downloads through "Save to Files" (a dedicated Files-app folder remains optional for a future native store build).
 
 
 ## Round 5 - second-pass audit (edge functions, portals, database, regressions, performance, compliance)
@@ -343,8 +343,19 @@ list APIs surface errors; desktop feed virtualized; images resized before upload
 per-page metadata; service worker cache hygiene; contrast and motion fixes; kill-switch gates for alumni/staff routes; bulk
 admin actions confirmed and capped.
 
-**Still needs a decision or a store release**: PKCE and verified app links; iOS privacy manifest and Android `allowBackup`;
-expo-router `asyncRoutes` for web code splitting; minors flag and guardian record; non-uploader takedown claims no longer hide
-resources instantly (policy call); instant `reported_total` vs `confirmed_total` backfill; remaining screens without an error state
-(student/staff/alumni dashboards, calendar, notifications list, search, forum explore, alumni network); remaining image pickers
-not yet resizing; the privacy page still lists Jitsi as a processor.
+## Round 6 - compliance, visibility, accessibility, performance & dependency hardening
+
+**Database (migrations 20261111 - 20261115)**
+* Minors & guardian consent (`20261111`): date-of-birth enforcement at sign-up (under-13 refused, 13–17 marked minor with limited DMs/calls/directory visibility until guardian consent is verified by an administrator; guardian records purged 30 days after turning 18; minors cannot hold staff/admin/ambassador roles).
+* Server-delivered event reminders & signed-out analytics (`20261112`): `set_event_reminder`, `get_my_event_reminders`, `dispatch_event_reminders` (every 5 minutes), and anonymous rate-capped `record_public_page_view`.
+* Campus Ambassador authority (`20261113`): full campus-scoped administrative authority with workspace switching between the Student Portal and Campus Admin Console.
+* Seed bot removal (`20261114`): removes fabricated seed bot posts, comments, profiles and client seed fallbacks.
+* Round-6 security sweep (`20261115`): restrictive SELECT policies on `posts`, `jobs`, `marketplace_listings`, `events` and `job_questions`; counter/timestamp/takedown-flag forgery guards; group-channel minor protection; revocation of `TRUNCATE`/`TRIGGER`/`REFERENCES` from `anon`/`authenticated`; storage path-segment (`..`) guards; `public_profiles` `security_invoker`; `refund_rate_limit` and expanded `purge_user_data`/`export_my_data`.
+* Post-setup & pasteable parts (`supabase/manual/04_post_setup.sql`, `supabase/manual/parts/01..19`).
+
+**Edge functions, client, web bundle & CI**
+* Edge functions (`f0bacaa`): root-admin confirmed-email check, push ticket retry safety, linear-time credential scrubber, Overpass upstream error classification, `turn-credentials` auth-before-config check, PowerShell deploy script reads `verify_jwt` from `supabase/config.toml`.
+* Client & UX (`ec4400e`, `c17d48e`, `db44183`, `889ffaf`, `67bd58b`): unified session-cache clearing on sign-out, feed pagination tie-breaking, WebRTC hang-up race cleanup, error states across all member and admin screens, universal image-picker resizing, accurate privacy processor disclosures (Jitsi removed), iOS `privacyManifests`, web `asyncRoutes` + `lazyWeb` modal splitting + tree shaking, WCAG 2.1 AA contrast & WCAG 2.5.3 Label-in-Name compliance, and `eslint . --max-warnings 0`.
+* Dependencies & CI: `overrides` pin patched releases for `decode-uri-component`, `zod`, `glob`, `minimatch` and `node-forge` (`0` vulnerabilities in `npm audit --omit=dev`, hard CI gate restored); Dependabot ignores minor/major native package bumps that would trip the OTA `native-runtime` guard; SQL harness normalises Windows CRLF line endings.
+
+**Remaining native-release / operational items**: Android `allowBackup` and verified universal/app links require a native store build (`version` bump in `app.config.ts`); redeploy edge functions and set `TURN_KEY_ID` / `TURN_KEY_API_TOKEN`, `SUPABASE_ACCESS_TOKEN`, and `EXPO_TOKEN` in the hosted environments.

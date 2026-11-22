@@ -16,7 +16,7 @@ set -uo pipefail
 
 SUPABASE_URL="${SUPABASE_URL:-https://fdtnbluslkabwsmspbem.supabase.co}"
 ANON_KEY="${SUPABASE_ANON_KEY:-sb_publishable_TB0Pw8k2oJQTmoO951YaIQ_xzOyGpZF}"
-SITE_URL="${SITE_URL:-https://lioris-final-version.vercel.app}"
+SITE_URL="${SITE_URL:-https://lioris-campus.vercel.app}"
 
 PASS=0
 FAIL=0
