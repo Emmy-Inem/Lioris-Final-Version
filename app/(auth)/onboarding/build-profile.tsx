@@ -158,14 +158,15 @@ export default function BuildProfileScreen() {
     }
   }
 
-  async function handleContinue() {
+  async function handleContinue(overrideDepartment?: string) {
     setErrorMessage(null);
     if (!campusCode || campusCode === 'GLOBAL') {
       setErrorMessage('Please select your university from the list above.');
       haptics.error();
       return;
     }
-    if (!department) {
+    const effectiveDepartment = overrideDepartment || department;
+    if (!effectiveDepartment) {
       setErrorMessage('Please select your academic department to continue.');
       haptics.error();
       return;
@@ -204,7 +205,7 @@ export default function BuildProfileScreen() {
       // silently reverted a refused campus, and the app carried on showing the campus the member had picked.
       const saved = await saveAcademicProfile({
         campusCode,
-        department,
+        department: effectiveDepartment,
         faculty: faculty || null,
         level: user?.role === 'alumni' ? 'Alumni' : level,
         bio: bio.trim() || null,
@@ -250,7 +251,23 @@ export default function BuildProfileScreen() {
       currentPath="/(auth)/onboarding/build-profile"
       title="Complete Academic Profile"
       subtitle="Select your university, college or faculty, and department to personalize your campus feed and study groups."
-      footer={<AppButton label="Continue" onPress={handleContinue} loading={submitting} fullWidth />}
+      footer={
+        <View style={{ gap: spacing.xs }}>
+          <AppButton label="Continue" onPress={() => handleContinue()} loading={submitting} fullWidth />
+          {!department ? (
+            <Pressable
+              onPress={() => handleContinue('General Studies')}
+              disabled={submitting}
+              accessibilityRole="button"
+              style={{ alignItems: 'center', paddingVertical: spacing.xs }}
+            >
+              <AppText variant="bodySmall" tone="secondary" weight="semiBold">
+                Skip department for now →
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      }
     >
       {/* Profile Photo (Optional) */}
       <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>

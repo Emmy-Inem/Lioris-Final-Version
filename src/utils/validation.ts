@@ -28,14 +28,12 @@ export interface PasswordCheck {
 export function checkPassword(password: string): PasswordCheck[] {
   return [
     { id: 'length', label: 'At least 8 characters', met: password.length >= 8 },
-    { id: 'upper', label: 'One uppercase letter', met: /[A-Z]/.test(password) },
-    { id: 'lower', label: 'One lowercase letter', met: /[a-z]/.test(password) },
-    { id: 'number', label: 'One number', met: /[0-9]/.test(password) },
-    { id: 'special', label: 'One special character', met: /[^A-Za-z0-9]/.test(password) },
+    { id: 'letter', label: 'At least one letter', met: /[A-Za-z]/.test(password) },
+    { id: 'number', label: 'At least one number', met: /[0-9]/.test(password) },
     {
       id: 'common',
       label: 'Not a commonly used password',
-      met: !COMMON_PASSWORDS.has(password.toLowerCase()),
+      met: password.length > 0 && !COMMON_PASSWORDS.has(password.toLowerCase()),
     },
   ];
 }

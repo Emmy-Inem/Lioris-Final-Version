@@ -33,11 +33,29 @@ const IP_LIMIT = 30;
 const IP_WINDOW_SECONDS = 5 * 60;
 const HANDLE_LIMIT = 10;
 const HANDLE_WINDOW_SECONDS = 15 * 60;
+const SIGNUP_IP_LIMIT = 10;
+const SIGNUP_IP_WINDOW_SECONDS = 15 * 60;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const INVALID = {
   error: 'invalid_credentials',
   message: 'Incorrect username or password. Check them and try again, or reset your password.',
 };
+
+interface FallbackPayload {
+  action?: unknown;
+  username?: unknown;
+  email?: unknown;
+  password?: unknown;
+  fullName?: unknown;
+  role?: unknown;
+  campusCode?: unknown;
+  termsVersion?: unknown;
+  termsAcceptedAt?: unknown;
+  ageConfirmed?: unknown;
+  dateOfBirth?: unknown;
+  captchaToken?: unknown;
+}
 
 Deno.serve(async (req: Request) => {
   const preflight = handlePreflight(req);
@@ -52,8 +70,120 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, { error: 'unavailable', message: 'Sign-in is temporarily unavailable. Please use your e-mail address.' }, 503);
   }
 
-  const parsed = await readJsonBody<{ username?: unknown; password?: unknown; captchaToken?: unknown }>(req, MAX_BODY_BYTES);
+  const parsed = await readJsonBody<FallbackPayload>(req, MAX_BODY_BYTES);
   if (!parsed.ok) return jsonResponse(req, { error: 'bad_request', message: parsed.error }, parsed.status);
+
+  const action = typeof parsed.value.action === 'string' ? parsed.value.action : 'login';
+  const ip = clientIp(req);
+
+  // ---------------------------------------------------------------------------
+  // Action 1: register_fallback (used when GoTrue's /auth/v1/signup fails due
+  // to broken/unconfigured SMTP "Error sending confirmation email" or rate cap)
+  // ---------------------------------------------------------------------------
+  if (action === 'register_fallback') {
+    const cleanEmail = typeof parsed.value.email === 'string' ? parsed.value.email.trim().toLowerCase() : '';
+    const password = typeof parsed.value.password === 'string' ? parsed.value.password : '';
+    const fullName = typeof parsed.value.fullName === 'string' ? parsed.value.fullName.trim().slice(0, 120) : '';
+    const rawHandle = typeof parsed.value.username === 'string' ? parsed.value.username : '';
+    const handle = rawHandle.trim().replace(/^@/, '').toLowerCase();
+    const role = parsed.value.role === 'alumni' ? 'alumni' : 'student';
+    const campusCode = typeof parsed.value.campusCode === 'string' ? parsed.value.campusCode.trim().toUpperCase() : null;
+    const termsVersion = typeof parsed.value.termsVersion === 'string' ? parsed.value.termsVersion.slice(0, 64) : null;
+    const termsAcceptedAt = typeof parsed.value.termsAcceptedAt === 'string' ? parsed.value.termsAcceptedAt : new Date().toISOString();
+    const ageConfirmed = parsed.value.ageConfirmed === true;
+    const dateOfBirth = typeof parsed.value.dateOfBirth === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.value.dateOfBirth)
+      ? parsed.value.dateOfBirth
+      : null;
+
+    if (!EMAIL_RE.test(cleanEmail) || cleanEmail.length > 254) {
+      return jsonResponse(req, { error: 'invalid_email', message: 'Please enter a valid email address.' }, 400);
+    }
+    if (password.length < 8 || password.length > 256) {
+      return jsonResponse(req, { error: 'weak_password', message: 'Password must be at least 8 characters.' }, 400);
+    }
+    if (fullName.length < 2) {
+      return jsonResponse(req, { error: 'invalid_name', message: 'Please enter your full display name.' }, 400);
+    }
+    if (!/^[a-z0-9._]{3,24}$/.test(handle)) {
+      return jsonResponse(req, { error: 'invalid_username', message: 'Username must be 3-24 characters (letters, numbers, dots, underscores).' }, 400);
+    }
+
+    const signupVerdict = await consumeRateLimit(admin, `signup-ip:${ip}`, SIGNUP_IP_LIMIT, SIGNUP_IP_WINDOW_SECONDS);
+    if (signupVerdict === 'limited') {
+      return jsonResponse(req, { error: 'rate_limited', message: 'Too many sign-up attempts. Please wait a few minutes and try again.' }, 429, { 'Retry-After': '300' });
+    }
+    if (signupVerdict === 'error') {
+      return jsonResponse(req, { error: 'unavailable', message: 'Registration is temporarily unavailable. Please try again shortly.' }, 503);
+    }
+
+    const created = await admin.auth.admin.createUser({
+      email: cleanEmail,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        username: handle,
+        role,
+        campus_code: campusCode,
+        terms_version: termsVersion,
+        terms_accepted_at: termsAcceptedAt,
+        age_eligibility_confirmed: ageConfirmed,
+        date_of_birth: dateOfBirth,
+      },
+    });
+
+    if (created.error || !created.data?.user) {
+      const msg = (created.error?.message ?? '').toLowerCase();
+      const errCode = (created.error as { code?: string } | null)?.code ?? '';
+      if (msg.includes('age_under_13') || msg.includes('at least 13')) {
+        return jsonResponse(req, { error: 'under_13', message: 'You must be at least 13 years old to create a Lioris account.' }, 400);
+      }
+      if (msg.includes('already') || msg.includes('registered') || errCode === 'email_exists') {
+        // Account may already exist from a partial signup attempt: try signing in with the password they supplied.
+        const anonTry = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
+        const tryLogin = await anonTry.auth.signInWithPassword({ email: cleanEmail, password });
+        if (!tryLogin.error && tryLogin.data?.session) {
+          const s = tryLogin.data.session;
+          return jsonResponse(req, {
+            session: {
+              access_token: s.access_token,
+              refresh_token: s.refresh_token,
+              expires_in: s.expires_in,
+              expires_at: s.expires_at,
+              token_type: s.token_type,
+            },
+          }, 200);
+        }
+        return jsonResponse(req, { error: 'email_exists', message: 'An account with this email address already exists. Please sign in or reset your password.' }, 409);
+      }
+      console.error('[login-with-username] register_fallback createUser failed:', created.error?.message);
+      return jsonResponse(req, { error: 'server_error', message: 'Unable to create your account right now. Please try again.' }, 500);
+    }
+
+    // Because email confirmation was bypassed due to SMTP failure, ensure institutional email auto-verify
+    // never marks the profile as verified without inbox ownership proof.
+    await admin
+      .from('profiles')
+      .update({ verification_status: 'unverified' })
+      .eq('id', created.data.user.id)
+      .neq('role', 'admin');
+
+    const anon = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
+    const signedIn = await anon.auth.signInWithPassword({ email: cleanEmail, password });
+    if (signedIn.error || !signedIn.data?.session) {
+      return jsonResponse(req, { error: 'created_please_login', message: 'Account created! Please sign in with your email and password.' }, 200);
+    }
+    const s = signedIn.data.session;
+    return jsonResponse(req, {
+      session: {
+        access_token: s.access_token,
+        refresh_token: s.refresh_token,
+        expires_in: s.expires_in,
+        expires_at: s.expires_at,
+        token_type: s.token_type,
+      },
+    }, 200);
+  }
 
   const rawHandle = typeof parsed.value.username === 'string' ? parsed.value.username : '';
   const handle = rawHandle.trim().replace(/^@/, '').toLowerCase();
@@ -67,7 +197,6 @@ Deno.serve(async (req: Request) => {
   // Only FAILED attempts count. The per-handle bucket is keyed by handle + IP, so a stranger who
   // hammers a victim's handle only locks out their OWN address, never the victim's. The buckets are
   // read here (peek) and spent by failLogin() below.
-  const ip = clientIp(req);
   const ipKey = `login-ip:${ip}`;
   const handleKey = `login-handle:${handle}:${ip}`;
   const [ipFails, handleFails] = await Promise.all([

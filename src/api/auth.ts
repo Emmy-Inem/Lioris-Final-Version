@@ -447,6 +447,84 @@ export async function register(payload: RegisterPayload): Promise<AuthSession> {
     if (payload.dateOfBirth && /database error saving new user/i.test(error?.message ?? '') && parseIsoDob(payload.dateOfBirth).status === 'under_13') {
       throw new Error(`You must be at least ${MIN_AGE} years old to create a Lioris account.`);
     }
+
+    // If GoTrue's SMTP mailer failed ("Error sending confirmation email" or email rate limit),
+    // automatically fall back to our server-side register_fallback in login-with-username (or direct signIn if created)
+    // so broken SMTP never blocks a student from creating an account.
+    const errMsg = (error?.message ?? '').toLowerCase();
+    const errCode = ((error as any)?.code ?? '').toLowerCase();
+    const isMailerFailure =
+      errMsg.includes('error sending confirmation') ||
+      errMsg.includes('error sending email') ||
+      errMsg.includes('over_email_send_rate_limit') ||
+      errMsg.includes('email rate limit') ||
+      errCode === 'over_email_send_rate_limit' ||
+      (errCode === 'unexpected_failure' && errMsg.includes('email'));
+
+    if (isMailerFailure) {
+      // 1. Check if the account was already created and auto-confirmed
+      try {
+        const directLogin = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: payload.password,
+        });
+        if (!directLogin.error && directLogin.data?.session && directLogin.data?.user) {
+          return {
+            accessToken: directLogin.data.session.access_token,
+            refreshToken: directLogin.data.session.refresh_token,
+            user: {
+              id: directLogin.data.user.id,
+              fullName: payload.fullName,
+              email: cleanEmail,
+              role: assignedRole,
+            },
+          };
+        }
+      } catch {
+        // continue to edge function fallback
+      }
+
+      // 2. Provision via server-side register_fallback (bypasses GoTrue SMTP mailer)
+      try {
+        const { data: fbData, error: fbError } = await supabase.functions.invoke('login-with-username', {
+          body: {
+            action: 'register_fallback',
+            email: cleanEmail,
+            password: payload.password,
+            fullName: payload.fullName,
+            username: cleanUsername,
+            role: assignedRole,
+            campusCode: detectedCampus,
+            termsVersion: payload.acceptedTermsVersion ?? null,
+            termsAcceptedAt: payload.acceptedTermsVersion ? new Date().toISOString() : null,
+            ageConfirmed: payload.confirmedAgeEligible === true,
+            dateOfBirth: payload.dateOfBirth ?? null,
+          },
+        });
+        const fbTokens = (fbData as any)?.session;
+        if (!fbError && fbTokens?.access_token && fbTokens?.refresh_token) {
+          const { data: set, error: setError } = await supabase.auth.setSession({
+            access_token: fbTokens.access_token,
+            refresh_token: fbTokens.refresh_token,
+          });
+          if (!setError && set?.session && set?.user) {
+            return {
+              accessToken: set.session.access_token,
+              refreshToken: set.session.refresh_token,
+              user: {
+                id: set.user.id,
+                fullName: payload.fullName,
+                email: cleanEmail,
+                role: assignedRole,
+              },
+            };
+          }
+        }
+      } catch {
+        // Fall through to friendly error message
+      }
+    }
+
     throw new Error(getFriendlyErrorMessage(error, 'Unable to register account. Please check your details.'));
   }
 

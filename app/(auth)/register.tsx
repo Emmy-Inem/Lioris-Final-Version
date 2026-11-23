@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Alert, Pressable, Platform, Modal } from 'react-native';
-import { Link, router } from 'expo-router';
+import { View, ScrollView, Alert, Pressable, Modal } from 'react-native';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { AppText } from '@/components/AppText';
@@ -24,8 +24,7 @@ import { LiorisLogo } from '@/components/LiorisLogo';
 import { CONSENT_VERSION, INDEPENDENT_AGE, MIN_AGE } from '@/constants/legal';
 import { DateOfBirthField, useDobFields } from '@/components/DateOfBirthField';
 import { TurnstileWidget, TurnstileWidgetRef } from '@/components/TurnstileWidget';
-import { captchaRequired } from '@/utils/captcha';
-import { persistCampus } from '@/hooks/useViewScope';
+import { persistCampus, getStoredCampus } from '@/hooks/useViewScope';
 import { getFriendlyErrorMessage } from '@/utils/errors';
 
 
@@ -36,11 +35,16 @@ const PORTALS: Array<{ value: Extract<UserRole, 'student' | 'alumni'>; label: st
 
 export default function RegisterScreen() {
  const { campuses: SUPPORTED_INSTITUTIONS } = useCampusRegistry();
+ const params = useLocalSearchParams<{ campus?: string; portal?: string }>();
  const { colors, radius, spacing, isDark, toggleTheme } = useTheme();
  const { isDesktop } = useResponsive();
  const { register } = useAuth();
- const [portal, setPortal] = useState<Extract<UserRole, 'student' | 'alumni'>>('student');
- const [selectedCampusCode, setSelectedCampusCode] = useState<string>('');
+ const [portal, setPortal] = useState<Extract<UserRole, 'student' | 'alumni'>>(
+   params.portal === 'alumni' ? 'alumni' : 'student'
+ );
+ const [selectedCampusCode, setSelectedCampusCode] = useState<string>(
+   typeof params.campus === 'string' && params.campus !== 'GLOBAL' ? params.campus : ''
+ );
  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
  const [waitlistName, setWaitlistName] = useState('');
  const [waitlistUniversity, setWaitlistUniversity] = useState('');
@@ -61,6 +65,25 @@ export default function RegisterScreen() {
  const [errorMessage, setErrorMessage] = useState<string | null>(null);
  const [submitting, setSubmitting] = useState(false);
 
+ // Pre-select stored or default campus so sign-up works out of the box without hunting for a chip
+ React.useEffect(() => {
+   let mounted = true;
+   async function initCampus() {
+     if (selectedCampusCode) return;
+     const stored = await getStoredCampus();
+     if (!mounted) return;
+     if (stored && stored !== 'GLOBAL') {
+       setSelectedCampusCode(stored);
+     } else if (SUPPORTED_INSTITUTIONS.length > 0) {
+       setSelectedCampusCode(SUPPORTED_INSTITUTIONS[0].code);
+     }
+   }
+   initCampus();
+   return () => {
+     mounted = false;
+   };
+ }, [SUPPORTED_INSTITUTIONS, selectedCampusCode]);
+
  const passwordValid = isPasswordValid(password);
  const strength = passwordStrength(password);
  const emailTouched = email.length > 0;
@@ -68,6 +91,29 @@ export default function RegisterScreen() {
  const matchedInstitution = getInstitutionForEmail(email);
  const usernameTouched = username.length > 0;
  const usernameValid = isValidUsername(username.trim().replace(/^@/, ''));
+
+ const suggestedUsername = React.useMemo(() => {
+   if (username.trim().length > 0) return '';
+   const baseFromName = fullName
+     .trim()
+     .toLowerCase()
+     .replace(/[^a-z0-9._\s]/g, '')
+     .replace(/\s+/g, '_');
+   const baseFromEmail = email
+     .split('@')[0]
+     ?.trim()
+     .toLowerCase()
+     .replace(/[^a-z0-9._]/g, '');
+   const candidate = (baseFromName.length >= 3 ? baseFromName : baseFromEmail || '').slice(0, 20);
+   return isValidUsername(candidate) ? candidate : '';
+ }, [username, fullName, email]);
+
+ // When an institutional email matches a campus, sync the selector chip automatically
+ React.useEffect(() => {
+   if (matchedInstitution?.code) {
+     setSelectedCampusCode(matchedInstitution.code);
+   }
+ }, [matchedInstitution?.code]);
 
  // Live debounced check for username availability
  React.useEffect(() => {
@@ -112,7 +158,7 @@ export default function RegisterScreen() {
  return;
  }
   if (!passwordValid) {
-    setErrorMessage('Password must meet all security criteria (8+ characters with uppercase, lowercase, numbers, and symbols).');
+    setErrorMessage('Password must be at least 8 characters and include at least one letter and one number.');
     return;
   }
  if (!usernameValid) {
@@ -146,18 +192,8 @@ export default function RegisterScreen() {
  return;
  }
 
-  // On phones a token is sent when the widget produced one; the server decides whether it is required (a widget
-  // that cannot load must not make sign-up impossible when the project's CAPTCHA is off).
-  if (Platform.OS === 'web' && captchaRequired() && !captchaToken) {
-    setErrorMessage('Please complete the security check above before continuing.');
-    return;
-  }
-
-  const effectiveCampusCode = matchedInstitution?.code || selectedCampusCode;
-  if (!effectiveCampusCode) {
-    setErrorMessage('Please select your university from the supported universities list.');
-    return;
-  }
+  const effectiveCampusCode =
+    matchedInstitution?.code || selectedCampusCode || SUPPORTED_INSTITUTIONS[0]?.code || 'UNILAG';
   persistCampus(effectiveCampusCode);
 
   setSubmitting(true);
@@ -399,7 +435,13 @@ export default function RegisterScreen() {
     autoCapitalize="none"
     value={username}
     onChangeText={(t) => {
-      setUsername(t.replace(/^@/, ''));
+      setUsername(
+        t
+          .replace(/^@/, '')
+          .replace(/\s+/g, '_')
+          .replace(/[^a-zA-Z0-9._]/g, '')
+          .toLowerCase()
+      );
       if (errorMessage) setErrorMessage(null);
     }}
     placeholder="e.g. starboy"
@@ -411,7 +453,31 @@ export default function RegisterScreen() {
         : undefined
     }
   />
-  {usernameStatus === 'available' && usernameValid ? (
+  {!usernameTouched && suggestedUsername ? (
+    <Pressable
+      onPress={() => {
+        setUsername(suggestedUsername);
+        if (errorMessage) setErrorMessage(null);
+      }}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        gap: 6,
+        marginTop: -spacing.sm,
+        marginBottom: spacing.md,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: radius.pill,
+        backgroundColor: colors.pastelPrimaryBg,
+      }}
+    >
+      <Ionicons name="sparkles-outline" size={13} color={colors.brandPrimary} />
+      <AppText variant="caption" weight="bold" tone="brand">
+        Tap to use @{suggestedUsername}
+      </AppText>
+    </Pressable>
+  ) : usernameStatus === 'available' && usernameValid ? (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -spacing.sm, marginBottom: spacing.md }}>
       <Ionicons name="checkmark-circle" size={14} color={colors.success} />
       <AppText variant="bodySmall" style={{ color: colors.success }}>

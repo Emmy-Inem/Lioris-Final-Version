@@ -109,7 +109,17 @@ export function getFriendlyErrorMessage(error: unknown, fallback?: string): stri
     return 'Incorrect password. Please verify your password and try again, or reset it if forgotten.';
   }
 
-  // 2. Email Confirmation Failures
+  // 2. Email Confirmation & Mailer Delivery Failures
+  if (
+    msg.includes('error sending confirmation') ||
+    msg.includes('error sending recovery') ||
+    msg.includes('error sending magic link') ||
+    msg.includes('error sending email') ||
+    msg.includes('failed to send email')
+  ) {
+    return 'Email confirmation service is temporarily unavailable. In Supabase Dashboard → Authentication → Providers → Email, switch off "Confirm email" (or configure Custom SMTP) to enable instant sign-up.';
+  }
+
   if (
     msg.includes('email not confirmed') ||
     msg.includes('email has not been confirmed') ||

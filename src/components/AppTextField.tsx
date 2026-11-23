@@ -13,6 +13,7 @@ interface AppTextFieldProps extends TextInputProps {
  helperText?: string;
  leftIcon?: keyof typeof Ionicons.glyphMap;
  showPasswordToggle?: boolean;
+ inputRef?: React.Ref<TextInput>;
 }
 
 export function AppTextField({
@@ -22,6 +23,7 @@ export function AppTextField({
  leftIcon,
  showPasswordToggle,
  secureTextEntry,
+ inputRef,
  style,
  ...rest
 }: AppTextFieldProps) {
@@ -59,6 +61,7 @@ export function AppTextField({
  />
  ) : null}
  <TextInput
+ ref={inputRef}
  accessibilityLabel={accessibleLabel}
  accessibilityState={{ disabled: rest.editable === false }}
  aria-disabled={rest.editable === false}

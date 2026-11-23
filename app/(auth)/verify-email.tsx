@@ -164,10 +164,6 @@ export default function VerifyEmailScreen() {
       setErrorMessage('Enter the email address you signed up with.');
       return;
     }
-    if (Platform.OS === 'web' && captchaRequired() && !captchaToken) {
-      setErrorMessage('Please complete the security check below, then tap "Send a new code".');
-      return;
-    }
     haptics.light();
     setResending(true);
     setErrorMessage(null);
